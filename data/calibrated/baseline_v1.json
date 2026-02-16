@@ -1,0 +1,129 @@
+{
+  "generated_at": "2026-02-15T09:17:58.284043+00:00",
+  "window": {
+    "start_year": 2015,
+    "end_year": 2024
+  },
+  "peer_model": "oecd_like_advanced_western",
+  "state": {
+    "debt_to_gdp": 61.3,
+    "deficit_to_gdp": 100.0,
+    "health_outcome": 93.71,
+    "education_outcome": 78.34,
+    "public_safety": 92.2,
+    "institutional_integrity": 86.07,
+    "economic_output": 93.75,
+    "employment": 72.85,
+    "external_stability": 100.0,
+    "climate_resilience": 58.89,
+    "debt_to_gdp_pct": 69.67,
+    "deficit_to_gdp_pct": -0.34,
+    "state_stability_index": 87.02
+  },
+  "diagnostics": {
+    "debt_to_gdp": {
+      "indicator": "DEBT_GDP",
+      "fallback_used": false,
+      "preferred_indicator": "DEBT_GDP",
+      "raw_mean": 69.666,
+      "raw_p10": 19.8823,
+      "raw_p90": 155.5815,
+      "score_0_100": 61.3,
+      "sample_count": 46
+    },
+    "deficit_to_gdp": {
+      "indicator": "DEFICIT_GDP",
+      "fallback_used": false,
+      "preferred_indicator": "DEFICIT_GDP",
+      "raw_mean": -0.3417,
+      "raw_p10": -7.1989,
+      "raw_p90": 6.3331,
+      "score_0_100": 100.0,
+      "sample_count": 46
+    },
+    "health_outcome": {
+      "indicator": "UHC_INDEX",
+      "fallback_used": false,
+      "preferred_indicator": "UHC_INDEX",
+      "raw_mean": 93.7083,
+      "raw_p10": 89.3642,
+      "raw_p90": 98.42,
+      "score_0_100": 93.71,
+      "sample_count": 144
+    },
+    "education_outcome": {
+      "indicator": "HUMAN_CAPITAL",
+      "fallback_used": false,
+      "preferred_indicator": "HUMAN_CAPITAL",
+      "raw_mean": 0.7834,
+      "raw_p10": 0.757,
+      "raw_p90": 0.806,
+      "score_0_100": 78.34,
+      "sample_count": 48
+    },
+    "public_safety": {
+      "indicator": "HOMICIDE_RATE",
+      "fallback_used": false,
+      "preferred_indicator": "HOMICIDE_RATE",
+      "raw_mean": 0.9364,
+      "raw_p10": 0.4824,
+      "raw_p90": 1.4964,
+      "score_0_100": 92.2,
+      "sample_count": 133
+    },
+    "institutional_integrity": {
+      "indicator": "CONTROL_CORRUPTION",
+      "fallback_used": false,
+      "preferred_indicator": "CONTROL_CORRUPTION",
+      "raw_mean": 1.8033,
+      "raw_p10": 1.3957,
+      "raw_p90": 2.1907,
+      "score_0_100": 86.07,
+      "sample_count": 144
+    },
+    "economic_output": {
+      "indicator": "GDP_PC_PPP",
+      "fallback_used": false,
+      "preferred_indicator": "GDP_PC_PPP",
+      "raw_mean": 63532.2393,
+      "raw_p10": 47362.3199,
+      "raw_p90": 85787.6174,
+      "score_0_100": 93.75,
+      "sample_count": 160
+    },
+    "employment": {
+      "indicator": "UNEMPLOYMENT",
+      "fallback_used": false,
+      "preferred_indicator": "UNEMPLOYMENT",
+      "raw_mean": 5.4302,
+      "raw_p10": 3.385,
+      "raw_p90": 8.009,
+      "score_0_100": 72.85,
+      "sample_count": 160
+    },
+    "external_stability": {
+      "indicator": "CURRENT_ACCOUNT",
+      "fallback_used": false,
+      "preferred_indicator": "CURRENT_ACCOUNT",
+      "raw_mean": 2.5798,
+      "raw_p10": -2.9896,
+      "raw_p90": 8.8315,
+      "score_0_100": 100.0,
+      "sample_count": 160
+    },
+    "climate_resilience": {
+      "indicator": "PM25+RENEWABLE_ENERGY_BLEND",
+      "raw_mean_components": {
+        "PM25": 9.3038,
+        "RENEWABLE_ENERGY": 24.6402
+      },
+      "score_0_100": 58.89,
+      "sample_count": 208
+    }
+  },
+  "notes": [
+    "Scores transformed to 0-100 for gameplay comparability.",
+    "Some domains are backed by non-World-Bank sources and remain external until integrated.",
+    "Tune elasticity and transforms after first balancing playtests."
+  ]
+}

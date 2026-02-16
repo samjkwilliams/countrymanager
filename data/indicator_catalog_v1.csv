@@ -1,0 +1,56 @@
+domain,indicator_id,indicator_name,source,source_code,unit,frequency,lag_class,direction_good,quality_tier,validation_status,api_or_page
+fiscal,GGREV_GDP,General government revenue proxy (tax revenue),World Bank,GC.TAX.TOTL.GD.ZS,percent_gdp,annual,short,up,Tier2,proxy_series,https://api.worldbank.org/v2/indicator/GC.TAX.TOTL.GD.ZS
+fiscal,GGEXP_GDP,General government expenditure proxy (gov final consumption),World Bank,NE.CON.GOVT.ZS,percent_gdp,annual,short,mixed,Tier2,proxy_series,https://api.worldbank.org/v2/indicator/NE.CON.GOVT.ZS
+fiscal,DEBT_GDP,General government gross debt,World Bank,GC.DOD.TOTL.GD.ZS,percent_gdp,annual,short,down,Tier1,verified_search,https://api.worldbank.org/v2/indicator/GC.DOD.TOTL.GD.ZS
+fiscal,DEFICIT_GDP,Fiscal balance,World Bank,GC.BAL.CASH.GD.ZS,percent_gdp,annual,short,up,Tier1,verified_search,https://api.worldbank.org/v2/indicator/GC.BAL.CASH.GD.ZS
+fiscal,INTPAY_GDP,Interest payments on debt proxy,World Bank,GC.XPN.INTP.RV.ZS,percent_revenue,annual,short,down,Tier2,proxy_series,https://api.worldbank.org/v2/indicator/GC.XPN.INTP.RV.ZS
+fiscal,INFLATION_CPI,Inflation CPI,World Bank,FP.CPI.TOTL.ZG,percent,annual,short,target_band,Tier1,verified_search,https://api.worldbank.org/v2/indicator/FP.CPI.TOTL.ZG
+fiscal,UNEMPLOYMENT,Unemployment rate,World Bank,SL.UEM.TOTL.ZS,percent,annual,short,down,Tier1,verified_search,https://api.worldbank.org/v2/indicator/SL.UEM.TOTL.ZS
+macro,GDP_GROWTH,GDP growth annual,World Bank,NY.GDP.MKTP.KD.ZG,percent,annual,short,up,Tier1,verified_search,https://api.worldbank.org/v2/indicator/NY.GDP.MKTP.KD.ZG
+macro,GDP_PC_PPP,GDP per capita PPP,World Bank,NY.GDP.PCAP.PP.KD,constant_ppp,annual,medium,up,Tier1,verified_search,https://api.worldbank.org/v2/indicator/NY.GDP.PCAP.PP.KD
+macro,CURRENT_ACCOUNT,Current account balance,World Bank,BN.CAB.XOKA.GD.ZS,percent_gdp,annual,short,target_band,Tier2,verified_search,https://api.worldbank.org/v2/indicator/BN.CAB.XOKA.GD.ZS
+macro,TRADE_OPENNESS,Trade as share of GDP,World Bank,NE.TRD.GNFS.ZS,percent_gdp,annual,short,target_band,Tier2,verified_search,https://api.worldbank.org/v2/indicator/NE.TRD.GNFS.ZS
+health,HEALTH_EXP_GDP,Current health expenditure,World Bank,SH.XPD.CHEX.GD.ZS,percent_gdp,annual,medium,up,Tier1,verified_search,https://api.worldbank.org/v2/indicator/SH.XPD.CHEX.GD.ZS
+health,LIFE_EXPECTANCY,Life expectancy at birth,World Bank,SP.DYN.LE00.IN,years,annual,long,up,Tier1,verified_search,https://api.worldbank.org/v2/indicator/SP.DYN.LE00.IN
+health,UHC_INDEX,UHC service coverage index,World Bank,SH.UHC.SRVS.CV.XD,index_0_100,annual,medium,up,Tier1,verified_search,https://api.worldbank.org/v2/indicator/SH.UHC.SRVS.CV.XD
+health,OOPEXP_SHARE,Out-of-pocket health spending share,World Bank,SH.XPD.OOPC.CH.ZS,percent_health_spend,annual,short,down,Tier2,verified_search,https://api.worldbank.org/v2/indicator/SH.XPD.OOPC.CH.ZS
+education,EDU_EXP_GDP,Gov expenditure on education,World Bank,SE.XPD.TOTL.GD.ZS,percent_gdp,annual,medium,up,Tier1,verified_search,https://api.worldbank.org/v2/indicator/SE.XPD.TOTL.GD.ZS
+education,PRIMARY_COMPLETION,Primary completion rate,World Bank,SE.PRM.CMPT.ZS,percent,annual,long,up,Tier2,verified_search,https://api.worldbank.org/v2/indicator/SE.PRM.CMPT.ZS
+education,LOWER_SEC_COMPLETION,Lower secondary completion rate,World Bank,SE.SEC.LO.CO.ZS,percent,annual,long,up,Tier2,verified_search,https://api.worldbank.org/v2/indicator/SE.SEC.LO.CO.ZS
+education,HUMAN_CAPITAL,Human capital index,World Bank,HD.HCI.OVRL,index_0_1,annual,long,up,Tier2,verified_search,https://api.worldbank.org/v2/indicator/HD.HCI.OVRL
+infrastructure,ACCESS_ELECTRICITY,Access to electricity,World Bank,EG.ELC.ACCS.ZS,percent_population,annual,medium,up,Tier2,verified_search,https://api.worldbank.org/v2/indicator/EG.ELC.ACCS.ZS
+infrastructure,LOGISTICS_PERF,Logistics performance index,World Bank,LP.LPI.OVRL.XQ,index_1_5,biennial,medium,up,Tier2,verified_search,https://api.worldbank.org/v2/indicator/LP.LPI.OVRL.XQ
+infrastructure,ROAD_DEATHS,Road traffic mortality,World Bank,SH.STA.TRAF.P5,per_100k,annual,medium,down,Tier3,verified_search,https://api.worldbank.org/v2/indicator/SH.STA.TRAF.P5
+safety,HOMICIDE_RATE,Intentional homicides,World Bank,VC.IHR.PSRC.P5,per_100k,annual,short,down,Tier1,verified_search,https://api.worldbank.org/v2/indicator/VC.IHR.PSRC.P5
+safety,RULE_OF_LAW,Rule of law estimate,WGI,RL.EST,index_-2_5_to_2_5,annual,medium,up,Tier1,verified_source,https://www.worldbank.org/en/publication/worldwide-governance-indicators
+safety,GOV_EFFECTIVENESS,Government effectiveness estimate,WGI,GE.EST,index_-2_5_to_2_5,annual,medium,up,Tier1,verified_source,https://www.worldbank.org/en/publication/worldwide-governance-indicators
+welfare,POVERTY_NATIONAL,National poverty headcount,World Bank,SI.POV.NAHC,percent_population,annual,medium,down,Tier2,verified_search,https://api.worldbank.org/v2/indicator/SI.POV.NAHC
+welfare,GINI,Gini index,World Bank,SI.POV.GINI,index_0_100,annual,medium,down,Tier1,verified_search,https://api.worldbank.org/v2/indicator/SI.POV.GINI
+welfare,SOCIAL_CONTRIB,Social contributions revenue share,World Bank,GC.REV.SOCL.ZS,percent_revenue,annual,short,target_band,Tier3,pending_api_validation,https://api.worldbank.org/v2/indicator/GC.REV.SOCL.ZS
+defense,MIL_EXP_GDP,Military expenditure share,World Bank,MS.MIL.XPND.GD.ZS,percent_gdp,annual,short,target_band,Tier1,verified_search,https://api.worldbank.org/v2/indicator/MS.MIL.XPND.GD.ZS
+defense,SIPRI_MILEX,Military expenditure detailed,SIPRI,MILEX_DB,local_currency_and_usd,annual,short,target_band,Tier1,verified_source,https://www.sipri.org/databases/milex
+environment,CO2_PC,CO2 emissions per capita,World Bank,EN.ATM.CO2E.PC,metric_tons_per_capita,annual,long,down,Tier1,verified_search,https://api.worldbank.org/v2/indicator/EN.ATM.CO2E.PC
+environment,PM25,PM2.5 exposure,World Bank,EN.ATM.PM25.MC.M3,microgram_per_m3,annual,medium,down,Tier1,verified_search,https://api.worldbank.org/v2/indicator/EN.ATM.PM25.MC.M3
+environment,RENEWABLE_ENERGY,Renewable energy consumption,World Bank,EG.FEC.RNEW.ZS,percent_total_final_energy,annual,medium,up,Tier2,verified_search,https://api.worldbank.org/v2/indicator/EG.FEC.RNEW.ZS
+environment,FOREST_AREA,Forest area,World Bank,AG.LND.FRST.ZS,percent_land,annual,long,up,Tier2,verified_search,https://api.worldbank.org/v2/indicator/AG.LND.FRST.ZS
+climate,DISASTER_AFFECTED,People affected by disasters,EM-DAT,EMDAT_TOTAL_AFFECTED_PER_100K,per_100k,annual,short,down,Tier2,verified_source,https://www.emdat.be/
+governance,CONTROL_CORRUPTION,Control of corruption estimate,WGI,CC.EST,index_-2_5_to_2_5,annual,short,up,Tier1,verified_source,https://www.worldbank.org/en/publication/worldwide-governance-indicators
+governance,VOICE_ACCOUNTABILITY,Voice and accountability,WGI,VA.EST,index_-2_5_to_2_5,annual,medium,up,Tier2,verified_source,https://www.worldbank.org/en/publication/worldwide-governance-indicators
+governance,REG_QUALITY,Regulatory quality,WGI,RQ.EST,index_-2_5_to_2_5,annual,medium,up,Tier2,verified_source,https://www.worldbank.org/en/publication/worldwide-governance-indicators
+governance,OBS_SCORE,Open Budget Survey score,OBS,OBS_SCORE,index_0_100,biennial,short,up,Tier1,verified_source,https://internationalbudget.org/open-budget-survey/
+political_finance,DONATION_DISCLOSURE,Campaign finance disclosure strictness,IDEA,IDEA_DISCLOSURE_RULES,index_0_100,annual,short,up,Tier2,verified_source,https://www.idea.int/data-tools/data/political-finance-database
+political_finance,DONATION_LIMITS,Contribution limit strictness,IDEA,IDEA_CONTRIB_LIMITS,index_0_100,annual,short,up,Tier2,verified_source,https://www.idea.int/data-tools/data/political-finance-database
+political_finance,PUBLIC_FINANCING_SHARE,Public funding share for parties,IDEA,IDEA_PUBLIC_FUNDING,index_0_100,annual,medium,target_band,Tier3,verified_source,https://www.idea.int/data-tools/data/political-finance-database
+external,FX_RESERVES_MONTHS,Reserves in months imports,World Bank,FI.RES.TOTL.MO,months_imports,annual,short,up,Tier2,verified_search,https://api.worldbank.org/v2/indicator/FI.RES.TOTL.MO
+external,FDI_NET,Fdi net inflows,World Bank,BX.KLT.DINV.WD.GD.ZS,percent_gdp,annual,medium,target_band,Tier2,verified_search,https://api.worldbank.org/v2/indicator/BX.KLT.DINV.WD.GD.ZS
+external,NET_MIGRATION,Net migration,World Bank,SM.POP.NETM,persons,annual,medium,target_band,Tier3,verified_search,https://api.worldbank.org/v2/indicator/SM.POP.NETM
+rights,FREEDOM_PROXY,Voice and accountability proxy,WGI,VA.EST,index_-2_5_to_2_5,annual,medium,up,Tier2,verified_source,https://www.worldbank.org/en/publication/worldwide-governance-indicators
+rights,RULELAW_PROXY,Rule of law proxy,WGI,RL.EST,index_-2_5_to_2_5,annual,medium,up,Tier1,verified_source,https://www.worldbank.org/en/publication/worldwide-governance-indicators
+ai_policy,AI_GOVERNANCE_INDEX,AI governance strictness (game-constructed),Internal,AI_GOV_IDX,index_0_100,weekly,short,target_band,TierG,n_a,internal_policy_variable
+surveillance,SURVEILLANCE_STRICTNESS,Surveillance strictness (game-constructed),Internal,SURV_STRICT,index_0_100,weekly,short,target_band,TierG,n_a,internal_policy_variable
+interference,CYBER_PRESSURE_INDEX,External cyber pressure (game-constructed with event weights),Internal,CYBER_PRESSURE,index_0_100,weekly,short,down,TierG,n_a,internal_event_model
+interference,TRADE_PRESSURE_INDEX,Trade coercion pressure from concentration + events,Internal,TRADE_PRESSURE,index_0_100,weekly,short,down,TierG,n_a,internal_event_model
+budget_structure,COFOG_HEALTH_SHARE,Health share of gov spend,OECD COFOG,COFOG_GF07,percent_total_spend,annual,short,target_band,Tier1,verified_source,https://www.oecd.org/en/data/indicators/general-government-spending.html
+budget_structure,COFOG_EDU_SHARE,Education share of gov spend,OECD COFOG,COFOG_GF09,percent_total_spend,annual,short,target_band,Tier1,verified_source,https://www.oecd.org/en/data/indicators/general-government-spending.html
+budget_structure,COFOG_DEF_SHARE,Defense share of gov spend,OECD COFOG,COFOG_GF02,percent_total_spend,annual,short,target_band,Tier1,verified_source,https://www.oecd.org/en/data/indicators/general-government-spending.html
+budget_structure,COFOG_SOCIAL_SHARE,Social protection share of gov spend,OECD COFOG,COFOG_GF10,percent_total_spend,annual,short,target_band,Tier1,verified_source,https://www.oecd.org/en/data/indicators/general-government-spending.html

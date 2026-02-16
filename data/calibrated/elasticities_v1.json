@@ -1,0 +1,15 @@
+{
+  "generated_at": "2026-02-15T09:17:58.284043+00:00",
+  "version": "v1_seed",
+  "elasticities": {
+    "health_spend_pp_to_health_outcome": 0.15,
+    "education_spend_pp_to_education_outcome": 0.12,
+    "infrastructure_spend_pp_to_infra_quality": 0.18,
+    "integrity_pts_to_leakage_pp": -0.06,
+    "deficit_pp_to_debt_trend_pressure": 0.35,
+    "surveillance_strictness_10_to_liberties": -4.0,
+    "surveillance_strictness_10_to_safety": 1.0,
+    "ai_governance_10_to_productivity": 2.0,
+    "ai_governance_10_to_misuse_risk": -1.0
+  }
+}

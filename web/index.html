@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Country Manager - Cozy Civic</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hud">
+        <div>
+          <p class="eyebrow">Cozy Civic Mode</p>
+          <h1>Country Manager</h1>
+        </div>
+        <div class="hud-metrics">
+          <div class="pill"><span>Tier</span><strong id="tierLabel">City</strong></div>
+          <div class="pill"><span>Day</span><strong id="dayLabel">0</strong></div>
+          <div class="pill"><span>Stability</span><strong id="stabilityLabel">0</strong></div>
+          <div class="pill"><span>Treasury</span><strong id="treasuryLabel">0</strong></div>
+          <div class="pill"><span>Action Pts</span><strong id="actionPoints">0</strong></div>
+          <div class="pill"><span>Streak</span><strong id="streakLabel">0</strong></div>
+          <div class="pill"><span>Civilians</span><strong id="civilianCount">0</strong></div>
+          <div class="pill"><span>Incidents</span><strong id="incidentCount">0</strong></div>
+          <button id="pauseBtn" class="btn">Pause</button>
+        </div>
+      </header>
+
+      <section id="statusBanner" class="status-banner">City systems nominal.</section>
+
+      <section class="game-layout">
+        <section class="map-panel card">
+          <canvas id="isoCanvas" width="1280" height="760"></canvas>
+          <div class="map-tip">Drag to pan. Scroll to zoom. Tap flashing incidents or click department buildings.</div>
+        </section>
+
+        <aside class="side-panel">
+          <section class="card">
+            <h2>Onboarding</h2>
+            <p id="sessionGoal" class="muted">Complete first mission set to unlock streak bonuses.</p>
+            <ul id="onboardingList" class="mission-list"></ul>
+          </section>
+
+          <section class="card rapid-card">
+            <h2>Rapid Decisions</h2>
+            <p id="rapidTitle">No urgent brief right now.</p>
+            <p id="rapidBody" class="muted">Critical briefs appear here with short timers.</p>
+            <div class="mini-grid">
+              <div><span>Timer</span><strong id="rapidTimer">-</strong></div>
+              <div><span>Momentum</span><strong id="rapidMomentum">0</strong></div>
+            </div>
+            <div class="actions">
+              <button id="rapidBtnA" class="btn primary" disabled>Option A</button>
+              <button id="rapidBtnB" class="btn" disabled>Option B</button>
+            </div>
+          </section>
+
+          <section class="card selected-card">
+            <h2 id="selectedName">Select a Department</h2>
+            <p id="selectedDesc" class="muted">Pick a building in the city to inspect funding and upgrades.</p>
+            <div class="mini-grid">
+              <div><span>Level</span><strong id="selectedLevel">-</strong></div>
+              <div><span>Budget</span><strong id="selectedBudget">-</strong></div>
+              <div><span>Status</span><strong id="selectedStatus">-</strong></div>
+              <div><span>Upgrade Cost</span><strong id="selectedCost">-</strong></div>
+            </div>
+            <div class="slider-wrap">
+              <label for="budgetSlider">Department Budget Priority</label>
+              <input id="budgetSlider" type="range" min="20" max="120" step="1" value="60" />
+            </div>
+            <div class="actions">
+              <button id="applyBudgetBtn" class="btn">Apply Budget</button>
+              <button id="upgradeBtn" class="btn primary">Upgrade Building</button>
+            </div>
+          </section>
+
+          <section class="card">
+            <h3>City Pulse</h3>
+            <div id="kpiGrid" class="kpi-grid"></div>
+          </section>
+
+          <section class="card">
+            <h3>Missions</h3>
+            <p id="tierGoal" class="muted"></p>
+            <ul id="missionList" class="mission-list"></ul>
+          </section>
+        </aside>
+      </section>
+
+      <section class="news-strip card">
+        <div class="ticker-wrap"><div id="tickerLine" class="ticker-line"></div></div>
+        <div id="eventRail" class="event-rail"></div>
+      </section>
+    </main>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none">
+  <ellipse cx="64" cy="98" rx="20" ry="8" fill="rgba(33,35,45,0.2)"/>
+  <circle cx="64" cy="70" r="22" fill="#d26464" opacity="0.25"/>
+  <circle cx="64" cy="70" r="15" fill="#d26464"/>
+  <text x="64" y="75" font-size="16" text-anchor="middle" fill="#fff" font-family="Verdana" font-weight="700">!</text>
+  </svg>

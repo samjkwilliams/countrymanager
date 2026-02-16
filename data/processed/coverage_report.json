@@ -1,0 +1,97 @@
+{
+  "domain_coverage": {
+    "ai_policy": {
+      "found": 1,
+      "total": 1,
+      "coverage_pct": 100.0
+    },
+    "budget_structure": {
+      "found": 4,
+      "total": 4,
+      "coverage_pct": 100.0
+    },
+    "climate": {
+      "found": 1,
+      "total": 1,
+      "coverage_pct": 100.0
+    },
+    "defense": {
+      "found": 2,
+      "total": 2,
+      "coverage_pct": 100.0
+    },
+    "education": {
+      "found": 4,
+      "total": 4,
+      "coverage_pct": 100.0
+    },
+    "environment": {
+      "found": 4,
+      "total": 4,
+      "coverage_pct": 100.0
+    },
+    "external": {
+      "found": 3,
+      "total": 3,
+      "coverage_pct": 100.0
+    },
+    "fiscal": {
+      "found": 7,
+      "total": 7,
+      "coverage_pct": 100.0
+    },
+    "governance": {
+      "found": 4,
+      "total": 4,
+      "coverage_pct": 100.0
+    },
+    "health": {
+      "found": 4,
+      "total": 4,
+      "coverage_pct": 100.0
+    },
+    "infrastructure": {
+      "found": 3,
+      "total": 3,
+      "coverage_pct": 100.0
+    },
+    "interference": {
+      "found": 2,
+      "total": 2,
+      "coverage_pct": 100.0
+    },
+    "macro": {
+      "found": 4,
+      "total": 4,
+      "coverage_pct": 100.0
+    },
+    "political_finance": {
+      "found": 3,
+      "total": 3,
+      "coverage_pct": 100.0
+    },
+    "rights": {
+      "found": 2,
+      "total": 2,
+      "coverage_pct": 100.0
+    },
+    "safety": {
+      "found": 3,
+      "total": 3,
+      "coverage_pct": 100.0
+    },
+    "surveillance": {
+      "found": 1,
+      "total": 1,
+      "coverage_pct": 100.0
+    },
+    "welfare": {
+      "found": 3,
+      "total": 3,
+      "coverage_pct": 100.0
+    }
+  },
+  "missing_indicators": [],
+  "found_indicator_count": 55,
+  "catalog_indicator_count": 55
+}
