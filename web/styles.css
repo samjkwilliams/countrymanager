@@ -89,6 +89,35 @@ body::before {
   pointer-events: none;
 }
 
+.decision-flash {
+  position: fixed;
+  left: 50%;
+  top: 84px;
+  transform: translateX(-50%);
+  z-index: 27;
+  display: grid;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.decision-toast {
+  border: 1px solid rgba(255, 124, 36, 0.5);
+  border-radius: 12px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  background: rgba(7, 22, 42, 0.96);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.34), 0 0 18px rgba(255, 124, 36, 0.2);
+}
+
+.decision-toast.good {
+  color: #6ef5b6;
+}
+
+.decision-toast.bad {
+  color: #ff8a84;
+}
+
 .ap-toast {
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -730,6 +759,18 @@ h1 {
   margin-top: 12px;
   display: flex;
   justify-content: flex-end;
+}
+
+.paper-ledger {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(100, 84, 66, 0.22);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.paper-ledger li {
+  margin-bottom: 8px;
 }
 
 .people-grid {

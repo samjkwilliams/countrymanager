@@ -2,16 +2,17 @@ const TICK_MS = 1000;
 const DAYS_PER_YEAR = 365;
 const TILE_W = 64;
 const TILE_H = 32;
-const MAP_W = 24;
-const MAP_H = 24;
+const MAP_W = 40;
+const MAP_H = 40;
 const ASSET_BASE = "./assets/cozy-pack";
 const POLICY_PACE = 0.25;
 const AP_REGEN_DAYS = 4;
-const RAPID_INTERVAL_DAYS = 80;
-const RAPID_WINDOW_DAYS = 20;
+const RAPID_INTERVAL_DAYS = 24;
+const RAPID_WINDOW_DAYS = 28;
 const MONTHLY_REPORT_DAYS = 120;
 const MAJOR_EVENT_INTERVAL_DAYS = 18;
 const MAX_ACTIVE_MAJOR_EVENTS = 2;
+const CITY_CORE_TILE = [12, 12];
 
 const TIER_CONFIG = [
   {
@@ -600,6 +601,16 @@ const MONTHLY_CHARACTERS = {
   ],
 };
 
+const IDENTITY_AXIS_KEYS = ["careAusterity", "libertyControl", "publicDonor", "truthSpin"];
+
+function emptyDemImpact() {
+  return { poverty: 0, working: 0, middle: 0, business: 0, elite: 0 };
+}
+
+function emptyAxisImpact() {
+  return { careAusterity: 0, libertyControl: 0, publicDonor: 0, truthSpin: 0 };
+}
+
 const state = {
   day: 0,
   year: 2026,
@@ -621,7 +632,7 @@ const state = {
   },
   delayed: [],
   incidents: [],
-  rapid: { active: null, momentum: 0, nextAtDay: 20 },
+  rapid: { active: null, momentum: 0, nextAtDay: 6 },
   resources: { actionPoints: 3, maxActionPoints: 4, streak: 0, bestStreak: 0 },
   onboarding: {
     selectedBuilding: false,
@@ -650,6 +661,10 @@ const state = {
       majorMissed: 0,
     },
   },
+  decisionLog: [],
+  ideology: { careAusterity: 0, libertyControl: 0, publicDonor: 0, truthSpin: 0, trust: 62 },
+  truth: { wins: 0, misses: 0, total: 0, score: 50 },
+  content: { scenarioLibrary: [], truthChecks: [] },
   majorEvents: [],
   major: {
     nextAtDay: 14,
@@ -657,6 +672,11 @@ const state = {
   },
   people: DEMOGRAPHICS.map((d) => ({ id: d.id, label: d.label, happiness: 65, trend: 0, note: "Watching policy signals." })),
   gameOver: { active: false, reason: "", facts: [] },
+  growth: {
+    radius: 10.5,
+    maxRadius: 18.5,
+    lastExpandDay: 0,
+  },
   districts: [
     { id: "NW", label: "Northwest", stress: 0 },
     { id: "NE", label: "Northeast", stress: 0 },
@@ -675,6 +695,7 @@ const state = {
       { x: 940, y: 72, speed: 14, size: 58 },
     ],
     lastFrameTs: performance.now(),
+    haze: 0,
   },
   camera: { x: 0, y: -80, zoom: 1, dragging: false, lastX: 0, lastY: 0, vx: 0, vy: 0, targetX: null, targetY: null, viewW: 1280, viewH: 760 },
   ui: {
@@ -684,6 +705,7 @@ const state = {
     placementBuildingId: null,
     ripples: [],
     apToasts: [],
+    decisionToasts: [],
     pausedByModal: false,
     placementRecommendations: [],
     budgetDraftByBuilding: {},
@@ -719,10 +741,12 @@ const els = {
   upgradeBtn: document.getElementById("upgradeBtn"),
   rapidTitle: document.getElementById("rapidTitle"),
   rapidBody: document.getElementById("rapidBody"),
+  rapidEvidence: document.getElementById("rapidEvidence"),
   rapidTimer: document.getElementById("rapidTimer"),
   rapidMomentum: document.getElementById("rapidMomentum"),
   rapidBtnA: document.getElementById("rapidBtnA"),
   rapidBtnB: document.getElementById("rapidBtnB"),
+  rapidBtnC: document.getElementById("rapidBtnC"),
   rapidCard: document.querySelector(".rapid-card"),
   kpiGrid: document.getElementById("kpiGrid"),
   tierGoal: document.getElementById("tierGoal"),
@@ -745,6 +769,7 @@ const els = {
   monthlyLead: document.getElementById("monthlyLead"),
   monthlySummaryList: document.getElementById("monthlySummaryList"),
   monthlyQuotes: document.getElementById("monthlyQuotes"),
+  monthlyDecisionList: document.getElementById("monthlyDecisionList"),
   monthlyCloseBtn: document.getElementById("monthlyCloseBtn"),
   gameOverModal: document.getElementById("gameOverModal"),
   gameOverHeadline: document.getElementById("gameOverHeadline"),
@@ -754,6 +779,7 @@ const els = {
   incidentInbox: document.getElementById("incidentInbox"),
   tickerLine: document.getElementById("tickerLine"),
   eventRail: document.getElementById("eventRail"),
+  decisionFlash: document.getElementById("decisionFlash"),
   majorEventCard: document.getElementById("majorEventCard"),
   majorEventTitle: document.getElementById("majorEventTitle"),
   majorEventBody: document.getElementById("majorEventBody"),
@@ -770,6 +796,16 @@ function rand(min, max) { return min + Math.random() * (max - min); }
 function tileDist(a, b) { return Math.hypot(a[0] - b[0], a[1] - b[1]); }
 function formatMoneyMillions(v) { return `$${Math.round(v)}m`; }
 function setText(el, value) { if (el) el.textContent = value; }
+function shorten(text, max = 96) {
+  const s = String(text || "").trim();
+  if (s.length <= max) return s;
+  return `${s.slice(0, max - 1).trimEnd()}...`;
+}
+function prettifyTag(tag) {
+  return String(tag || "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (m) => m.toUpperCase());
+}
 function setTabAlert(el, active = false, critical = false) {
   if (!el) return;
   el.hidden = !active;
@@ -778,8 +814,18 @@ function setTabAlert(el, active = false, critical = false) {
 function buildingTile(b) {
   return b?.tile || b?.homeTile || [12, 12];
 }
+function cityRadius() {
+  return state.growth?.radius || 10;
+}
+function isDevelopedTile(x, y, margin = 0) {
+  const dx = x - CITY_CORE_TILE[0];
+  const dy = y - CITY_CORE_TILE[1];
+  const dist = Math.hypot(dx, dy);
+  return dist <= cityRadius() + margin;
+}
 function isTileBuildable(x, y) {
   if (x < 1 || y < 1 || x > MAP_W - 2 || y > MAP_H - 2) return false;
+  if (!isDevelopedTile(x, y, -0.4)) return false;
   if (x === 10 || y === 10) return false;
   return !state.buildings.some((b) => b.placed && b.tile && b.tile[0] === x && b.tile[1] === y);
 }
@@ -807,6 +853,10 @@ function pulseActionPill() {
 function addApToast(text, kind = "") {
   state.ui.apToasts.unshift({ id: `ap_${Date.now()}_${Math.random()}`, text, kind, ttl: 1.8 });
   state.ui.apToasts = state.ui.apToasts.slice(0, 4);
+}
+function addDecisionToast(text, kind = "good") {
+  state.ui.decisionToasts.unshift({ id: `dc_${Date.now()}_${Math.random()}`, text, kind, ttl: 3.2 });
+  state.ui.decisionToasts = state.ui.decisionToasts.slice(0, 3);
 }
 
 const BUILDING_STATE_META = {
@@ -1142,6 +1192,48 @@ function applyDepartmentBudget() {
   markOnboarding("budgetApplied");
   recordAction(b.id);
   addTicker(`${b.name} budget nudged to ${b.budget} ($m/day).`);
+  const moodBoost = delta > 0 ? 3 : -3;
+  const dem = emptyDemImpact();
+  if (b.id === "welfare" || b.id === "health") {
+    dem.poverty += moodBoost;
+    dem.working += round(moodBoost * 0.8);
+  } else if (b.id === "education") {
+    dem.working += moodBoost;
+    dem.middle += round(moodBoost * 0.8);
+  } else if (b.id === "transport") {
+    dem.working += round(moodBoost * 0.8);
+    dem.business += round(moodBoost * 0.9);
+  } else if (b.id === "security") {
+    dem.middle += round(moodBoost * 0.7);
+    dem.business += round(moodBoost * 0.5);
+  } else if (b.id === "integrity") {
+    dem.poverty += round(moodBoost * 0.4);
+    dem.middle += round(moodBoost * 0.6);
+  } else if (b.id === "treasury") {
+    dem.business += round(moodBoost * -0.4);
+    dem.elite += round(moodBoost * -0.6);
+  } else if (b.id === "climate") {
+    dem.poverty += round(moodBoost * 0.5);
+    dem.working += round(moodBoost * 0.5);
+    dem.middle += round(moodBoost * 0.4);
+  }
+  logDecisionImpact({
+    title: `${b.name} Budget Adjustment`,
+    category: b.id,
+    choice: delta > 0 ? "Increase Funding" : "Reduce Funding",
+    demNow: dem,
+    trustDelta: delta > 0 ? 0.2 : -0.2,
+    axisDrift: {
+      careAusterity: delta > 0 ? 0.8 : -0.8,
+      libertyControl: 0,
+      publicDonor: b.id === "treasury" ? -0.5 : 0.3,
+      truthSpin: 0.1,
+    },
+    treasuryDeltaNow: 0,
+    kpiNow: { [b.kpi]: round((delta > 0 ? 0.4 : -0.4)) },
+    confidence: "medium",
+    explain: `${delta > 0 ? "Expanded" : "Tightened"} ${b.name} funding signal; demographic trust moved accordingly.`,
+  });
 }
 
 function applyBudgetAvailabilityState() {
@@ -1221,6 +1313,25 @@ function upgradeSelected() {
   recordAction(b.id);
   addTicker(`${b.name} upgraded to level ${b.level}.`);
   addRailEvent("Upgrade Complete", `${b.name} construction started.`, false);
+  logDecisionImpact({
+    title: `${b.name} Upgrade`,
+    category: b.id,
+    choice: `Upgrade to L${b.level}`,
+    demNow: {
+      poverty: b.id === "health" || b.id === "welfare" ? 3 : 0,
+      working: b.id === "transport" || b.id === "education" ? 3 : 1,
+      middle: 2,
+      business: b.id === "transport" || b.id === "treasury" ? 3 : 1,
+      elite: b.id === "treasury" ? 2 : 1,
+    },
+    trustDelta: 0.6,
+    axisDrift: { careAusterity: 1.2, libertyControl: 0, publicDonor: 0.4, truthSpin: 0.2 },
+    treasuryDeltaNow: -cost,
+    kpiNow: { [b.kpi]: 1.2, stability: 0.3 },
+    riskFlags: cost > 26 ? ["capital_spend_pressure"] : [],
+    confidence: "high",
+    explain: `Capital upgrade improves long-run service delivery and visible state capacity.`,
+  });
   scheduleDelayed(5, `${b.name} expansion came online and boosted outcomes.`, () => {
     state.kpi[b.kpi] = clamp(state.kpi[b.kpi] + 1.7 + b.level * 0.22, 0, 100);
   });
@@ -1229,6 +1340,35 @@ function upgradeSelected() {
 function triggerRapidDecision() {
   if (state.rapid.active) return;
   if (state.day < state.rapid.nextAtDay) return;
+  const truthCards = state.content.truthChecks || [];
+  const useScenario = truthCards.length > 0 && Math.random() < 0.95;
+  if (useScenario) {
+    const scenario = truthCards[Math.floor(Math.random() * truthCards.length)];
+    const idNum = Math.floor(state.day / RAPID_INTERVAL_DAYS) + 1;
+    const incidentCode = `INCIDENT-${String(idNum).padStart(3, "0")}`;
+    const opts = (scenario.options || []).slice(0, 3);
+    const withKeys = opts.map((o, idx) => ({ ...o, key: idx === 0 ? "a" : idx === 1 ? "b" : "c" }));
+    const fallbackDefault = withKeys.find((o) => o.id === "ask_proof")?.key || withKeys[0]?.key || "a";
+    const focus = findBuilding(majorEventAnchorBuildingId(scenario.category?.includes("_") ? scenario.category.split("_")[0] : scenario.category)) || findBuilding("treasury");
+    state.rapid.active = {
+      mode: "scenario",
+      incidentCode,
+      title: scenario.title,
+      speaker: scenario.speaker || "Advisory Desk",
+      claim: scenario.claim || "",
+      body: scenario.prompt,
+      clues: scenario.clues || null,
+      options: withKeys,
+      defaultChoice: fallbackDefault,
+      focusBuildingId: focus?.id || "treasury",
+      mapMarkerTile: focus ? buildingTile(focus) : [12, 12],
+      expiresDay: state.day + RAPID_WINDOW_DAYS,
+    };
+    state.rapid.nextAtDay = state.day + RAPID_INTERVAL_DAYS;
+    addTicker(`${incidentCode}: ${scenario.title}`);
+    addRailEvent(`🧠 ${incidentCode}`, "Truth Check live: read clues, then make the call.", true);
+    return;
+  }
   const pick = RAPID_DECISIONS[Math.floor(Math.random() * RAPID_DECISIONS.length)];
   const idNum = Math.floor(state.day / RAPID_INTERVAL_DAYS) + 1;
   const incidentCode = `INCIDENT-${String(idNum).padStart(3, "0")}`;
@@ -1252,7 +1392,33 @@ function triggerRapidDecision() {
 function resolveRapid(choice, timedOut = false) {
   const active = state.rapid.active;
   if (!active) return;
-  if (choice === "a") active.applyA(state);
+  if (active.mode === "scenario" && Array.isArray(active.options)) {
+    const picked = active.options.find((o) => o.key === choice) || active.options[0];
+    applyDemographicShiftMap(picked.dem_now || {});
+    applyKpiShiftMap(picked.kpi_now || {});
+    state.budget.treasury = round(state.budget.treasury + (picked.treasury_delta_now || 0));
+    const truthQuality = Number.isFinite(picked.truth_quality) ? picked.truth_quality : null;
+    if (truthQuality !== null) {
+      state.truth.total += 1;
+      if (truthQuality > 0) state.truth.wins += 1;
+      else if (truthQuality < 0) state.truth.misses += 1;
+      state.truth.score = clamp(round(50 + (state.truth.wins - state.truth.misses) * 3), 0, 100);
+    }
+    logDecisionImpact({
+      title: active.title,
+      category: "scenario",
+      choice: picked.label || "Scenario choice",
+      demNow: picked.dem_now || emptyDemImpact(),
+      trustDelta: picked.trust_delta || 0,
+      axisDrift: picked.axis_drift || emptyAxisImpact(),
+      treasuryDeltaNow: picked.treasury_delta_now || 0,
+      kpiNow: picked.kpi_now || {},
+      riskFlags: picked.risk_flags || [],
+      confidence: "medium",
+      explain: `Scenario judgment applied via ${picked.id || "policy"} response.`,
+      truthQuality,
+    });
+  } else if (choice === "a") active.applyA(state);
   else active.applyB(state);
 
   if (!timedOut) {
@@ -1270,6 +1436,34 @@ function resolveRapid(choice, timedOut = false) {
   const label = timedOut ? "🤖 Auto decision applied due to timeout." : "✅ Player rapid decision resolved.";
   addTicker(`${active.incidentCode}: ${active.title} - ${label}`);
   addRailEvent(timedOut ? "🤖 Rapid Auto-Resolved" : "✅ Rapid Player-Resolved", `${active.incidentCode}: ${active.title}`, timedOut);
+  if (!timedOut) {
+    const supportive = choice === "a";
+    const dem = emptyDemImpact();
+    dem.poverty += supportive ? 2 : -2;
+    dem.working += supportive ? 2 : -2;
+    dem.middle += supportive ? 1 : -1;
+    dem.business += supportive ? -1 : 1;
+    dem.elite += supportive ? -1 : 1;
+    const trustDelta = supportive ? 0.5 : -0.5;
+    logDecisionImpact({
+      title: active.title,
+      category: "rapid",
+      choice: supportive ? active.a : active.b,
+      demNow: dem,
+      trustDelta,
+      axisDrift: {
+        careAusterity: supportive ? 1 : -1,
+        libertyControl: active.title.includes("Corruption") ? -0.2 : 0,
+        publicDonor: supportive ? 0.2 : -0.2,
+        truthSpin: active.title.includes("Corruption") && supportive ? 0.6 : -0.2,
+      },
+      treasuryDeltaNow: 0,
+      kpiNow: { stability: supportive ? 0.6 : -0.6 },
+      riskFlags: supportive ? [] : ["short_term_saving_long_term_risk"],
+      confidence: "medium",
+      explain: supportive ? "You absorbed short-term cost for resilience." : "You protected short-run spend but raised deferred risk.",
+    });
+  }
   state.rapid.active = null;
 }
 
@@ -1298,6 +1492,82 @@ function applyKpiShiftMap(map, scale = 1) {
   for (const [k, v] of Object.entries(map)) {
     if (!Object.hasOwn(state.kpi, k)) continue;
     state.kpi[k] = clamp(state.kpi[k] + v * scale, 0, 100);
+  }
+}
+
+function axisDriftTag(axis) {
+  const top = Object.entries(axis || {}).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))[0];
+  if (!top || Math.abs(top[1]) < 0.2) return "Drift: Balanced";
+  const labelMap = {
+    careAusterity: top[1] > 0 ? "Care+" : "Austerity+",
+    libertyControl: top[1] > 0 ? "Liberty+" : "Control+",
+    publicDonor: top[1] > 0 ? "Public+" : "Donor+",
+    truthSpin: top[1] > 0 ? "Truth+" : "Spin+",
+  };
+  return `Drift: ${labelMap[top[0]] || "Balanced"}`;
+}
+
+function computeDecisionPriority(decision) {
+  const sumDem = Object.values(decision.demNow || {}).reduce((a, v) => a + Math.abs(v), 0);
+  const sumKpi = Object.values(decision.kpiNow || {}).reduce((a, v) => a + Math.abs(v), 0);
+  const riskWeight = (decision.riskFlags || []).length * 1.4;
+  return round(0.35 * sumDem + 0.25 * Math.abs(decision.trustDelta || 0) + 0.2 * sumKpi + 0.2 * riskWeight);
+}
+
+function logDecisionImpact({
+  title,
+  category = "governance",
+  choice = "Applied",
+  demNow = emptyDemImpact(),
+  kpiNow = {},
+  treasuryDeltaNow = 0,
+  trustDelta = 0,
+  axisDrift = emptyAxisImpact(),
+  riskFlags = [],
+  confidence = "medium",
+  explain = "",
+  truthQuality = null,
+}) {
+  const persistence = category === "integrity" || category === "education" || category === "climate" ? 0.62 : 0.48;
+  const dem30 = Object.fromEntries(Object.entries(demNow).map(([k, v]) => [k, round(v * persistence)]));
+  for (const key of IDENTITY_AXIS_KEYS) {
+    state.ideology[key] = clamp(state.ideology[key] + (axisDrift[key] || 0), -100, 100);
+  }
+  state.ideology.trust = clamp(state.ideology.trust + trustDelta, 0, 100);
+  const decision = {
+    id: `dec_${state.day}_${Math.floor(Math.random() * 10000)}`,
+    day: state.day,
+    title,
+    category,
+    choice,
+    demNow,
+    dem30,
+    trustDelta: round(trustDelta),
+    axisDrift,
+    treasuryDeltaNow: round(treasuryDeltaNow),
+    kpiNow,
+    riskFlags,
+    confidence,
+    explain: explain || "Decision effects are unfolding across demographics.",
+    truthQuality,
+  };
+  decision.priority = computeDecisionPriority(decision);
+  state.decisionLog.push(decision);
+  state.decisionLog = state.decisionLog.slice(-240);
+  const demSummary = [
+    ["Pov", demNow.poverty || 0],
+    ["Work", demNow.working || 0],
+    ["Mid", demNow.middle || 0],
+    ["Biz", demNow.business || 0],
+    ["Elite", demNow.elite || 0],
+  ]
+    .filter(([, v]) => Math.abs(v) > 0)
+    .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+    .slice(0, 3)
+    .map(([k, v]) => `${k} ${v > 0 ? "+" : ""}${round(v)}`);
+  if (demSummary.length) {
+    const score = Object.values(demNow).reduce((a, v) => a + v, 0);
+    addDecisionToast(`${shorten(title, 26)} · ${demSummary.join("  ")}`, score >= 0 ? "good" : "bad");
   }
 }
 
@@ -1381,6 +1651,24 @@ function resolveMajorEvent(eventId) {
   recordAction(ev.domain || "treasury");
   addTicker(`Major response funded: ${ev.title}.`);
   addRailEvent("✅ Major Resolved", `${ev.title} funded (${formatMoneyMillions(costCash)}).`, true);
+  logDecisionImpact({
+    title: ev.title,
+    category: ev.domain || "major",
+    choice: ev.response?.label || "Fund Response",
+    demNow: ev.response?.dem || emptyDemImpact(),
+    trustDelta: 0.8,
+    axisDrift: {
+      careAusterity: 1.2,
+      libertyControl: ev.domain === "security" ? -0.4 : 0.2,
+      publicDonor: 0.6,
+      truthSpin: 0.3,
+    },
+    treasuryDeltaNow: -costCash,
+    kpiNow: ev.response?.kpi || {},
+    riskFlags: ev.domain === "security" ? ["rights_tradeoff_risk"] : [],
+    confidence: "high",
+    explain: ev.hint || "Intervention reduced compounding demographic damage.",
+  });
   state.majorEvents = state.majorEvents.filter((x) => x.id !== ev.id);
   if (state.ui.focusedMajorEventId === ev.id) state.ui.focusedMajorEventId = null;
 }
@@ -1677,14 +1965,27 @@ function initResponders() {
 }
 
 function initDecorProps() {
-  const kinds = ["prop_tree_small", "prop_tree_tall", "prop_lamp", "prop_market", "prop_banner", "prop_fountain"];
+  const kinds = [
+    "prop_tree_small",
+    "prop_tree_tall",
+    "prop_lamp",
+    "prop_market",
+    "prop_banner",
+    "prop_fountain",
+    "prop_house_small",
+    "prop_house_mid",
+    "prop_apartment",
+    "prop_shop_corner",
+    "prop_playground",
+  ];
   const out = [];
   for (let x = 2; x < MAP_W - 2; x += 1) {
     for (let y = 2; y < MAP_H - 2; y += 1) {
+      if (!isDevelopedTile(x, y, 1.2)) continue;
       if (x === 10 || y === 10) continue;
       if ((x + y) % 6 !== 0) continue;
       const hash = (x * 31 + y * 17) % 100;
-      if (hash > 34) continue;
+      if (hash > 42) continue;
       const kind = kinds[(x * 13 + y * 7) % kinds.length];
       out.push({ tile: [x + ((hash % 3) - 1) * 0.12, y + ((hash % 4) - 2) * 0.1], kind });
     }
@@ -1937,8 +2238,23 @@ function checkGameOver() {
   if (els.pauseBtn) els.pauseBtn.textContent = "Resume";
 }
 
+function buildMonthlyDecisionLedger(fromDay, toDay) {
+  const entries = state.decisionLog
+    .filter((d) => d.day >= fromDay && d.day <= toDay)
+    .map((d) => ({ ...d, priority: computeDecisionPriority(d) }))
+    .sort((a, b) => b.priority - a.priority)
+    .slice(0, 8);
+  return entries;
+}
+
 function runMonthlySummary() {
   if (state.day === 0 || state.day % MONTHLY_REPORT_DAYS !== 0 || state.monthly.lastSummaryDay === state.day) return;
+  const fromDay = Math.max(1, state.day - MONTHLY_REPORT_DAYS + 1);
+  const toDay = state.day;
+  const decisionLedger = buildMonthlyDecisionLedger(fromDay, toDay);
+  const monthTruth = state.decisionLog.filter((d) => d.day >= fromDay && d.day <= toDay && Number.isFinite(d.truthQuality));
+  const monthTruthWins = monthTruth.filter((d) => d.truthQuality > 0).length;
+  const monthTruthTotal = monthTruth.length;
   state.monthly.lastSummaryDay = state.day;
   const top = Object.entries(state.kpi).sort((a, b) => b[1] - a[1])[0];
   const low = Object.entries(state.kpi).sort((a, b) => a[1] - b[1])[0];
@@ -1981,6 +2297,8 @@ function runMonthlySummary() {
       `🤖 Auto-resolved outcomes: ${autoActions}.`,
       `💰 Treasury now ${formatMoneyMillions(state.budget.treasury)} · Debt ${round(state.budget.debt)}%.`,
       `👥 Mean demographic mood: ${round(fair)}%.`,
+      `🧭 Identity drift: ${axisDriftTag(state.ideology)} · Trust ${round(state.ideology.trust)}%.`,
+      `🕵️ Truth rating: ${round(state.truth.score)}% (${monthTruthWins}/${monthTruthTotal} solid reads this month).`,
     ],
     quotes: [
       `(${centre.label} · ${centreSource}) “${centreLine}”`,
@@ -1991,6 +2309,8 @@ function runMonthlySummary() {
       `“${adviser2.line}” — ${adviser2.name}, ${adviser2.dept}`,
       `“${opponent.jab}” — ${opponent.name}, ${opponent.party} (opposition framing only)`,
     ],
+    decisions: decisionLedger,
+    ideology: { ...state.ideology },
   };
 
   addRailEvent(
@@ -2021,6 +2341,19 @@ function scaleCityActivity(avgLevel) {
 
   if (state.visual.vehicles.length < targetVehicles) addTrafficVehicles(Math.min(4, targetVehicles - state.visual.vehicles.length));
   else if (state.visual.vehicles.length > targetVehicles) state.visual.vehicles.length = targetVehicles;
+}
+
+function maybeGrowCity(avgLevel) {
+  if (state.day - state.growth.lastExpandDay < 14) return;
+  if (state.growth.radius >= state.growth.maxRadius) return;
+  const prosperity = computeProsperityScore();
+  const canGrow = prosperity > 66 && state.kpi.climate > 52 && state.budget.treasury > 70;
+  if (!canGrow) return;
+  state.growth.radius = clamp(state.growth.radius + 0.55 + avgLevel * 0.02, 8, state.growth.maxRadius);
+  state.growth.lastExpandDay = state.day;
+  initDecorProps();
+  addTicker("City footprint expanded: new neighborhoods are developing.");
+  addRailEvent("🌆 Urban Growth", `Development ring expanded to ${round(state.growth.radius)} tiles.`, true);
 }
 
 function applySimTick() {
@@ -2072,6 +2405,7 @@ function applySimTick() {
   updateGoalDaily();
   updatePeopleMood();
   runMonthlySummary();
+  maybeGrowCity(avgLevel);
   if (state.day % 10 === 0) scaleCityActivity(avgLevel);
 
   state.kpi.stability = clamp(
@@ -2190,6 +2524,31 @@ function drawClouds() {
   }
 }
 
+function drawAtmosphere() {
+  const hour = state.visual.hour;
+  const nightFactor = hour < 6 || hour > 19 ? 1 : 0;
+  const twilight = (hour >= 17 && hour <= 19) || (hour >= 5 && hour <= 7) ? 1 : 0;
+  const smog = clamp((65 - state.kpi.climate) / 28, 0, 1);
+  state.visual.haze = smog;
+
+  if (nightFactor) {
+    ctx.fillStyle = "rgba(8, 12, 24, 0.36)";
+    ctx.fillRect(0, 0, state.camera.viewW, state.camera.viewH);
+  } else if (twilight) {
+    ctx.fillStyle = "rgba(255, 132, 56, 0.12)";
+    ctx.fillRect(0, 0, state.camera.viewW, state.camera.viewH);
+  }
+
+  if (smog > 0.05) {
+    const alpha = 0.14 + smog * 0.22;
+    ctx.fillStyle = `rgba(126, 104, 86, ${alpha})`;
+    ctx.fillRect(0, 0, state.camera.viewW, state.camera.viewH);
+  } else if (state.kpi.climate > 74) {
+    ctx.fillStyle = "rgba(111, 193, 245, 0.06)";
+    ctx.fillRect(0, 0, state.camera.viewW, state.camera.viewH);
+  }
+}
+
 function drawTraffic() {
   for (const v of state.visual.vehicles) {
     const tileX = v.lane === "x" ? v.t : 10;
@@ -2289,10 +2648,19 @@ function drawProsperityDecor(prosperity) {
 
   for (let i = 0; i < activeCount; i += 1) {
     const d = sorted[i];
+    if (!isDevelopedTile(d.tile[0], d.tile[1], 1.2)) continue;
     const p = isoToScreen(d.tile[0], d.tile[1]);
     const img = state.assets.actors[d.kind];
     if (state.assets.loaded && img) {
-      const size = d.kind === "prop_tree_tall" ? [20, 28] : d.kind === "prop_fountain" ? [24, 18] : [18, 16];
+      const size =
+        d.kind === "prop_tree_tall" ? [20, 28]
+        : d.kind === "prop_fountain" ? [24, 18]
+        : d.kind === "prop_apartment" ? [24, 28]
+        : d.kind === "prop_house_mid" ? [22, 20]
+        : d.kind === "prop_house_small" ? [18, 16]
+        : d.kind === "prop_shop_corner" ? [22, 18]
+        : d.kind === "prop_playground" ? [24, 18]
+        : [18, 16];
       drawSpriteCentered(img, p.x, p.y - 8 * scale, size[0] * scale, size[1] * scale);
       if (night && d.kind === "prop_lamp") {
         const glow = state.assets.fx.prosperity_glow;
@@ -2406,6 +2774,7 @@ function drawIncidents() {
 }
 
 function tileSpriteFor(x, y) {
+  if (!isDevelopedTile(x, y, 1.6)) return "water";
   if (x === 10 && y === 10) return "plaza";
   if (x === 10 || y === 10) {
     if ((x + y) % 7 === 0) return "road_turn";
@@ -2429,12 +2798,19 @@ function drawMap() {
       const p = isoToScreen(x, y);
       const tileKey = tileSpriteFor(x, y);
       const tileSprite = state.assets.tiles[tileKey];
+      const developed = isDevelopedTile(x, y, 0.4);
+      const frontier = !developed && isDevelopedTile(x, y, 1.2);
       if (state.assets.loaded && tileSprite) {
+        ctx.save();
+        if (!developed) ctx.globalAlpha = frontier ? 0.42 : 0.22;
         drawSpriteCentered(tileSprite, p.x, p.y, TILE_W * 1.1 * state.camera.zoom, TILE_H * 1.08 * state.camera.zoom);
+        ctx.restore();
       } else {
         const alt = (x + y) % 2 === 0;
-        drawDiamond(p.x, p.y, TILE_W * state.camera.zoom, TILE_H * state.camera.zoom, alt ? "#9fd0b0" : "#93c5a8", "#6ea08a");
-        if ((x === 10 || y === 10) && (x + y) % 3 !== 0) {
+        const fill = !developed ? (frontier ? "#4f6881" : "#374a5c") : (alt ? "#9fd0b0" : "#93c5a8");
+        const stroke = !developed ? "#304051" : "#6ea08a";
+        drawDiamond(p.x, p.y, TILE_W * state.camera.zoom, TILE_H * state.camera.zoom, fill, stroke);
+        if (developed && (x === 10 || y === 10) && (x + y) % 3 !== 0) {
           drawDiamond(p.x, p.y - 1, TILE_W * 0.9 * state.camera.zoom, TILE_H * 0.7 * state.camera.zoom, "#b9b3a3", "#9b9688");
         }
       }
@@ -2540,6 +2916,7 @@ function drawMap() {
   drawIncidents();
   drawResponders();
   drawRipples();
+  drawAtmosphere();
 }
 
 function pickBuildingAt(sx, sy) {
@@ -2595,35 +2972,116 @@ function emergencyTapIncident(inc) {
   recordAction(inc.type.id === "corruption" ? "integrity" : inc.type.id === "flood" ? "climate" : inc.type.id === "crime" ? "security" : inc.type.id === "medical" ? "health" : "transport");
   addTicker(`Emergency dispatch funded for ${inc.code || "INCIDENT"} ${inc.type.title}.`);
   addRailEvent("⚡ Emergency Funded", `${inc.type.title} fast-tracked.`, true);
+  logDecisionImpact({
+    title: inc.type.title,
+    category: inc.type.id,
+    choice: "Emergency Dispatch",
+    demNow: {
+      poverty: inc.type.id === "medical" || inc.type.id === "flood" ? 3 : 1,
+      working: 2,
+      middle: 2,
+      business: inc.type.id === "fire" || inc.type.id === "crime" ? 2 : 1,
+      elite: 1,
+    },
+    trustDelta: 0.5,
+    axisDrift: { careAusterity: 0.8, libertyControl: inc.type.id === "crime" ? -0.4 : 0.1, publicDonor: 0.3, truthSpin: 0.2 },
+    treasuryDeltaNow: -cost,
+    kpiNow: { [inc.type.kpi]: 0.7, stability: 0.3 },
+    confidence: "medium",
+    explain: "Fast funding prevented escalation and signaled active governance.",
+  });
 }
 
 function renderRapidCard() {
   const a = state.rapid.active;
   els.rapidMomentum.textContent = String(state.rapid.momentum);
   if (!a) {
-    els.rapidTitle.textContent = "No urgent brief right now.";
-    const nextIn = Math.max(0, state.rapid.nextAtDay - state.day);
-    els.rapidBody.textContent = `Critical INCIDENT briefs appear roughly every ${RAPID_INTERVAL_DAYS} days. Next in ~${nextIn} days.`;
+    const hasManual = state.incidents.some((i) => !i.resolved && !i.contained);
+    if (hasManual) {
+      els.rapidTitle.textContent = "No timed civic brief right now.";
+      const nextIn = Math.max(0, state.rapid.nextAtDay - state.day);
+      els.rapidBody.textContent = `Manual incidents are still active on map. Next major brief in ~${nextIn} days.`;
+    } else {
+      els.rapidTitle.textContent = "All clear.";
+      const nextIn = Math.max(0, state.rapid.nextAtDay - state.day);
+      els.rapidBody.textContent = `No manual actions required right now. Next civic brief in ~${nextIn} days.`;
+    }
+    if (els.rapidEvidence) els.rapidEvidence.textContent = "";
     els.rapidTimer.textContent = "-";
     els.rapidBtnA.disabled = true;
     els.rapidBtnB.disabled = true;
+    if (els.rapidBtnC) els.rapidBtnC.disabled = true;
     els.rapidBtnA.textContent = "Option A";
     els.rapidBtnB.textContent = "Option B";
+    if (els.rapidBtnC) els.rapidBtnC.textContent = "Option C";
     els.rapidBtnA.title = "";
     els.rapidBtnB.title = "";
+    if (els.rapidBtnC) els.rapidBtnC.title = "";
+    if (els.rapidBtnC) els.rapidBtnC.style.display = "none";
     els.rapidCard.classList.remove("urgent");
     return;
   }
 
-  els.rapidTitle.textContent = `${a.incidentCode}: ${a.title}`;
-  els.rapidBody.textContent = a.body;
+  els.rapidTitle.textContent = a.title || "Civic Brief";
+  if (a.mode === "scenario") {
+    const speaker = a.speaker ? `${a.speaker}: ` : "";
+    const claim = a.claim ? `"${shorten(a.claim, 96)}"` : "";
+    els.rapidBody.textContent = `${speaker}${claim}`.trim();
+  } else {
+    els.rapidBody.textContent = a.body;
+  }
+  if (els.rapidEvidence) {
+    if (a.mode === "scenario" && a.clues) {
+      const parts = [];
+      if (a.clues.data) parts.push(`Data: ${shorten(a.clues.data, 68)}`);
+      if (a.clues.street) parts.push(`Street: ${shorten(a.clues.street, 68)}`);
+      if (a.clues.motive) parts.push(`Motive: ${shorten(a.clues.motive, 68)}`);
+      els.rapidEvidence.textContent = parts.join("  |  ");
+    } else if (a.mode === "scenario" && Array.isArray(a.evidence) && a.evidence.length) {
+      els.rapidEvidence.textContent = `Clues: ${a.evidence.map((x) => prettifyTag(x)).slice(0, 3).join(" · ")}`;
+    } else {
+      els.rapidEvidence.textContent = "";
+    }
+  }
   els.rapidTimer.textContent = String(Math.max(0, a.expiresDay - state.day));
   els.rapidBtnA.disabled = false;
   els.rapidBtnB.disabled = false;
-  els.rapidBtnA.textContent = a.a;
-  els.rapidBtnB.textContent = a.b;
-  els.rapidBtnA.title = a.tipA;
-  els.rapidBtnB.title = a.tipB;
+  if (a.mode === "scenario" && Array.isArray(a.options)) {
+    const oA = a.options.find((o) => o.key === "a");
+    const oB = a.options.find((o) => o.key === "b");
+    const oC = a.options.find((o) => o.key === "c");
+    const labelShort = (t) => {
+      if (!t) return "";
+      if (/back it now/i.test(t)) return "BACK IT";
+      if (/call bluff/i.test(t)) return "CALL BLUFF";
+      if (/ask for proof/i.test(t)) return "ASK PROOF";
+      return shorten(t.toUpperCase(), 18);
+    };
+    els.rapidBtnA.textContent = labelShort(oA?.label) || "OPTION A";
+    els.rapidBtnB.textContent = labelShort(oB?.label) || "OPTION B";
+    els.rapidBtnA.title = oA?.outcome_blurb || "Make your call.";
+    els.rapidBtnB.title = oB?.outcome_blurb || "Make your call.";
+    if (els.rapidBtnC) {
+      if (oC) {
+        els.rapidBtnC.style.display = "";
+        els.rapidBtnC.disabled = false;
+        els.rapidBtnC.textContent = labelShort(oC.label) || "OPTION C";
+        els.rapidBtnC.title = oC.outcome_blurb || "Make your call.";
+      } else {
+        els.rapidBtnC.style.display = "none";
+        els.rapidBtnC.disabled = true;
+      }
+    }
+  } else {
+    els.rapidBtnA.textContent = a.a;
+    els.rapidBtnB.textContent = a.b;
+    els.rapidBtnA.title = a.tipA;
+    els.rapidBtnB.title = a.tipB;
+    if (els.rapidBtnC) {
+      els.rapidBtnC.style.display = "none";
+      els.rapidBtnC.disabled = true;
+    }
+  }
   els.rapidCard.classList.add("urgent");
 }
 
@@ -2863,37 +3321,25 @@ function renderTabAlerts() {
 
 function renderIncidentInbox() {
   if (!els.incidentInbox) return;
-  const major = state.majorEvents
-    .slice()
-    .sort((a, b) => (a.expiresDay - state.day) - (b.expiresDay - state.day))
-    .slice(0, 4);
   const manual = state.incidents
     .filter((i) => !i.resolved && !i.contained)
     .sort((a, b) => (b.severity - a.severity) || (b.daysOpen - a.daysOpen))
     .slice(0, 8);
-  const auto = state.incidents
-    .filter((i) => !i.resolved && i.contained)
-    .sort((a, b) => (b.severity - a.severity) || (b.daysOpen - a.daysOpen))
-    .slice(0, 4);
 
   const rapidLine = state.rapid.active
     ? `<li>🚨 ${state.rapid.active.incidentCode}: ${state.rapid.active.title} (${Math.max(0, state.rapid.active.expiresDay - state.day)}d)</li>`
     : "";
-  const majorLines = major
-    .map((ev) => `<li>🟠 MAJOR: ${ev.title} (${Math.max(0, ev.expiresDay - state.day)}d) · ${majorImpactLabel(ev)} · click map beacon</li>`)
-    .join("");
 
   const incidentLines = manual.map((i) => {
     return `<li>❗ ${i.code || "INCIDENT"}: ${i.type.title} · sev ${i.severity} · action needed</li>`;
   }).join("");
-  const autoLines = auto.map((i) => `<li>🤖 ${i.code || "INCIDENT"}: ${i.type.title} · responders handling</li>`).join("");
 
-  if (!rapidLine && !majorLines && manual.length === 0 && auto.length === 0) {
-    els.incidentInbox.innerHTML = "<li>No open incidents right now.</li>";
+  if (!rapidLine && manual.length === 0) {
+    els.incidentInbox.innerHTML = "<li>✅ All clear. No manual interventions required right now.</li>";
     return;
   }
 
-  els.incidentInbox.innerHTML = `${rapidLine}${majorLines}${incidentLines}${autoLines}`;
+  els.incidentInbox.innerHTML = `${rapidLine}${incidentLines}`;
 }
 
 function renderPeoplePanel() {
@@ -2930,6 +3376,24 @@ function applyInitiative(id) {
   }
   addTicker(`Initiative launched: ${ini.name}.`);
   addRailEvent("🧩 Initiative", `${ini.name} deployed for ${formatMoneyMillions(ini.costCash)}.`, true);
+  logDecisionImpact({
+    title: ini.name,
+    category: "initiative",
+    choice: "Launch",
+    demNow: shifts,
+    trustDelta: ini.id === "corp_tax_holiday" ? -1 : 0.8,
+    axisDrift: {
+      careAusterity: ini.id === "corp_tax_holiday" ? -1.2 : 1.2,
+      libertyControl: 0,
+      publicDonor: ini.id === "corp_tax_holiday" ? -1.4 : 0.6,
+      truthSpin: ini.id === "corp_tax_holiday" ? -0.4 : 0.3,
+    },
+    treasuryDeltaNow: -ini.costCash,
+    kpiNow: { stability: ini.id === "corp_tax_holiday" ? -0.4 : 0.6 },
+    riskFlags: ini.id === "corp_tax_holiday" ? ["inequality_backlash_risk"] : [],
+    confidence: "high",
+    explain: ini.desc,
+  });
 }
 
 function renderInitiatives() {
@@ -3000,10 +3464,23 @@ function cameraBounds() {
   const zoom = state.camera.zoom;
   const halfW = (TILE_W / 2) * zoom;
   const halfH = (TILE_H / 2) * zoom;
+  const r = cityRadius() + 1.5;
+  const minIX = clamp(Math.floor(CITY_CORE_TILE[0] - r), 0, MAP_W - 1);
+  const maxIX = clamp(Math.ceil(CITY_CORE_TILE[0] + r), 0, MAP_W - 1);
+  const minIY = clamp(Math.floor(CITY_CORE_TILE[1] - r), 0, MAP_H - 1);
+  const maxIY = clamp(Math.ceil(CITY_CORE_TILE[1] + r), 0, MAP_H - 1);
 
-  const minTermX = -(MAP_H - 1) * halfW;
-  const maxTermX = (MAP_W - 1) * halfW;
-  const spanY = (MAP_W + MAP_H - 2) * halfH;
+  const corners = [
+    { x: (minIX - minIY) * halfW, y: (minIX + minIY) * halfH },
+    { x: (minIX - maxIY) * halfW, y: (minIX + maxIY) * halfH },
+    { x: (maxIX - minIY) * halfW, y: (maxIX + minIY) * halfH },
+    { x: (maxIX - maxIY) * halfW, y: (maxIX + maxIY) * halfH },
+  ];
+  const minTermX = Math.min(...corners.map((c) => c.x));
+  const maxTermX = Math.max(...corners.map((c) => c.x));
+  const minTermY = Math.min(...corners.map((c) => c.y));
+  const maxTermY = Math.max(...corners.map((c) => c.y));
+  const spanY = maxTermY - minTermY;
 
   const padX = 110;
   const padTop = 70;
@@ -3020,8 +3497,8 @@ function cameraBounds() {
     maxX = c + 40;
   }
 
-  const centerYForBottom = (state.camera.viewH - padBottom) - spanY;
-  const centerYForTop = padTop;
+  const centerYForBottom = (state.camera.viewH - padBottom) - maxTermY;
+  const centerYForTop = padTop - minTermY;
   let minY = centerYForBottom - state.camera.viewH / 2;
   let maxY = centerYForTop - state.camera.viewH / 2;
 
@@ -3087,6 +3564,9 @@ function updateUiFx(dt) {
   state.ui.apToasts = state.ui.apToasts
     .map((t) => ({ ...t, ttl: t.ttl - dt }))
     .filter((t) => t.ttl > 0);
+  state.ui.decisionToasts = state.ui.decisionToasts
+    .map((t) => ({ ...t, ttl: t.ttl - dt }))
+    .filter((t) => t.ttl > 0);
 }
 
 function drawRipples() {
@@ -3107,6 +3587,11 @@ function renderApFeedback() {
   els.apFeedback.innerHTML = state.ui.apToasts
     .map((t) => `<div class="ap-toast ${t.kind}">${t.text}</div>`)
     .join("");
+  if (els.decisionFlash) {
+    els.decisionFlash.innerHTML = state.ui.decisionToasts
+      .map((t) => `<div class="decision-toast ${t.kind}">${t.text}</div>`)
+      .join("");
+  }
 }
 
 function renderMonthlyModal() {
@@ -3123,6 +3608,26 @@ function renderMonthlyModal() {
   }
   if (els.monthlyQuotes) {
     els.monthlyQuotes.innerHTML = (r.quotes || []).map((q) => `<li>${q}</li>`).join("");
+  }
+  if (els.monthlyDecisionList) {
+    const decisions = r.decisions || [];
+    if (decisions.length === 0) {
+      els.monthlyDecisionList.innerHTML = "<li>No major player decisions recorded this period.</li>";
+    } else {
+      els.monthlyDecisionList.innerHTML = decisions.map((d) => {
+        const demRow = [
+          `Pov ${d.demNow?.poverty || 0}`,
+          `Work ${d.demNow?.working || 0}`,
+          `Mid ${d.demNow?.middle || 0}`,
+          `Biz ${d.demNow?.business || 0}`,
+          `Elite ${d.demNow?.elite || 0}`,
+        ].join(" · ");
+        const trustTag = d.trustDelta >= 0 ? `Trust +${round(d.trustDelta)}` : `Trust ${round(d.trustDelta)}`;
+        const driftTag = axisDriftTag(d.axisDrift);
+        const riskTag = d.riskFlags && d.riskFlags.length ? ` · Risk: ${d.riskFlags[0]}` : "";
+        return `<li><strong>Day ${d.day}: ${d.title}</strong> (${d.choice})<br/>Impact: ${demRow}<br/>${trustTag} · ${driftTag}${riskTag}<br/><em>${d.explain}</em></li>`;
+      }).join("");
+    }
   }
 }
 
@@ -3145,6 +3650,28 @@ async function loadBaseline() {
     return await res.json();
   } catch {
     return null;
+  }
+}
+
+async function loadScenarioLibrary() {
+  try {
+    const res = await fetch("../data/calibrated/civic_scenarios_v1.json");
+    if (!res.ok) throw new Error("scenario fetch failed");
+    const data = await res.json();
+    return data?.scenarios || [];
+  } catch {
+    return [];
+  }
+}
+
+async function loadTruthChecks() {
+  try {
+    const res = await fetch("../data/calibrated/truth_checks_v1.json");
+    if (!res.ok) throw new Error("truth check fetch failed");
+    const data = await res.json();
+    return data?.truth_checks || [];
+  } catch {
+    return [];
   }
 }
 
@@ -3273,6 +3800,10 @@ function bindInput() {
 
   els.rapidBtnB.addEventListener("click", () => {
     resolveRapid("b", false);
+    renderUI();
+  });
+  els.rapidBtnC?.addEventListener("click", () => {
+    resolveRapid("c", false);
     renderUI();
   });
   els.majorEventRespondBtn?.addEventListener("click", () => {
@@ -3457,7 +3988,11 @@ function buildSparkline(values) {
 
 async function bootstrap() {
   const baseline = await loadBaseline();
+  const scenarios = await loadScenarioLibrary();
+  const truthChecks = await loadTruthChecks();
   initFromBaseline(baseline);
+  state.content.scenarioLibrary = scenarios;
+  state.content.truthChecks = truthChecks;
   try {
     await loadAssetPack();
     addTicker("Cozy art pack loaded.");
@@ -3475,6 +4010,8 @@ async function bootstrap() {
   renderUI();
 
   addTicker("Living city active: civilians commute, incidents spawn, responders dispatch in realtime.");
+  if (truthChecks.length > 0) addTicker(`Truth Check deck loaded: ${truthChecks.length} briefs ready.`);
+  else if (scenarios.length > 0) addTicker(`Scenario library loaded: ${scenarios.length} civic briefs ready.`);
   addRailEvent("Tip", "Tap flashing incidents on-map to fund emergency response.", true);
 
   setInterval(() => {

@@ -1,0 +1,2917 @@
+{
+  "version": "v1",
+  "generated_at": "2026-02-17T22:56:47.807Z",
+  "note": "Truth Check scenarios with plain-language options and clue-based reasoning.",
+  "truth_checks": [
+    {
+      "id": "TRUTH-001",
+      "title": "Mayor Selfie Highway",
+      "category": "identity",
+      "speaker": "Chief of Staff",
+      "claim": "Rename the ring road after you before the election.",
+      "prompt": "Your team says it will boost authority, critics say it screams ego.",
+      "clues": {
+        "data": "Approval bump after vanity branding usually fades in weeks.",
+        "street": "Commuters are angry about potholes, not names.",
+        "motive": "Ad agency linked to donors is pitching the rollout."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 3,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": -1,
+          "risk_flags": [],
+          "truth_quality": 1
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-002",
+      "title": "Luxury Flood Barrier",
+      "category": "climate",
+      "speaker": "Property Lobby",
+      "claim": "Build flood barriers only around premium waterfront towers first.",
+      "prompt": "They call it 'economic triage'.",
+      "clues": {
+        "data": "Low-income flood losses historically cause deeper long-run instability.",
+        "street": "Outer suburbs report repeat water damage.",
+        "motive": "Premium owners funded the latest campaign blitz."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 3,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": 0,
+            "working": 0,
+            "middle": 0,
+            "business": 0,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0,
+            "integrity": 0
+          },
+          "trust_delta": 0.2,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [],
+          "truth_quality": 0
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": -2,
+          "risk_flags": [
+            "short_delay"
+          ],
+          "truth_quality": 1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-003",
+      "title": "Midnight Curfew Push",
+      "category": "crime",
+      "speaker": "Police Minister",
+      "claim": "Impose a blanket youth curfew tonight.",
+      "prompt": "A viral clip has triggered panic across suburbs.",
+      "clues": {
+        "data": "Blanket curfews reduce trust unless targeted and evidence-based.",
+        "street": "Youth workers say trouble is concentrated in two blocks.",
+        "motive": "Security contractors gain from broad curfew enforcement."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 1,
+          "risk_flags": [],
+          "truth_quality": 1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": 1,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-004",
+      "title": "Hospital Ribbon Tour",
+      "category": "health",
+      "speaker": "Health Advisor",
+      "claim": "Open a flashy private wing and pause local clinics.",
+      "prompt": "Media loves visuals, but clinics cover most visits.",
+      "clues": {
+        "data": "Primary care keeps emergency queues lower than prestige expansions.",
+        "street": "Patients in outer districts face 3-week delays.",
+        "motive": "Construction donor wants naming rights."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 3,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": -1,
+          "risk_flags": [],
+          "truth_quality": 1
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-005",
+      "title": "Stadium Before Schools",
+      "category": "education",
+      "speaker": "Treasury Advisor",
+      "claim": "Fast-track a mega stadium and defer school repairs.",
+      "prompt": "You’re promised jobs and international buzz.",
+      "clues": {
+        "data": "School maintenance neglect drags education and productivity.",
+        "street": "Parents report unsafe classrooms.",
+        "motive": "Developer consortium offers co-branding deal."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 3,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": 0,
+            "working": 0,
+            "middle": 0,
+            "business": 0,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0,
+            "integrity": 0
+          },
+          "trust_delta": 0.2,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [],
+          "truth_quality": 0
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": -2,
+          "risk_flags": [
+            "short_delay"
+          ],
+          "truth_quality": 1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-006",
+      "title": "Fast Drone Patrol",
+      "category": "tech",
+      "speaker": "Tech Vendor",
+      "claim": "Deploy facial drones citywide this month.",
+      "prompt": "Vendor promises instant crime collapse.",
+      "clues": {
+        "data": "Broad surveillance without safeguards tends to spike backlash.",
+        "street": "Residents fear misidentification in dense neighborhoods.",
+        "motive": "Vendor contract includes auto-renew clause."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 1,
+          "risk_flags": [],
+          "truth_quality": 1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": 1,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-007",
+      "title": "Fuel Panic Tax Cut",
+      "category": "cost",
+      "speaker": "Business Coalition",
+      "claim": "Slash fuel tax instantly and delay transit upgrades.",
+      "prompt": "Talkback radio says this is the only real relief.",
+      "clues": {
+        "data": "Transit reliability gives longer relief than temporary fuel cuts.",
+        "street": "Workers ask for cheaper, more frequent buses.",
+        "motive": "Freight lobby wrote the proposed policy text."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 3,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": -1,
+          "risk_flags": [],
+          "truth_quality": 1
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-008",
+      "title": "Ghost Contract Cleanup",
+      "category": "corruption",
+      "speaker": "Integrity Chief",
+      "claim": "Quietly settle procurement leaks to 'avoid noise'.",
+      "prompt": "They claim public inquiry will hurt confidence.",
+      "clues": {
+        "data": "Transparent inquiries usually rebuild trust faster than hush deals.",
+        "street": "Whistleblowers are ready to testify publicly.",
+        "motive": "Three implicated firms donate across parties."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 3,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": 0,
+            "working": 0,
+            "middle": 0,
+            "business": 0,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0,
+            "integrity": 0
+          },
+          "trust_delta": 0.2,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [],
+          "truth_quality": 0
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": -2,
+          "risk_flags": [
+            "short_delay"
+          ],
+          "truth_quality": 1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-009",
+      "title": "Heatwave PR Parade",
+      "category": "climate",
+      "speaker": "Media Advisor",
+      "claim": "Run a unity parade during extreme heat alerts.",
+      "prompt": "They say morale matters more than caution.",
+      "clues": {
+        "data": "Cooling centers save more lives than symbolic events in heatwaves.",
+        "street": "Paramedics warn dehydration cases are rising.",
+        "motive": "Event contractor is politically connected."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 1,
+          "risk_flags": [],
+          "truth_quality": 1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": 1,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-010",
+      "title": "Teacher Loyalty Oath",
+      "category": "education",
+      "speaker": "Culture Minister",
+      "claim": "Require ideological pledges for public teachers.",
+      "prompt": "Framed as restoring values and discipline.",
+      "clues": {
+        "data": "Politicized schooling raises attrition and lowers outcomes.",
+        "street": "Principals report resignations already rising.",
+        "motive": "Partisan think tank wrote the pledge template."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 3,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": -1,
+          "risk_flags": [],
+          "truth_quality": 1
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-011",
+      "title": "Harbor Strike Narrative",
+      "category": "labour",
+      "speaker": "Opposition Leader",
+      "claim": "Call dock workers 'economic vandals' and ban pickets.",
+      "prompt": "They want a hard line in tonight’s debate.",
+      "clues": {
+        "data": "Negotiated settlement usually restores throughput faster than bans.",
+        "street": "Shops are low on stock but talks are active.",
+        "motive": "Shipping insurers profit from prolonged disruption fees."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 3,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": 0,
+            "working": 0,
+            "middle": 0,
+            "business": 0,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0,
+            "integrity": 0
+          },
+          "trust_delta": 0.2,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [],
+          "truth_quality": 0
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": -2,
+          "risk_flags": [
+            "short_delay"
+          ],
+          "truth_quality": 1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-012",
+      "title": "Riverfront Eviction Plan",
+      "category": "cost",
+      "speaker": "Urban Renewal Board",
+      "claim": "Clear informal housing for a skyline project now.",
+      "prompt": "They promise 'modernization' and tourism lift.",
+      "clues": {
+        "data": "Forced displacement spikes homelessness and long-run service costs.",
+        "street": "Families say they have nowhere to go.",
+        "motive": "Developer pre-sold penthouses offshore."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 1,
+          "risk_flags": [],
+          "truth_quality": 1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": 1,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-013",
+      "title": "Data Leak Spin",
+      "category": "tech",
+      "speaker": "Comms Director",
+      "claim": "Blame foreign hackers before internal audit finishes.",
+      "prompt": "Speed beats detail, they argue.",
+      "clues": {
+        "data": "Premature blame hurts credibility if disproven.",
+        "street": "IT staff say breach likely came from old vendor keys.",
+        "motive": "Vendor seeks contract extension."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 3,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": -1,
+          "risk_flags": [],
+          "truth_quality": 1
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-014",
+      "title": "Charity Gala Immunity",
+      "category": "corruption",
+      "speaker": "Donor Liaison",
+      "claim": "Grant procurement exemptions to gala sponsors.",
+      "prompt": "They framed it as philanthropy acceleration.",
+      "clues": {
+        "data": "Exemptions tied to donors correlate with leakage risk.",
+        "street": "Small nonprofits say rules are being bent.",
+        "motive": "Top sponsor is bidding on transport deals."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 3,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": 0,
+            "working": 0,
+            "middle": 0,
+            "business": 0,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0,
+            "integrity": 0
+          },
+          "trust_delta": 0.2,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [],
+          "truth_quality": 0
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": -2,
+          "risk_flags": [
+            "short_delay"
+          ],
+          "truth_quality": 1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-015",
+      "title": "Downtown Anti-Loiter Sweep",
+      "category": "cost",
+      "speaker": "Business Association",
+      "claim": "Crack down on rough sleepers near retail strips.",
+      "prompt": "They demand 'visual order' before festival season.",
+      "clues": {
+        "data": "Housing-first responses outperform punitive sweeps.",
+        "street": "Outreach teams report shelter shortages.",
+        "motive": "Retail PR agency sells the sweep campaign."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 1,
+          "risk_flags": [],
+          "truth_quality": 1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": 1,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-016",
+      "title": "Airport Prestige Rail",
+      "category": "transport",
+      "speaker": "Transport Minister",
+      "claim": "Build express airport rail and pause suburban lines.",
+      "prompt": "Claim: prestige route pays for itself.",
+      "clues": {
+        "data": "Commuter reliability improvements usually have broader benefit.",
+        "street": "Workers complain about packed suburban services.",
+        "motive": "Airport retail lobby backs the push."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 3,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": -1,
+          "risk_flags": [],
+          "truth_quality": 1
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-017",
+      "title": "Border Threat Hype",
+      "category": "foreign",
+      "speaker": "National Security Panel",
+      "claim": "Announce elevated threat level without releasing basis.",
+      "prompt": "They say uncertainty itself is the deterrent.",
+      "clues": {
+        "data": "Opaque threat inflation can erode trust quickly.",
+        "street": "Local police report no corroborating signals.",
+        "motive": "Private security stocks jump on leaks."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 3,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": 0,
+            "working": 0,
+            "middle": 0,
+            "business": 0,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0,
+            "integrity": 0
+          },
+          "trust_delta": 0.2,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [],
+          "truth_quality": 0
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": -2,
+          "risk_flags": [
+            "short_delay"
+          ],
+          "truth_quality": 1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-018",
+      "title": "Sports Wedge Blitz",
+      "category": "identity",
+      "speaker": "Talkshow Host Bloc",
+      "claim": "Launch inquiry into one symbolic sports dispute now.",
+      "prompt": "They claim it is the nation’s top fairness issue.",
+      "clues": {
+        "data": "Culture-war spikes rarely improve core service outcomes.",
+        "street": "Hospitals and rents dominate citizen concerns this week.",
+        "motive": "Outrage outlets are buying ad bundles."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 1,
+          "risk_flags": [],
+          "truth_quality": 1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": 1,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-019",
+      "title": "Procurement Amnesty",
+      "category": "corruption",
+      "speaker": "Treasury Counsel",
+      "claim": "Offer amnesty to firms who overbilled if they repay quietly.",
+      "prompt": "Sold as pragmatic and efficient.",
+      "clues": {
+        "data": "Quiet amnesties reduce deterrence versus visible penalties.",
+        "street": "Auditors say repeat offenders are common.",
+        "motive": "Two firms hold major road contracts."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 3,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": -1,
+          "risk_flags": [],
+          "truth_quality": 1
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-020",
+      "title": "Night Bus Cuts",
+      "category": "transport",
+      "speaker": "Budget Committee",
+      "claim": "Cancel late-night routes to close deficit gap.",
+      "prompt": "Committee calls it low-impact savings.",
+      "clues": {
+        "data": "Late-night transit cuts hurt workers and safety outcomes.",
+        "street": "Shift workers say options disappear after midnight.",
+        "motive": "Ride-share lobby lobbying hard."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 3,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": 0,
+            "working": 0,
+            "middle": 0,
+            "business": 0,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0,
+            "integrity": 0
+          },
+          "trust_delta": 0.2,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [],
+          "truth_quality": 0
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": -2,
+          "risk_flags": [
+            "short_delay"
+          ],
+          "truth_quality": 1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-021",
+      "title": "Water Privatisation Rush",
+      "category": "cost",
+      "speaker": "Infrastructure Bloc",
+      "claim": "Lease water network to private operator in 2 weeks.",
+      "prompt": "They promise efficiency magic.",
+      "clues": {
+        "data": "Rapid privatization without safeguards often raises household costs.",
+        "street": "Community groups fear bill shocks.",
+        "motive": "Operator asks for guaranteed profit floor."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 1,
+          "risk_flags": [],
+          "truth_quality": 1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": 1,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-022",
+      "title": "Clinic AI Triage",
+      "category": "health",
+      "speaker": "Health Tech Vendor",
+      "claim": "Replace triage nurses with AI pilot citywide now.",
+      "prompt": "Vendor promises zero wait rooms.",
+      "clues": {
+        "data": "Gradual pilots beat full replacements for safety and trust.",
+        "street": "Nurses flag edge-case risk.",
+        "motive": "Vendor seeks exclusive data rights."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 3,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": -1,
+          "risk_flags": [],
+          "truth_quality": 1
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-023",
+      "title": "Emergency Powers Forever",
+      "category": "tech",
+      "speaker": "Interior Office",
+      "claim": "Extend emergency powers with no sunset clause.",
+      "prompt": "Office says flexibility is essential.",
+      "clues": {
+        "data": "No-sunset emergency laws correlate with civil-liberty deterioration.",
+        "street": "Civil groups ask for oversight trigger.",
+        "motive": "Security suppliers lobby for extension."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 3,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": 0,
+            "working": 0,
+            "middle": 0,
+            "business": 0,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0,
+            "integrity": 0
+          },
+          "trust_delta": 0.2,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [],
+          "truth_quality": 0
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": -2,
+          "risk_flags": [
+            "short_delay"
+          ],
+          "truth_quality": 1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-024",
+      "title": "Festival Fireworks Subsidy",
+      "category": "climate",
+      "speaker": "Tourism Board",
+      "claim": "Subsidize giant fireworks while smoke warnings are active.",
+      "prompt": "They sell it as hope and unity.",
+      "clues": {
+        "data": "Air quality episodes worsen health burdens when ignored.",
+        "street": "Asthma clinics report increased demand.",
+        "motive": "Event group is campaign-friendly."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 1,
+          "risk_flags": [],
+          "truth_quality": 1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": 1,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-025",
+      "title": "Teacher Strike Smear",
+      "category": "education",
+      "speaker": "War Room",
+      "claim": "Leak selective data to paint teachers as lazy.",
+      "prompt": "War room says morale can be managed later.",
+      "clues": {
+        "data": "Smear tactics can secure headlines but degrade long-run trust.",
+        "street": "Parents mostly want quick negotiated return.",
+        "motive": "PR contractor billing triples during disputes."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 3,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": -1,
+          "risk_flags": [],
+          "truth_quality": 1
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-026",
+      "title": "Cyberattack Show Trial",
+      "category": "tech",
+      "speaker": "Security Chief",
+      "claim": "Arrest junior staff publicly before forensic report lands.",
+      "prompt": "Chief wants immediate deterrence optics.",
+      "clues": {
+        "data": "Premature punishment raises legal and trust costs.",
+        "street": "Forensics team says attribution is incomplete.",
+        "motive": "Vendor legal team pushing narrative."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 3,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": 0,
+            "working": 0,
+            "middle": 0,
+            "business": 0,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0,
+            "integrity": 0
+          },
+          "trust_delta": 0.2,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [],
+          "truth_quality": 0
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": -2,
+          "risk_flags": [
+            "short_delay"
+          ],
+          "truth_quality": 1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-027",
+      "title": "Rationing Rumor",
+      "category": "cost",
+      "speaker": "Tabloid Consortium",
+      "claim": "Announce possible food rationing to force calm buying.",
+      "prompt": "Editors call fear a useful stabilizer.",
+      "clues": {
+        "data": "Panic messaging can worsen hoarding behavior.",
+        "street": "Grocers say supply is tight but manageable.",
+        "motive": "Speculators profit from panic pricing."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 1,
+          "risk_flags": [],
+          "truth_quality": 1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": 1,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-028",
+      "title": "Foreign Capital Ultimatum",
+      "category": "foreign",
+      "speaker": "Investment Envoy",
+      "claim": "Grant tax holiday to a single foreign megafirm today.",
+      "prompt": "Envoy says they will leave otherwise.",
+      "clues": {
+        "data": "Targeted concessions can crowd out local firms if unchecked.",
+        "street": "Local suppliers fear contract loss.",
+        "motive": "Firm seeks labour rule exemptions."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 3,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": -1,
+          "risk_flags": [],
+          "truth_quality": 1
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-029",
+      "title": "Civic App Data Selloff",
+      "category": "tech",
+      "speaker": "Digital Agency",
+      "claim": "Monetize citizen app data for quick revenue.",
+      "prompt": "Agency frames it as painless finance.",
+      "clues": {
+        "data": "Selling civic data usually harms trust and uptake.",
+        "street": "Residents already skeptical after last breach.",
+        "motive": "Broker consortium pre-drafted legal terms."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 3,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": 0,
+            "working": 0,
+            "middle": 0,
+            "business": 0,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0,
+            "integrity": 0
+          },
+          "trust_delta": 0.2,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [],
+          "truth_quality": 0
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": -2,
+          "risk_flags": [
+            "short_delay"
+          ],
+          "truth_quality": 1
+        }
+      ]
+    },
+    {
+      "id": "TRUTH-030",
+      "title": "Public Housing Trophy Tower",
+      "category": "cost",
+      "speaker": "Planning Minister",
+      "claim": "Convert affordable lots into one trophy mixed-use tower.",
+      "prompt": "Pitch: iconic density equals progress.",
+      "clues": {
+        "data": "Distributed affordable stock often outperforms single showcase projects.",
+        "street": "Applicants on waiting list keep rising.",
+        "motive": "Luxury co-investor wants fast-track approvals."
+      },
+      "options": [
+        {
+          "id": "back_it",
+          "label": "Back it now",
+          "outcome_blurb": "Move fast and back the claim publicly.",
+          "dem_now": {
+            "poverty": 3,
+            "working": 2,
+            "middle": 2,
+            "business": 1,
+            "elite": 0
+          },
+          "kpi_now": {
+            "stability": 0.8,
+            "integrity": 0.6
+          },
+          "trust_delta": 1.1,
+          "axis_drift": {
+            "careAusterity": -0.1,
+            "libertyControl": -0.2,
+            "publicDonor": -0.3,
+            "truthSpin": -0.4
+          },
+          "treasury_delta_now": 1,
+          "risk_flags": [],
+          "truth_quality": 1
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call bluff on live TV",
+          "outcome_blurb": "Challenge the claim and hit motives hard.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.3,
+            "libertyControl": 0.2,
+            "publicDonor": 0.4,
+            "truthSpin": 0.7
+          },
+          "treasury_delta_now": 1,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        },
+        {
+          "id": "ask_proof",
+          "label": "Ask for proof first",
+          "outcome_blurb": "Pause, demand evidence, then decide.",
+          "dem_now": {
+            "poverty": -3,
+            "working": -2,
+            "middle": -1,
+            "business": 1,
+            "elite": 2
+          },
+          "kpi_now": {
+            "stability": -0.8,
+            "integrity": -0.7
+          },
+          "trust_delta": -1,
+          "axis_drift": {
+            "careAusterity": 0.2,
+            "libertyControl": 0.4,
+            "publicDonor": 0.3,
+            "truthSpin": 1
+          },
+          "treasury_delta_now": 0,
+          "risk_flags": [
+            "narrative_backfire"
+          ],
+          "truth_quality": -1
+        }
+      ]
+    }
+  ]
+}

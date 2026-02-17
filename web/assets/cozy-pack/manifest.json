@@ -60,6 +60,11 @@
     "actors/prop_banner.svg",
     "actors/prop_fountain.svg",
     "fx/prosperity_glow.svg",
-    "fx/confetti.svg"
+    "fx/confetti.svg",
+    "actors/prop_house_small.svg",
+    "actors/prop_house_mid.svg",
+    "actors/prop_apartment.svg",
+    "actors/prop_shop_corner.svg",
+    "actors/prop_playground.svg"
   ]
 }

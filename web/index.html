@@ -30,6 +30,7 @@
         </div>
       </header>
       <div id="apFeedback" class="ap-feedback" aria-live="polite"></div>
+      <div id="decisionFlash" class="decision-flash" aria-live="polite"></div>
 
       <section id="statusBanner" class="status-banner">City systems nominal.</section>
 
@@ -100,6 +101,7 @@
                 <h2>INCIDENT BRIEF</h2>
                 <p id="rapidTitle">No urgent brief right now.</p>
                 <p id="rapidBody" class="muted">Critical briefs appear here with short timers.</p>
+                <p id="rapidEvidence" class="muted"></p>
                 <div class="mini-grid">
                   <div><span>Timer</span><strong id="rapidTimer">-</strong></div>
                   <div><span>Momentum</span><strong id="rapidMomentum">0</strong></div>
@@ -107,6 +109,7 @@
                 <div class="actions">
                   <button id="rapidBtnA" class="btn primary" disabled>Option A</button>
                   <button id="rapidBtnB" class="btn" disabled>Option B</button>
+                  <button id="rapidBtnC" class="btn" disabled>Option C</button>
                 </div>
               </section>
               <section class="card">
@@ -193,6 +196,10 @@
             <h3>Voices</h3>
             <ul id="monthlyQuotes" class="mission-list"></ul>
           </div>
+        </div>
+        <div class="paper-ledger">
+          <h3>Decision Impact Ledger</h3>
+          <ul id="monthlyDecisionList" class="mission-list"></ul>
         </div>
         <div class="paper-actions">
           <button id="monthlyCloseBtn" class="btn primary">Continue</button>
