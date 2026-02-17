@@ -710,6 +710,16 @@ const state = {
     placementRecommendations: [],
     budgetDraftByBuilding: {},
     focusedMajorEventId: null,
+    touch: {
+      mode: null,
+      tapStartX: 0,
+      tapStartY: 0,
+      tapMoved: false,
+      tapStartAt: 0,
+      pinchStartDistance: 0,
+      pinchStartZoom: 1,
+      suppressClickUntil: 0,
+    },
   },
 };
 
@@ -3695,6 +3705,58 @@ function initFromBaseline(base) {
   state.people = state.people.map((p) => ({ ...p, happiness: seeds[p.id] ?? p.happiness }));
 }
 
+function handleCanvasPress(sx, sy) {
+  if (state.gameOver.active) return;
+  state.ui.ripples.push({ x: sx, y: sy, ttl: 0.45 });
+
+  if (state.ui.placementBuildingId) {
+    const t = screenToTile(sx, sy);
+    if (placeBuilding(state.ui.placementBuildingId, t)) {
+      renderUI();
+    } else {
+      addTicker("Cannot place here. Choose an empty non-road tile.");
+    }
+    return;
+  }
+
+  const major = pickMajorEventAt(sx, sy);
+  if (major) {
+    state.ui.focusedMajorEventId = major.id;
+    focusCameraOnTile(major.tile);
+    addTicker(`MAJOR INCIDENT selected: ${major.title}.`);
+    renderUI();
+    return;
+  }
+
+  const incident = pickIncidentAt(sx, sy);
+  if (incident) {
+    emergencyTapIncident(incident);
+    renderUI();
+    return;
+  }
+
+  if (state.rapid.active) {
+    const p = isoToScreen(state.rapid.active.mapMarkerTile[0], state.rapid.active.mapMarkerTile[1]);
+    const d = Math.hypot(sx - p.x, sy - (p.y - 50 * state.camera.zoom));
+    if (d < 16 * state.camera.zoom) {
+      addTicker(`${state.rapid.active.incidentCode}: focus marker selected.`);
+      focusCameraOnTile(state.rapid.active.mapMarkerTile);
+      return;
+    }
+  }
+
+  const picked = pickBuildingAt(sx, sy);
+  if (picked) {
+    state.selectedBuildingId = picked.id;
+    if (!Number.isFinite(state.ui.budgetDraftByBuilding[picked.id])) {
+      state.ui.budgetDraftByBuilding[picked.id] = picked.budget;
+    }
+    markOnboarding("selectedBuilding");
+    focusCameraOnTile(picked.tile);
+    renderUI();
+  }
+}
+
 function bindInput() {
   els.pauseBtn.addEventListener("click", () => {
     if (state.gameOver.active) return;
@@ -3878,60 +3940,99 @@ function bindInput() {
     if (placeBuilding(state.ui.placementBuildingId, t)) renderUI();
   });
 
+  canvas.addEventListener(
+    "touchstart",
+    (e) => {
+      if (e.touches.length === 1) {
+        const t = e.touches[0];
+        state.ui.touch.mode = "pan";
+        state.ui.touch.tapStartX = t.clientX;
+        state.ui.touch.tapStartY = t.clientY;
+        state.ui.touch.tapMoved = false;
+        state.ui.touch.tapStartAt = performance.now();
+        state.camera.dragging = true;
+        state.camera.lastX = t.clientX;
+        state.camera.lastY = t.clientY;
+        state.camera.targetX = null;
+        state.camera.targetY = null;
+        state.camera.vx = 0;
+        state.camera.vy = 0;
+      } else if (e.touches.length >= 2) {
+        const t0 = e.touches[0];
+        const t1 = e.touches[1];
+        state.ui.touch.mode = "pinch";
+        state.ui.touch.pinchStartDistance = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+        state.ui.touch.pinchStartZoom = state.camera.zoom;
+        state.camera.dragging = false;
+      }
+    },
+    { passive: true }
+  );
+
+  canvas.addEventListener(
+    "touchmove",
+    (e) => {
+      if (state.ui.touch.mode === "pan" && e.touches.length === 1) {
+        e.preventDefault();
+        const t = e.touches[0];
+        const dx = t.clientX - state.camera.lastX;
+        const dy = t.clientY - state.camera.lastY;
+        state.camera.x += dx;
+        state.camera.y += dy;
+        state.camera.vx = dx;
+        state.camera.vy = dy;
+        state.camera.lastX = t.clientX;
+        state.camera.lastY = t.clientY;
+        if (Math.hypot(t.clientX - state.ui.touch.tapStartX, t.clientY - state.ui.touch.tapStartY) > 8) {
+          state.ui.touch.tapMoved = true;
+        }
+        clampCamera();
+      } else if (e.touches.length >= 2) {
+        e.preventDefault();
+        const t0 = e.touches[0];
+        const t1 = e.touches[1];
+        const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+        const ratio = state.ui.touch.pinchStartDistance > 0 ? dist / state.ui.touch.pinchStartDistance : 1;
+        state.camera.zoom = clamp(state.ui.touch.pinchStartZoom * ratio, 0.62, 1.45);
+        clampCamera();
+      }
+    },
+    { passive: false }
+  );
+
+  canvas.addEventListener(
+    "touchend",
+    (e) => {
+      if (e.touches.length === 0) {
+        const wasTap = state.ui.touch.mode === "pan"
+          && !state.ui.touch.tapMoved
+          && performance.now() - state.ui.touch.tapStartAt < 280;
+        state.camera.dragging = false;
+        state.ui.touch.mode = null;
+        state.ui.touch.suppressClickUntil = Date.now() + 400;
+        if (wasTap) {
+          const rect = canvas.getBoundingClientRect();
+          const sx = state.ui.touch.tapStartX - rect.left;
+          const sy = state.ui.touch.tapStartY - rect.top;
+          handleCanvasPress(sx, sy);
+        }
+      } else if (e.touches.length === 1) {
+        const t = e.touches[0];
+        state.ui.touch.mode = "pan";
+        state.camera.dragging = true;
+        state.camera.lastX = t.clientX;
+        state.camera.lastY = t.clientY;
+      }
+    },
+    { passive: true }
+  );
+
   canvas.addEventListener("click", (e) => {
-    if (state.gameOver.active) return;
+    if (Date.now() < state.ui.touch.suppressClickUntil) return;
     const rect = canvas.getBoundingClientRect();
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;
-
-    state.ui.ripples.push({ x: sx, y: sy, ttl: 0.45 });
-
-    if (state.ui.placementBuildingId) {
-      const t = screenToTile(sx, sy);
-      if (placeBuilding(state.ui.placementBuildingId, t)) {
-        renderUI();
-      } else {
-        addTicker("Cannot place here. Choose an empty non-road tile.");
-      }
-      return;
-    }
-
-    const major = pickMajorEventAt(sx, sy);
-    if (major) {
-      state.ui.focusedMajorEventId = major.id;
-      focusCameraOnTile(major.tile);
-      addTicker(`MAJOR INCIDENT selected: ${major.title}.`);
-      renderUI();
-      return;
-    }
-
-    const incident = pickIncidentAt(sx, sy);
-    if (incident) {
-      emergencyTapIncident(incident);
-      renderUI();
-      return;
-    }
-
-    if (state.rapid.active) {
-      const p = isoToScreen(state.rapid.active.mapMarkerTile[0], state.rapid.active.mapMarkerTile[1]);
-      const d = Math.hypot(sx - p.x, sy - (p.y - 50 * state.camera.zoom));
-      if (d < 16 * state.camera.zoom) {
-        addTicker(`${state.rapid.active.incidentCode}: focus marker selected.`);
-        focusCameraOnTile(state.rapid.active.mapMarkerTile);
-        return;
-      }
-    }
-
-    const picked = pickBuildingAt(sx, sy);
-    if (picked) {
-      state.selectedBuildingId = picked.id;
-      if (!Number.isFinite(state.ui.budgetDraftByBuilding[picked.id])) {
-        state.ui.budgetDraftByBuilding[picked.id] = picked.budget;
-      }
-      markOnboarding("selectedBuilding");
-      focusCameraOnTile(picked.tile);
-      renderUI();
-    }
+    handleCanvasPress(sx, sy);
   });
 
   canvas.addEventListener(
