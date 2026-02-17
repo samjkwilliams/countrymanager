@@ -36,98 +36,181 @@
       <section class="game-layout">
         <section class="map-panel card">
           <canvas id="isoCanvas" width="1280" height="760"></canvas>
-          <div class="map-tip">Drag to pan. Scroll to zoom. Tap flashing incidents or click department buildings.</div>
+          <aside id="majorEventCard" class="major-event-card" hidden>
+            <p class="eyebrow">Major Event</p>
+            <h3 id="majorEventTitle">No major event</h3>
+            <p id="majorEventBody" class="muted"></p>
+            <p id="majorEventHint" class="muted"></p>
+            <div class="mini-grid">
+              <div><span>Window</span><strong id="majorEventTimer">-</strong></div>
+              <div><span>Impact</span><strong id="majorEventImpact">-</strong></div>
+            </div>
+            <div class="actions">
+              <button id="majorEventRespondBtn" class="btn primary">Fund Response</button>
+              <button id="majorEventDismissBtn" class="btn">Defer</button>
+            </div>
+          </aside>
+          <div class="map-tip">Drag to pan. Scroll to zoom. Place departments on highlighted tiles, then tackle flashing MAJOR beacons and incidents.</div>
         </section>
 
         <aside class="side-panel">
-          <section class="card collapsible-card" id="buildQueueCard">
-            <div class="card-head">
-              <h2>Build Queue</h2>
-              <button class="btn collapse-btn" data-target="buildQueueCard">Minimize</button>
-            </div>
-            <div class="card-body">
-              <p class="muted">Pick a department then click a map tile to place it.</p>
-              <div id="buildQueue" class="event-rail"></div>
-            </div>
-          </section>
+          <nav class="tab-bar card">
+            <button class="btn side-tab is-active" data-tab="control">Control <span id="tabControlAlert" class="tab-alert" hidden>!</span></button>
+            <button class="btn side-tab" data-tab="incidents">Incidents <span id="tabIncidentsAlert" class="tab-alert" hidden>!</span></button>
+            <button class="btn side-tab" data-tab="pulse">Pulse <span id="tabPulseAlert" class="tab-alert" hidden>!</span></button>
+            <button class="btn side-tab" data-tab="people">People <span id="tabPeopleAlert" class="tab-alert" hidden>!</span></button>
+            <button class="btn side-tab" data-tab="missions">Missions <span id="tabMissionsAlert" class="tab-alert" hidden>!</span></button>
+          </nav>
 
-          <section class="card collapsible-card" id="onboardingCard">
-            <div class="card-head">
-              <h2>Onboarding</h2>
-              <button class="btn collapse-btn" data-target="onboardingCard">Minimize</button>
-            </div>
-            <div class="card-body">
-              <p id="sessionGoal" class="muted">Complete first mission set to unlock streak bonuses.</p>
-              <ul id="onboardingList" class="mission-list"></ul>
-            </div>
-          </section>
+          <div class="tab-panes">
+            <section class="tab-pane is-active" data-pane="control">
+              <section class="card collapsible-card" id="buildQueueCard">
+                <div class="card-head">
+                  <h2>Build Queue</h2>
+                  <button class="btn collapse-btn" data-target="buildQueueCard">Minimize</button>
+                </div>
+                <div class="card-body">
+                  <p class="muted">Pick a department then click a map tile to place it.</p>
+                  <div id="buildQueue" class="event-rail"></div>
+                </div>
+              </section>
 
-          <section class="card rapid-card">
-            <h2>INCIDENT BRIEF</h2>
-            <p id="rapidTitle">No urgent brief right now.</p>
-            <p id="rapidBody" class="muted">Critical briefs appear here with short timers.</p>
-            <div class="mini-grid">
-              <div><span>Timer</span><strong id="rapidTimer">-</strong></div>
-              <div><span>Momentum</span><strong id="rapidMomentum">0</strong></div>
-            </div>
-            <div class="actions">
-              <button id="rapidBtnA" class="btn primary" disabled>Option A</button>
-              <button id="rapidBtnB" class="btn" disabled>Option B</button>
-            </div>
-          </section>
+              <section class="card selected-card">
+                <h2 id="selectedName">Select a Department</h2>
+                <p id="selectedDesc" class="muted">Pick a building in the city to inspect funding and upgrades.</p>
+                <div class="mini-grid">
+                  <div><span>Level</span><strong id="selectedLevel">-</strong></div>
+                  <div><span>Budget ($m/day)</span><strong id="selectedBudget">-</strong></div>
+                  <div><span>Status</span><strong id="selectedStatus">-</strong></div>
+                  <div><span>Upgrade Cost ($m)</span><strong id="selectedCost">-</strong></div>
+                </div>
+                <div class="slider-wrap">
+                  <label for="budgetSlider">Department Budget Priority (slow change)</label>
+                  <input id="budgetSlider" type="range" min="20" max="120" step="1" value="60" />
+                </div>
+                <div class="actions">
+                  <button id="applyBudgetBtn" class="btn">Apply Budget</button>
+                  <button id="upgradeBtn" class="btn primary">Upgrade Building</button>
+                </div>
+              </section>
+            </section>
 
-          <section class="card selected-card">
-            <h2 id="selectedName">Select a Department</h2>
-            <p id="selectedDesc" class="muted">Pick a building in the city to inspect funding and upgrades.</p>
-            <div class="mini-grid">
-              <div><span>Level</span><strong id="selectedLevel">-</strong></div>
-              <div><span>Budget ($m/day)</span><strong id="selectedBudget">-</strong></div>
-              <div><span>Status</span><strong id="selectedStatus">-</strong></div>
-              <div><span>Upgrade Cost ($m)</span><strong id="selectedCost">-</strong></div>
-            </div>
-            <div class="slider-wrap">
-              <label for="budgetSlider">Department Budget Priority (slow change)</label>
-              <input id="budgetSlider" type="range" min="20" max="120" step="1" value="60" />
-            </div>
-            <div class="actions">
-              <button id="applyBudgetBtn" class="btn">Apply Budget</button>
-              <button id="upgradeBtn" class="btn primary">Upgrade Building</button>
-            </div>
-          </section>
+            <section class="tab-pane" data-pane="incidents">
+              <section class="card rapid-card">
+                <h2>INCIDENT BRIEF</h2>
+                <p id="rapidTitle">No urgent brief right now.</p>
+                <p id="rapidBody" class="muted">Critical briefs appear here with short timers.</p>
+                <div class="mini-grid">
+                  <div><span>Timer</span><strong id="rapidTimer">-</strong></div>
+                  <div><span>Momentum</span><strong id="rapidMomentum">0</strong></div>
+                </div>
+                <div class="actions">
+                  <button id="rapidBtnA" class="btn primary" disabled>Option A</button>
+                  <button id="rapidBtnB" class="btn" disabled>Option B</button>
+                </div>
+              </section>
+              <section class="card">
+                <h3>Incident Inbox</h3>
+                <div id="incidentInbox" class="mission-list"></div>
+              </section>
+            </section>
 
-          <section class="card">
-            <h3>City Pulse</h3>
-            <div id="kpiGrid" class="kpi-grid"></div>
-          </section>
+            <section class="tab-pane" data-pane="pulse">
+              <section class="card">
+                <h3>City Pulse</h3>
+                <div id="kpiGrid" class="kpi-grid"></div>
+              </section>
 
-          <section class="card collapsible-card" id="advisorCard">
-            <div class="card-head">
-              <h3>Monthly Advisor Brief</h3>
-              <button class="btn collapse-btn" data-target="advisorCard">Minimize</button>
-            </div>
-            <div class="card-body">
-              <div id="advisorBrief" class="mission-list"></div>
-            </div>
-          </section>
+              <section class="card collapsible-card" id="advisorCard">
+                <div class="card-head">
+                  <h3>Monthly Advisor Brief</h3>
+                  <button class="btn collapse-btn" data-target="advisorCard">Minimize</button>
+                </div>
+                <div class="card-body">
+                  <div id="advisorBrief" class="mission-list"></div>
+                </div>
+              </section>
+            </section>
 
-          <section class="card collapsible-card" id="missionCard">
-            <div class="card-head">
-              <h3>Missions</h3>
-              <button class="btn collapse-btn" data-target="missionCard">Minimize</button>
-            </div>
-            <div class="card-body">
-              <p id="tierGoal" class="muted"></p>
-              <ul id="missionList" class="mission-list"></ul>
-            </div>
-          </section>
+            <section class="tab-pane" data-pane="people">
+              <section class="card">
+                <h3>People Pulse</h3>
+                <p class="muted">How each demographic is reacting to your policy mix.</p>
+                <div id="peopleGrid" class="people-grid"></div>
+              </section>
+              <section class="card">
+                <h3>Initiatives</h3>
+                <p class="muted">Spend AP and treasury to directly improve social outcomes.</p>
+                <div id="initiativeGrid" class="people-grid"></div>
+              </section>
+            </section>
+
+            <section class="tab-pane" data-pane="missions">
+              <section class="card collapsible-card" id="onboardingCard">
+                <div class="card-head">
+                  <h2>Onboarding</h2>
+                  <button class="btn collapse-btn" data-target="onboardingCard">Minimize</button>
+                </div>
+                <div class="card-body">
+                  <p id="sessionGoal" class="muted">Complete first mission set to unlock streak bonuses.</p>
+                  <ul id="onboardingList" class="mission-list"></ul>
+                </div>
+              </section>
+
+              <section class="card collapsible-card" id="missionCard">
+                <div class="card-head">
+                  <h3>Missions</h3>
+                  <button class="btn collapse-btn" data-target="missionCard">Minimize</button>
+                </div>
+                <div class="card-body">
+                  <p id="tierGoal" class="muted"></p>
+                  <ul id="missionList" class="mission-list"></ul>
+                </div>
+              </section>
+            </section>
+          </div>
         </aside>
       </section>
 
-      <section class="news-strip card">
+      <section class="news-strip compact-dock card">
         <div class="ticker-wrap"><div id="tickerLine" class="ticker-line"></div></div>
         <div id="eventRail" class="event-rail"></div>
       </section>
     </main>
+
+    <section id="monthlyModal" class="monthly-modal" hidden>
+      <article class="monthly-paper">
+        <p class="paper-kicker">Monthly Gazette</p>
+        <h2 id="monthlyHeadline">The Capital Ledger | Monthly Brief</h2>
+        <p id="monthlySubhead" class="muted"></p>
+        <p id="monthlyLead" class="paper-lead"></p>
+        <div class="paper-cols">
+          <div>
+            <h3>City Desk</h3>
+            <ul id="monthlySummaryList" class="mission-list"></ul>
+          </div>
+          <div>
+            <h3>Voices</h3>
+            <ul id="monthlyQuotes" class="mission-list"></ul>
+          </div>
+        </div>
+        <div class="paper-actions">
+          <button id="monthlyCloseBtn" class="btn primary">Continue</button>
+        </div>
+      </article>
+    </section>
+
+    <section id="gameOverModal" class="monthly-modal game-over-modal" hidden>
+      <article class="monthly-paper game-over-paper">
+        <p class="paper-kicker">Simulation Ended</p>
+        <h2 id="gameOverHeadline">Government Collapse</h2>
+        <p id="gameOverReason" class="paper-lead"></p>
+        <ul id="gameOverFacts" class="mission-list"></ul>
+        <div class="paper-actions">
+          <button id="gameOverRestartBtn" class="btn primary">Restart</button>
+        </div>
+      </article>
+    </section>
 
     <script type="module" src="app.js"></script>
   </body>

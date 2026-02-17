@@ -52,6 +52,14 @@
     "fx/incident_corruption.svg",
     "fx/sparkle.svg",
     "fx/warning_ring.svg",
-    "preview.html"
+    "preview.html",
+    "actors/prop_tree_small.svg",
+    "actors/prop_tree_tall.svg",
+    "actors/prop_lamp.svg",
+    "actors/prop_market.svg",
+    "actors/prop_banner.svg",
+    "actors/prop_fountain.svg",
+    "fx/prosperity_glow.svg",
+    "fx/confetti.svg"
   ]
 }
