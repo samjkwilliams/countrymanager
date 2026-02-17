@@ -14,17 +14,22 @@
           <h1>Country Manager</h1>
         </div>
         <div class="hud-metrics">
+          <div class="pill traffic-pill" id="trafficPill" title="City health status">
+            <span>Status</span><strong id="trafficLight">🟢</strong>
+          </div>
           <div class="pill"><span>Tier</span><strong id="tierLabel">City</strong></div>
           <div class="pill"><span>Day</span><strong id="dayLabel">0</strong></div>
-          <div class="pill"><span>Stability</span><strong id="stabilityLabel">0</strong></div>
-          <div class="pill"><span>Treasury</span><strong id="treasuryLabel">0</strong></div>
-          <div class="pill"><span>Action Pts</span><strong id="actionPoints">0</strong></div>
+          <div class="pill"><span>Stability</span><strong id="stabilityLabel">0%</strong></div>
+          <div class="pill"><span>Treasury ($m)</span><strong id="treasuryLabel">$0m</strong></div>
+          <div class="pill" title="Action Points are used for upgrades, budget changes, and emergency interventions. They regenerate every 4 days and via streaks/goals."><span>Action Pts</span><strong id="actionPoints">0</strong></div>
           <div class="pill"><span>Streak</span><strong id="streakLabel">0</strong></div>
           <div class="pill"><span>Civilians</span><strong id="civilianCount">0</strong></div>
           <div class="pill"><span>Incidents</span><strong id="incidentCount">0</strong></div>
+          <button id="focusBtn" class="btn">Focus: Off</button>
           <button id="pauseBtn" class="btn">Pause</button>
         </div>
       </header>
+      <div id="apFeedback" class="ap-feedback" aria-live="polite"></div>
 
       <section id="statusBanner" class="status-banner">City systems nominal.</section>
 
@@ -35,14 +40,30 @@
         </section>
 
         <aside class="side-panel">
-          <section class="card">
-            <h2>Onboarding</h2>
-            <p id="sessionGoal" class="muted">Complete first mission set to unlock streak bonuses.</p>
-            <ul id="onboardingList" class="mission-list"></ul>
+          <section class="card collapsible-card" id="buildQueueCard">
+            <div class="card-head">
+              <h2>Build Queue</h2>
+              <button class="btn collapse-btn" data-target="buildQueueCard">Minimize</button>
+            </div>
+            <div class="card-body">
+              <p class="muted">Pick a department then click a map tile to place it.</p>
+              <div id="buildQueue" class="event-rail"></div>
+            </div>
+          </section>
+
+          <section class="card collapsible-card" id="onboardingCard">
+            <div class="card-head">
+              <h2>Onboarding</h2>
+              <button class="btn collapse-btn" data-target="onboardingCard">Minimize</button>
+            </div>
+            <div class="card-body">
+              <p id="sessionGoal" class="muted">Complete first mission set to unlock streak bonuses.</p>
+              <ul id="onboardingList" class="mission-list"></ul>
+            </div>
           </section>
 
           <section class="card rapid-card">
-            <h2>Rapid Decisions</h2>
+            <h2>INCIDENT BRIEF</h2>
             <p id="rapidTitle">No urgent brief right now.</p>
             <p id="rapidBody" class="muted">Critical briefs appear here with short timers.</p>
             <div class="mini-grid">
@@ -60,12 +81,12 @@
             <p id="selectedDesc" class="muted">Pick a building in the city to inspect funding and upgrades.</p>
             <div class="mini-grid">
               <div><span>Level</span><strong id="selectedLevel">-</strong></div>
-              <div><span>Budget</span><strong id="selectedBudget">-</strong></div>
+              <div><span>Budget ($m/day)</span><strong id="selectedBudget">-</strong></div>
               <div><span>Status</span><strong id="selectedStatus">-</strong></div>
-              <div><span>Upgrade Cost</span><strong id="selectedCost">-</strong></div>
+              <div><span>Upgrade Cost ($m)</span><strong id="selectedCost">-</strong></div>
             </div>
             <div class="slider-wrap">
-              <label for="budgetSlider">Department Budget Priority</label>
+              <label for="budgetSlider">Department Budget Priority (slow change)</label>
               <input id="budgetSlider" type="range" min="20" max="120" step="1" value="60" />
             </div>
             <div class="actions">
@@ -79,10 +100,25 @@
             <div id="kpiGrid" class="kpi-grid"></div>
           </section>
 
-          <section class="card">
-            <h3>Missions</h3>
-            <p id="tierGoal" class="muted"></p>
-            <ul id="missionList" class="mission-list"></ul>
+          <section class="card collapsible-card" id="advisorCard">
+            <div class="card-head">
+              <h3>Monthly Advisor Brief</h3>
+              <button class="btn collapse-btn" data-target="advisorCard">Minimize</button>
+            </div>
+            <div class="card-body">
+              <div id="advisorBrief" class="mission-list"></div>
+            </div>
+          </section>
+
+          <section class="card collapsible-card" id="missionCard">
+            <div class="card-head">
+              <h3>Missions</h3>
+              <button class="btn collapse-btn" data-target="missionCard">Minimize</button>
+            </div>
+            <div class="card-body">
+              <p id="tierGoal" class="muted"></p>
+              <ul id="missionList" class="mission-list"></ul>
+            </div>
           </section>
         </aside>
       </section>
