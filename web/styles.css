@@ -292,8 +292,8 @@ h1 {
   touch-action: none;
   border-radius: 16px;
   background:
-    radial-gradient(circle at 55% 20%, rgba(49, 107, 176, 0.42), transparent 42%),
-    linear-gradient(180deg, #11315a, #0e2648 65%, #0a1e3a);
+    radial-gradient(circle at 50% 12%, rgba(193, 227, 255, 0.72), transparent 42%),
+    linear-gradient(180deg, #8fc7f2, #78b4e4 52%, #6aa6d9);
 }
 
 .map-tip {

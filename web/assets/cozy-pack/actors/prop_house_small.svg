@@ -1,7 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <ellipse cx="32" cy="52" rx="18" ry="6" fill="#163246" opacity="0.25"/>
-  <rect x="18" y="26" width="28" height="22" rx="3" fill="#f3d8a5" stroke="#b98d5f" stroke-width="2"/>
-  <polygon points="16,28 32,15 48,28" fill="#cf7f61" stroke="#9c5643" stroke-width="2"/>
-  <rect x="26" y="34" width="8" height="14" rx="1.5" fill="#9b6b4a"/>
-  <rect x="36" y="34" width="7" height="7" rx="1.2" fill="#9fd7ee" stroke="#5e8fad" stroke-width="1"/>
-</svg>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none">
+  <ellipse cx="64" cy="108" rx="22" ry="7" fill="#153244" opacity="0.25"/>
+  <polygon points="40,66 64,52 88,66 64,80" fill="#d77c63" stroke="#6d4f46" stroke-width="2"/>
+  <polygon points="40,66 64,80 64,102 40,88" fill="#f3d9b2" stroke="#6d4f46" stroke-width="2"/>
+  <polygon points="88,66 64,80 64,102 88,88" fill="#d5e2ea" stroke="#6d4f46" stroke-width="2"/>
+  <polygon points="64,84 72,88 72,104 64,100" fill="#966a4e"/>
+  <polygon points="64,84 56,88 56,104 64,100" fill="#b37d59"/>
+  <polygon points="52,80 58,83 58,90 52,87" fill="#eaf7ff"/>
+  <polygon points="76,80 82,83 82,90 76,87" fill="#eaf7ff"/>
+  </svg>

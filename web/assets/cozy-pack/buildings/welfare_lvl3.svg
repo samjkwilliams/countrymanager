@@ -1,17 +1,48 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="120" viewBox="0 0 128 120" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="150" viewBox="0 0 160 150" fill="none">
   <defs>
     <linearGradient id="ground" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#b3dbc5"/><stop offset="100%" stop-color="#95c9af"/>
+      <stop offset="0%" stop-color="#c7e7cd"/><stop offset="100%" stop-color="#95c8ad"/>
     </linearGradient>
+    <linearGradient id="roofFace" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7d96d8"/><stop offset="100%" stop-color="#647fca"/>
+    </linearGradient>
+    <linearGradient id="wallL" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#b6c9ff"/><stop offset="100%" stop-color="#b6c2ce"/>
+    </linearGradient>
+    <linearGradient id="wallR" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#c6d2df"/><stop offset="100%" stop-color="#b6c9ff"/>
+    </linearGradient>
+    <radialGradient id="roofSpec" cx="40%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#ffffff88"/><stop offset="100%" stop-color="#ffffff00"/>
+    </radialGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2.6" flood-color="#122a38" flood-opacity="0.35"/>
+    </filter>
   </defs>
-  <polygon points="64,22 118,54 64,86 10,54" fill="url(#ground)" stroke="#6f9685" stroke-width="2"/>
 
-  <polygon points="38,36 90,36 90,92 38,92" fill="#b6c9ff" stroke="#564f46" stroke-width="2"/>
-  <polygon points="38,36 64,20 90,36" fill="#7d96d8" stroke="#564f46" stroke-width="2"/>
-  <rect x="57" y="58" width="14" height="22" rx="2" fill="#647fca"/>
-  <rect x="42" y="48" width="6" height="5" rx="1" fill="#fff5c9"/><rect x="54" y="48" width="6" height="5" rx="1" fill="#fff5c9"/><rect x="68" y="48" width="6" height="5" rx="1" fill="#fff5c9"/><rect x="80" y="48" width="6" height="5" rx="1" fill="#fff5c9"/><rect x="42" y="58" width="6" height="5" rx="1" fill="#fff5c9"/><rect x="54" y="58" width="6" height="5" rx="1" fill="#fff5c9"/><rect x="68" y="58" width="6" height="5" rx="1" fill="#fff5c9"/><rect x="80" y="58" width="6" height="5" rx="1" fill="#fff5c9"/><rect x="42" y="68" width="6" height="5" rx="1" fill="#fff5c9"/><rect x="54" y="68" width="6" height="5" rx="1" fill="#fff5c9"/><rect x="68" y="68" width="6" height="5" rx="1" fill="#fff5c9"/><rect x="80" y="68" width="6" height="5" rx="1" fill="#fff5c9"/><rect x="42" y="78" width="6" height="5" rx="1" fill="#fff5c9"/><rect x="54" y="78" width="6" height="5" rx="1" fill="#fff5c9"/><rect x="68" y="78" width="6" height="5" rx="1" fill="#fff5c9"/><rect x="80" y="78" width="6" height="5" rx="1" fill="#fff5c9"/>
-  <circle cx="64" cy="30" r="6" fill="#647fca"/>
-  <text x="64" y="34" font-size="8" text-anchor="middle" fill="#ffffff" font-family="Verdana">W</text>
-  <text x="64" y="110" font-size="10" text-anchor="middle" fill="#2f3a3b" font-family="Verdana">Welfare L3</text>
+  <ellipse cx="80" cy="122" rx="56" ry="14" fill="#173246" opacity="0.22"/>
+  <polygon points="80,30 142,66 80,102 18,66" fill="url(#ground)" stroke="#6f9685" stroke-width="2"/>
+
+  <g filter="url(#softShadow)">
+    <polygon points="32,54 80,78 80,154 32,130" fill="url(#wallL)" stroke="#48545f" stroke-width="2.1"/>
+    <polygon points="128,54 80,78 80,154 128,130" fill="url(#wallR)" stroke="#48545f" stroke-width="2.1"/>
+    <polygon points="80,25 128,54 80,78 32,54" fill="url(#roofFace)" stroke="#48545f" stroke-width="2.3"/>
+    <polygon points="80,25 128,54 80,78 32,54" fill="url(#roofSpec)"/>
+  </g>
+
+  <polygon points="80,60 89,65 89,96 80,91" fill="#a9754d" stroke="#564333" stroke-width="1.4"/>
+  <polygon points="80,60 71,65 71,96 80,91" fill="#ca9264" stroke="#564333" stroke-width="1.4"/>
+
+  
+    <polyline points="45,68 80,86 115,68" stroke="#ffffff55" stroke-width="1.2"/>
+    <polyline points="45,82 80,100 115,82" stroke="#00000022" stroke-width="1.1"/>
+  
+  <polygon points="97,62 106,67 106,72 97,67" fill="#cde8f8" stroke="#5f6771" stroke-width="0.9"/><polygon points="110,69 119,74 119,79 110,74" fill="#cde8f8" stroke="#5f6771" stroke-width="0.9"/><polygon points="97,70 106,75 106,80 97,75" fill="#f8efbd" stroke="#5f6771" stroke-width="0.9"/><polygon points="110,77 119,82 119,87 110,82" fill="#f8efbd" stroke="#5f6771" stroke-width="0.9"/><polygon points="97,78 106,83 106,88 97,83" fill="#f8efbd" stroke="#5f6771" stroke-width="0.9"/><polygon points="110,85 119,90 119,95 110,90" fill="#f8efbd" stroke="#5f6771" stroke-width="0.9"/><polygon points="97,86 106,91 106,96 97,91" fill="#cde8f8" stroke="#5f6771" stroke-width="0.9"/><polygon points="110,93 119,98 119,103 110,98" fill="#cde8f8" stroke="#5f6771" stroke-width="0.9"/><polygon points="97,94 106,99 106,104 97,99" fill="#f8efbd" stroke="#5f6771" stroke-width="0.9"/><polygon points="110,101 119,106 119,111 110,106" fill="#f8efbd" stroke="#5f6771" stroke-width="0.9"/><polygon points="97,102 106,107 106,112 97,107" fill="#f8efbd" stroke="#5f6771" stroke-width="0.9"/><polygon points="110,109 119,114 119,119 110,114" fill="#f8efbd" stroke="#5f6771" stroke-width="0.9"/><polygon points="97,110 106,115 106,120 97,115" fill="#cde8f8" stroke="#5f6771" stroke-width="0.9"/><polygon points="110,117 119,122 119,127 110,122" fill="#cde8f8" stroke="#5f6771" stroke-width="0.9"/>
+  <polygon points="63,67 54,72 54,77 63,72" fill="#cde8f8" stroke="#5f6771" stroke-width="0.9"/><polygon points="50,74 41,79 41,84 50,79" fill="#cde8f8" stroke="#5f6771" stroke-width="0.9"/><polygon points="63,75 54,80 54,85 63,80" fill="#f8efbd" stroke="#5f6771" stroke-width="0.9"/><polygon points="50,82 41,87 41,92 50,87" fill="#f8efbd" stroke="#5f6771" stroke-width="0.9"/><polygon points="63,83 54,88 54,93 63,88" fill="#f8efbd" stroke="#5f6771" stroke-width="0.9"/><polygon points="50,90 41,95 41,100 50,95" fill="#f8efbd" stroke="#5f6771" stroke-width="0.9"/><polygon points="63,91 54,96 54,101 63,96" fill="#cde8f8" stroke="#5f6771" stroke-width="0.9"/><polygon points="50,98 41,103 41,108 50,103" fill="#cde8f8" stroke="#5f6771" stroke-width="0.9"/><polygon points="63,99 54,104 54,109 63,104" fill="#f8efbd" stroke="#5f6771" stroke-width="0.9"/><polygon points="50,106 41,111 41,116 50,111" fill="#f8efbd" stroke="#5f6771" stroke-width="0.9"/><polygon points="63,107 54,112 54,117 63,112" fill="#f8efbd" stroke="#5f6771" stroke-width="0.9"/><polygon points="50,114 41,119 41,124 50,119" fill="#f8efbd" stroke="#5f6771" stroke-width="0.9"/><polygon points="63,115 54,120 54,125 63,120" fill="#cde8f8" stroke="#5f6771" stroke-width="0.9"/><polygon points="50,122 41,127 41,132 50,127" fill="#cde8f8" stroke="#5f6771" stroke-width="0.9"/>
+
+  <ellipse cx="80" cy="56" rx="12" ry="7" fill="#647fca" stroke="#3d4650" stroke-width="1.5"/>
+  <text x="80" y="59" font-size="10" text-anchor="middle" fill="#ffffff" font-family="Verdana" font-weight="700">W</text>
+  <rect x="74" y="27" width="12" height="9" rx="2" fill="#647fca" stroke="#424b56" stroke-width="1.2"/><rect x="78" y="17" width="4" height="10" rx="1.6" fill="#8fa0b4"/><circle cx="80" cy="15" r="4.2" fill="#ffe39e" stroke="#424b56" stroke-width="1"/>
+  <circle cx="80" cy="23" r="6" fill="#ffe0a3" stroke="#4e5963" stroke-width="1.1"/><circle cx="74" cy="27" r="2.4" fill="#ffe0a3" stroke="#4e5963" stroke-width="1"/>
   </svg>

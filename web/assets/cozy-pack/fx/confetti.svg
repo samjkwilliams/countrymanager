@@ -1,11 +1,2 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none">
-  <rect x="22" y="22" width="8" height="4" rx="1" fill="#ffd37f" transform="rotate(18 22 22)"/>
-  <rect x="40" y="34" width="8" height="4" rx="1" fill="#8de0ac" transform="rotate(-18 40 34)"/>
-  <rect x="62" y="20" width="8" height="4" rx="1" fill="#ffc0a6" transform="rotate(12 62 20)"/>
-  <rect x="82" y="36" width="8" height="4" rx="1" fill="#9ec4ff" transform="rotate(-12 82 36)"/>
-  <rect x="24" y="54" width="8" height="4" rx="1" fill="#ff9f72" transform="rotate(-22 24 54)"/>
-  <rect x="46" y="66" width="8" height="4" rx="1" fill="#ffd37f" transform="rotate(22 46 66)"/>
-  <rect x="72" y="56" width="8" height="4" rx="1" fill="#8de0ac" transform="rotate(-16 72 56)"/>
-  <rect x="94" y="68" width="8" height="4" rx="1" fill="#ffb5d8" transform="rotate(16 94 68)"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none"><circle cx="24" cy="24" r="4" fill="#ffd46b"/><circle cx="46" cy="38" r="3" fill="#8ac7ff"/><circle cx="84" cy="24" r="4" fill="#ff8c76"/><circle cx="96" cy="48" r="3" fill="#9de18f"/><circle cx="36" cy="86" r="3" fill="#c8a3ff"/><circle cx="78" cy="90" r="4" fill="#ffe79c"/></svg>

@@ -677,6 +677,7 @@ const state = {
     radius: 10.5,
     maxRadius: 18.5,
     lastExpandDay: 0,
+    score: 60,
   },
   districts: [
     { id: "NW", label: "Northwest", stress: 0 },
@@ -843,6 +844,20 @@ function buildingTile(b) {
 function cityRadius() {
   return state.growth?.radius || 10;
 }
+function activeRoadLines() {
+  const r = cityRadius();
+  const lines = [10];
+  if (r > 12.5) lines.push(14);
+  if (r > 15.5) lines.push(18);
+  if (r > 18.5) lines.push(22);
+  if (r > 22) lines.push(26);
+  if (r > 25) lines.push(30);
+  return lines.filter((v) => v > 1 && v < MAP_W - 2);
+}
+function isRoadTile(x, y) {
+  const lines = activeRoadLines();
+  return lines.includes(x) || lines.includes(y);
+}
 function isDevelopedTile(x, y, margin = 0) {
   const dx = x - CITY_CORE_TILE[0];
   const dy = y - CITY_CORE_TILE[1];
@@ -852,7 +867,7 @@ function isDevelopedTile(x, y, margin = 0) {
 function isTileBuildable(x, y) {
   if (x < 1 || y < 1 || x > MAP_W - 2 || y > MAP_H - 2) return false;
   if (!isDevelopedTile(x, y, -0.4)) return false;
-  if (x === 10 || y === 10) return false;
+  if (isRoadTile(x, y)) return false;
   return !state.buildings.some((b) => b.placed && b.tile && b.tile[0] === x && b.tile[1] === y);
 }
 function screenToTile(sx, sy) {
@@ -1916,10 +1931,14 @@ function getResponderKindColor(kind) {
 
 function initTrafficVehicles() {
   const vehicleSprites = ["vehicle_car", "vehicle_bus", "vehicle_car", "vehicle_car"];
+  const lines = activeRoadLines();
   state.visual.vehicles = [];
   for (let i = 0; i < 34; i += 1) {
+    const lane = i % 2 === 0 ? "x" : "y";
+    const laneOffset = lines[i % lines.length] ?? 10;
     state.visual.vehicles.push({
-      lane: i % 2 === 0 ? "x" : "y",
+      lane,
+      laneOffset,
       t: Math.random() * MAP_W,
       speed: 0.9 + Math.random() * 1.6,
       color: i % 3 === 0 ? "#f5f5f5" : i % 3 === 1 ? "#ffd17b" : "#9dc8ff",
@@ -1930,10 +1949,14 @@ function initTrafficVehicles() {
 
 function addTrafficVehicles(count) {
   const vehicleSprites = ["vehicle_car", "vehicle_bus", "vehicle_car", "vehicle_car"];
+  const lines = activeRoadLines();
   for (let i = 0; i < count; i += 1) {
     const idx = state.visual.vehicles.length + i;
+    const lane = idx % 2 === 0 ? "x" : "y";
+    const laneOffset = lines[idx % lines.length] ?? 10;
     state.visual.vehicles.push({
-      lane: idx % 2 === 0 ? "x" : "y",
+      lane,
+      laneOffset,
       t: Math.random() * MAP_W,
       speed: 0.9 + Math.random() * 1.6,
       color: idx % 3 === 0 ? "#f5f5f5" : idx % 3 === 1 ? "#ffd17b" : "#9dc8ff",
@@ -1945,12 +1968,7 @@ function addTrafficVehicles(count) {
 function initCivilians(count = 180) {
   const civSprites = ["civ_a", "civ_b", "civ_c", "civ_d", "civ_e", "civ_f"];
   state.visual.civilians = [];
-  const homeClusters = [
-    [3.5, 17.5],
-    [5.2, 6.3],
-    [18.4, 5.6],
-    [19.1, 17.3],
-  ];
+  const homeClusters = getResidentialAnchors();
   const jobs = state.buildings.map((b) => buildingTile(b));
 
   for (let i = 0; i < count; i += 1) {
@@ -1975,12 +1993,7 @@ function initCivilians(count = 180) {
 
 function addCivilians(count = 8) {
   const civSprites = ["civ_a", "civ_b", "civ_c", "civ_d", "civ_e", "civ_f"];
-  const homeClusters = [
-    [3.5, 17.5],
-    [5.2, 6.3],
-    [18.4, 5.6],
-    [19.1, 17.3],
-  ];
+  const homeClusters = getResidentialAnchors();
   const jobs = state.buildings.map((b) => buildingTile(b));
   for (let i = 0; i < count; i += 1) {
     const h = homeClusters[Math.floor(Math.random() * homeClusters.length)];
@@ -2038,32 +2051,50 @@ function initResponders() {
 }
 
 function initDecorProps() {
-  const kinds = [
-    "prop_tree_small",
-    "prop_tree_tall",
-    "prop_lamp",
-    "prop_market",
-    "prop_banner",
-    "prop_fountain",
-    "prop_house_small",
-    "prop_house_mid",
-    "prop_apartment",
-    "prop_shop_corner",
-    "prop_playground",
-  ];
+  const density = clamp((cityRadius() - 9) / 20, 0.24, 0.92);
+  const economyBoost = clamp((state.kpi.economy - 55) / 40, 0, 1);
+  const climateBoost = clamp((state.kpi.climate - 50) / 40, 0, 1);
+  const highRiseChance = clamp(0.06 + economyBoost * 0.28, 0.06, 0.36);
+  const parkChance = clamp(0.12 + climateBoost * 0.2 - economyBoost * 0.05, 0.08, 0.34);
   const out = [];
   for (let x = 2; x < MAP_W - 2; x += 1) {
     for (let y = 2; y < MAP_H - 2; y += 1) {
-      if (!isDevelopedTile(x, y, 1.2)) continue;
-      if (x === 10 || y === 10) continue;
-      if ((x + y) % 6 !== 0) continue;
-      const hash = (x * 31 + y * 17) % 100;
-      if (hash > 42) continue;
-      const kind = kinds[(x * 13 + y * 7) % kinds.length];
-      out.push({ tile: [x + ((hash % 3) - 1) * 0.12, y + ((hash % 4) - 2) * 0.1], kind });
+      if (!isDevelopedTile(x, y, 1.2) || isRoadTile(x, y)) continue;
+      const dist = tileDist([x, y], CITY_CORE_TILE);
+      const edgeBias = clamp((dist - (cityRadius() - 5)) / 6, 0, 1);
+      const hash = ((x * 73856093) ^ (y * 19349663)) >>> 0;
+      const pick = (hash % 1000) / 1000;
+      const localDensity = density + edgeBias * 0.12;
+      if (pick > localDensity) continue;
+
+      let kind = "prop_tree_small";
+      if (pick < parkChance * 0.55) kind = "prop_oval";
+      else if (pick < parkChance) kind = ["prop_tree_tall", "prop_tree_small", "prop_playground"][hash % 3];
+      else if (pick < parkChance + highRiseChance * 0.7 && dist < cityRadius() - 2.8) kind = "prop_skyscraper";
+      else if (pick < parkChance + highRiseChance) kind = "prop_apartment";
+      else if (pick < 0.7) kind = ["prop_house_small", "prop_house_mid", "prop_townhouse_row"][hash % 3];
+      else if (pick < 0.86) kind = ["prop_shop_corner", "prop_market", "prop_banner"][hash % 3];
+      else kind = ["prop_lamp", "prop_tree_small", "prop_fountain"][hash % 3];
+
+      const jx = ((hash % 5) - 2) * 0.07;
+      const jy = (((hash >> 3) % 5) - 2) * 0.07;
+      out.push({ tile: [x + jx, y + jy], kind });
     }
   }
   state.visual.decorProps = out;
+}
+
+function getResidentialAnchors() {
+  const homes = state.visual.decorProps
+    .filter((p) => p.kind === "prop_house_small" || p.kind === "prop_house_mid" || p.kind === "prop_townhouse_row" || p.kind === "prop_apartment")
+    .map((p) => [p.tile[0], p.tile[1]]);
+  if (homes.length >= 8) return homes;
+  return [
+    [3.5, 17.5],
+    [5.2, 6.3],
+    [18.4, 5.6],
+    [19.1, 17.3],
+  ];
 }
 
 function nearestUnassignedIncidentFor(kind) {
@@ -2154,7 +2185,8 @@ function updateVisual(dt) {
 
   for (const v of state.visual.vehicles) {
     v.t += v.speed * dt;
-    if (v.t > MAP_W + 2) v.t = -2;
+    const laneLimit = v.lane === "x" ? MAP_W : MAP_H;
+    if (v.t > laneLimit + 2) v.t = -2;
   }
 
   updateCivilians(dt);
@@ -2421,8 +2453,9 @@ function runMonthlySummary() {
 }
 
 function scaleCityActivity(avgLevel) {
-  const targetCivilians = clamp(Math.round(130 + state.kpi.stability * 1.35 + avgLevel * 10), 150, 330);
-  const targetVehicles = clamp(Math.round(18 + state.kpi.economy * 0.24 + avgLevel * 1.8), 20, 56);
+  const radiusFactor = cityRadius() - 10;
+  const targetCivilians = clamp(Math.round(130 + state.kpi.stability * 1.25 + avgLevel * 10 + radiusFactor * 10), 150, 520);
+  const targetVehicles = clamp(Math.round(18 + state.kpi.economy * 0.22 + avgLevel * 1.8 + radiusFactor * 1.5), 20, 90);
 
   if (state.visual.civilians.length < targetCivilians) addCivilians(Math.min(8, targetCivilians - state.visual.civilians.length));
   else if (state.visual.civilians.length > targetCivilians) state.visual.civilians.length = targetCivilians;
@@ -2431,16 +2464,68 @@ function scaleCityActivity(avgLevel) {
   else if (state.visual.vehicles.length > targetVehicles) state.visual.vehicles.length = targetVehicles;
 }
 
+function maxGrowthRadius() {
+  const corners = [
+    [0, 0],
+    [MAP_W - 1, 0],
+    [0, MAP_H - 1],
+    [MAP_W - 1, MAP_H - 1],
+  ];
+  let maxD = 10;
+  for (const c of corners) {
+    maxD = Math.max(maxD, tileDist(CITY_CORE_TILE, c));
+  }
+  return maxD - 1;
+}
+
+function computeGrowthScore(avgLevel) {
+  const peopleAvg = state.people.reduce((a, p) => a + p.happiness, 0) / state.people.length;
+  const treasurySignal = clamp(50 + state.budget.treasury * 0.32, 0, 100);
+  const debtSignal = clamp(120 - state.budget.debt, 0, 100);
+  return clamp(
+    state.kpi.economy * 0.28 +
+      state.kpi.stability * 0.18 +
+      state.kpi.climate * 0.14 +
+      peopleAvg * 0.16 +
+      treasurySignal * 0.14 +
+      debtSignal * 0.1 +
+      avgLevel * 2.2,
+    0,
+    100
+  );
+}
+
+function normalizeTrafficLanes() {
+  const lines = activeRoadLines();
+  if (lines.length === 0) return;
+  for (let i = 0; i < state.visual.vehicles.length; i += 1) {
+    const v = state.visual.vehicles[i];
+    if (!lines.includes(v.laneOffset)) {
+      v.laneOffset = lines[i % lines.length];
+    }
+  }
+}
+
 function maybeGrowCity(avgLevel) {
-  if (state.day - state.growth.lastExpandDay < 14) return;
-  if (state.growth.radius >= state.growth.maxRadius) return;
-  const prosperity = computeProsperityScore();
-  const canGrow = prosperity > 66 && state.kpi.climate > 52 && state.budget.treasury > 70;
-  if (!canGrow) return;
-  state.growth.radius = clamp(state.growth.radius + 0.55 + avgLevel * 0.02, 8, state.growth.maxRadius);
+  const minGap = state.kpi.economy > 78 ? 5 : state.kpi.economy > 66 ? 7 : 10;
+  if (state.day - state.growth.lastExpandDay < minGap) return;
+  state.growth.maxRadius = maxGrowthRadius();
+  if (state.growth.radius >= state.growth.maxRadius - 0.05) return;
+  const score = computeGrowthScore(avgLevel);
+  state.growth.score = round(score);
+  let delta = 0;
+  if (score >= 82) delta = 0.95 + avgLevel * 0.03;
+  else if (score >= 72) delta = 0.68 + avgLevel * 0.025;
+  else if (score >= 62) delta = 0.42 + avgLevel * 0.02;
+  else if (score >= 55) delta = 0.22 + avgLevel * 0.015;
+  if (delta <= 0) return;
+  state.growth.radius = clamp(state.growth.radius + delta, 8, state.growth.maxRadius);
   state.growth.lastExpandDay = state.day;
   initDecorProps();
-  addTicker("City footprint expanded: new neighborhoods are developing.");
+  normalizeTrafficLanes();
+  addCivilians(10 + Math.floor(delta * 4));
+  addTrafficVehicles(2 + Math.floor(delta * 2));
+  addTicker(`City footprint expanded: growth score ${round(score)} is unlocking new neighborhoods.`);
   addRailEvent("🌆 Urban Growth", `Development ring expanded to ${round(state.growth.radius)} tiles.`, true);
 }
 
@@ -2613,20 +2698,52 @@ function drawClouds() {
   }
 }
 
+function drawOceanEdge() {
+  const left = isoToScreen(0, MAP_H - 1);
+  const bottom = isoToScreen(MAP_W - 1, MAP_H - 1);
+  const waveT = performance.now() / 900;
+
+  const nX = left.y - bottom.y;
+  const nY = bottom.x - left.x;
+  const nLen = Math.max(1, Math.hypot(nX, nY));
+  const ux = (nX / nLen) * 150;
+  const uy = (nY / nLen) * 150;
+
+  const p1 = { x: left.x - ux, y: left.y - uy };
+  const p2 = { x: bottom.x - ux, y: bottom.y - uy };
+
+  const grad = ctx.createLinearGradient((left.x + bottom.x) / 2, left.y - 30, (p1.x + p2.x) / 2, p2.y + 160);
+  grad.addColorStop(0, "rgba(95, 210, 238, 0.65)");
+  grad.addColorStop(0.45, "rgba(49, 169, 213, 0.62)");
+  grad.addColorStop(1, "rgba(18, 109, 172, 0.72)");
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(left.x, left.y);
+  ctx.lineTo(bottom.x, bottom.y);
+  ctx.lineTo(p2.x, p2.y);
+  ctx.lineTo(p1.x, p1.y);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  for (let t = 0; t <= 1; t += 0.065) {
+    const bx = left.x + (bottom.x - left.x) * t;
+    const by = left.y + (bottom.y - left.y) * t;
+    const swell = Math.sin(t * 17 + waveT) * 4 + Math.cos(t * 9 + waveT * 1.8) * 2.2;
+    const wx = bx - (ux * 0.14 + swell * 0.7);
+    const wy = by - (uy * 0.14 + swell);
+    ctx.fillStyle = "rgba(234, 255, 255, 0.55)";
+    ctx.beginPath();
+    ctx.ellipse(wx, wy, 7, 2.4, -0.42, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 function drawAtmosphere() {
-  const hour = state.visual.hour;
-  const nightFactor = hour < 6 || hour > 19 ? 1 : 0;
-  const twilight = (hour >= 17 && hour <= 19) || (hour >= 5 && hour <= 7) ? 1 : 0;
   const smog = clamp((65 - state.kpi.climate) / 28, 0, 1);
   state.visual.haze = smog;
-
-  if (nightFactor) {
-    ctx.fillStyle = "rgba(8, 12, 24, 0.36)";
-    ctx.fillRect(0, 0, state.camera.viewW, state.camera.viewH);
-  } else if (twilight) {
-    ctx.fillStyle = "rgba(255, 132, 56, 0.12)";
-    ctx.fillRect(0, 0, state.camera.viewW, state.camera.viewH);
-  }
 
   if (smog > 0.05) {
     const alpha = 0.14 + smog * 0.22;
@@ -2640,8 +2757,9 @@ function drawAtmosphere() {
 
 function drawTraffic() {
   for (const v of state.visual.vehicles) {
-    const tileX = v.lane === "x" ? v.t : 10;
-    const tileY = v.lane === "x" ? 10 : v.t;
+    const laneOffset = v.laneOffset ?? 10;
+    const tileX = v.lane === "x" ? v.t : laneOffset;
+    const tileY = v.lane === "x" ? laneOffset : v.t;
     const p = isoToScreen(tileX, tileY);
     const sprite = state.assets.actors[v.sprite];
     if (state.assets.loaded && sprite) {
@@ -2744,6 +2862,9 @@ function drawProsperityDecor(prosperity) {
       const size =
         d.kind === "prop_tree_tall" ? [20, 28]
         : d.kind === "prop_fountain" ? [24, 18]
+        : d.kind === "prop_oval" ? [34, 22]
+        : d.kind === "prop_skyscraper" ? [24, 38]
+        : d.kind === "prop_townhouse_row" ? [30, 20]
         : d.kind === "prop_apartment" ? [24, 28]
         : d.kind === "prop_house_mid" ? [22, 20]
         : d.kind === "prop_house_small" ? [18, 16]
@@ -2863,15 +2984,21 @@ function drawIncidents() {
 }
 
 function tileSpriteFor(x, y) {
-  if (!isDevelopedTile(x, y, 1.6)) return "water";
-  if (x === 10 && y === 10) return "plaza";
-  if (x === 10 || y === 10) {
+  if (!isDevelopedTile(x, y, 1.6)) return "grass";
+  const lines = activeRoadLines();
+  if (lines.includes(x) && lines.includes(y)) return "plaza";
+  if (lines.includes(x) || lines.includes(y)) {
     if ((x + y) % 7 === 0) return "road_turn";
     return "road_straight";
   }
-  if ((x + y) % 13 === 0) return "water";
-  if ((x + y) % 9 === 0) return "park";
-  if ((x + y) % 5 === 0) return "sidewalk";
+  const hash = ((x * 92837111) ^ (y * 689287499)) >>> 0;
+  const climateWet = clamp((state.kpi.climate - 48) / 70, 0, 1);
+  const parkBias = 0.1 + climateWet * 0.16;
+  const waterBias = 0.05 + climateWet * 0.06;
+  const h = (hash % 1000) / 1000;
+  if (h < waterBias && cityRadius() > 13) return "water";
+  if (h < waterBias + parkBias) return "park";
+  if ((hash % 7) <= 1) return "sidewalk";
   return "grass";
 }
 
@@ -2881,6 +3008,7 @@ function drawMap() {
   ctx.clearRect(0, 0, state.camera.viewW, state.camera.viewH);
 
   drawClouds();
+  drawOceanEdge();
 
   for (let x = 0; x < MAP_W; x += 1) {
     for (let y = 0; y < MAP_H; y += 1) {
@@ -2899,7 +3027,7 @@ function drawMap() {
         const fill = !developed ? (frontier ? "#4f6881" : "#374a5c") : (alt ? "#9fd0b0" : "#93c5a8");
         const stroke = !developed ? "#304051" : "#6ea08a";
         drawDiamond(p.x, p.y, TILE_W * state.camera.zoom, TILE_H * state.camera.zoom, fill, stroke);
-        if (developed && (x === 10 || y === 10) && (x + y) % 3 !== 0) {
+        if (developed && isRoadTile(x, y) && (x + y) % 3 !== 0) {
           drawDiamond(p.x, p.y - 1, TILE_W * 0.9 * state.camera.zoom, TILE_H * 0.7 * state.camera.zoom, "#b9b3a3", "#9b9688");
         }
       }
@@ -2950,12 +3078,12 @@ function drawMap() {
     const p = isoToScreen(b.tile[0], b.tile[1]);
     const lvl = Math.max(1, Math.min(3, b.level));
     const bSprite = state.assets.buildings[`${b.id}_lvl${lvl}`];
-    const w = TILE_W * 1.28 * state.camera.zoom;
-    const h = TILE_H * 2.2 * state.camera.zoom;
-    const h3d = (16 + b.level * 12) * state.camera.zoom;
+    const w = TILE_W * 1.62 * state.camera.zoom;
+    const h = TILE_H * 2.9 * state.camera.zoom;
+    const h3d = (18 + b.level * 11) * state.camera.zoom;
 
     if (state.assets.loaded && bSprite) {
-      drawSpriteCentered(bSprite, p.x, p.y - 26 * state.camera.zoom, w, h);
+      drawSpriteCentered(bSprite, p.x, p.y - 34 * state.camera.zoom, w, h);
     } else {
       const bw = TILE_W * 0.62 * state.camera.zoom;
       const bh = TILE_H * 0.56 * state.camera.zoom;
@@ -2996,10 +3124,10 @@ function drawMap() {
     ctx.textAlign = "center";
     ctx.fillText(iconMeta.icon, p.x + 20 * state.camera.zoom, p.y - h3d - 12 * state.camera.zoom);
 
-    ctx.fillStyle = "rgba(45,52,53,0.8)";
-    ctx.font = `${Math.max(10, 11 * state.camera.zoom)}px sans-serif`;
+    ctx.fillStyle = "rgba(32,39,44,0.68)";
+    ctx.font = `${Math.max(9, 10 * state.camera.zoom)}px sans-serif`;
     ctx.textAlign = "center";
-    ctx.fillText(b.name.split(" ")[0], p.x, p.y + 18 * state.camera.zoom);
+    ctx.fillText(b.name.split(" ")[0], p.x, p.y + 16 * state.camera.zoom);
   }
 
   drawIncidents();
@@ -3266,7 +3394,7 @@ function renderHud() {
     tone = "warning";
     els.statusBanner.textContent = `Status: Warning trend (${worstDistrict.label}).`;
   } else {
-    els.statusBanner.textContent = "Status: Stable systems.";
+    els.statusBanner.textContent = `Status: Stable systems · Growth score ${round(state.growth.score || 0)}.`;
   }
   setText(els.trafficLight, light);
   const rapidHint = state.rapid.active ? `${state.rapid.active.incidentCode} active` : "No rapid INCIDENT";
@@ -3314,7 +3442,7 @@ function renderHud() {
     const label = hottest ? prettifyTag(hottest[0]) : "Systems";
     const manual = state.incidents.filter((i) => !i.resolved && !i.contained).length;
     const rapid = state.rapid.active ? 1 : 0;
-    els.dockStatus.textContent = `${label} pressure ${hotPct}% · Manual actions ${manual + rapid}`;
+    els.dockStatus.textContent = `${label} pressure ${hotPct}% · Growth ${round(state.growth.score || 0)} · Radius ${round(cityRadius())} · Manual actions ${manual + rapid}`;
   }
 
   const goal = currentGoal();
@@ -4270,9 +4398,9 @@ async function bootstrap() {
     addTicker("Asset pack unavailable; using fallback visuals.");
   }
   initTrafficVehicles();
+  initDecorProps();
   initCivilians(220);
   initResponders();
-  initDecorProps();
   recalcBuildingStates();
   refreshAdvisorBrief();
   bindInput();
