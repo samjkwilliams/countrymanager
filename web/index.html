@@ -120,6 +120,16 @@
 
             <section class="tab-pane" data-pane="pulse">
               <section class="card">
+                <h3>Ops Radar</h3>
+                <p class="muted">At-a-glance system heat and demographic direction.</p>
+                <div class="ops-radar-wrap">
+                  <svg id="opsRadarSvg" viewBox="0 0 220 220" class="ops-radar" aria-label="Operations radar"></svg>
+                  <div id="opsHeatList" class="ops-heat-list"></div>
+                </div>
+                <div id="pulseMiniBoard" class="pulse-mini-board"></div>
+              </section>
+
+              <section class="card">
                 <h3>City Pulse</h3>
                 <div id="kpiGrid" class="kpi-grid"></div>
               </section>
@@ -176,8 +186,17 @@
       </section>
 
       <section class="news-strip compact-dock card">
-        <div class="ticker-wrap"><div id="tickerLine" class="ticker-line"></div></div>
-        <div id="eventRail" class="event-rail"></div>
+        <div class="dock-head">
+          <strong>Live Pulse</strong>
+          <span id="dockStatus" class="muted">Monitoring city systems</span>
+        </div>
+        <div class="dock-grid">
+          <div id="dockPeople" class="pulse-mini-board"></div>
+          <div class="dock-radar-wrap">
+            <svg id="dockRadarSvg" viewBox="0 0 220 220" class="ops-radar" aria-label="Dock operations radar"></svg>
+            <div id="dockHeatList" class="ops-heat-list"></div>
+          </div>
+        </div>
       </section>
     </main>
 

@@ -663,7 +663,8 @@ const state = {
   },
   decisionLog: [],
   ideology: { careAusterity: 0, libertyControl: 0, publicDonor: 0, truthSpin: 0, trust: 62 },
-  truth: { wins: 0, misses: 0, total: 0, score: 50 },
+  truth: { wins: 0, misses: 0, neutral: 0, total: 0, score: 50, streak: 0, bestStreak: 0, played: 0, speakerReads: {} },
+  ops: { heat: { health: 0.2, education: 0.2, safety: 0.2, climate: 0.25, integrity: 0.25, economy: 0.2 } },
   content: { scenarioLibrary: [], truthChecks: [] },
   majorEvents: [],
   major: {
@@ -759,6 +760,9 @@ const els = {
   rapidBtnC: document.getElementById("rapidBtnC"),
   rapidCard: document.querySelector(".rapid-card"),
   kpiGrid: document.getElementById("kpiGrid"),
+  pulseMiniBoard: document.getElementById("pulseMiniBoard"),
+  opsRadarSvg: document.getElementById("opsRadarSvg"),
+  opsHeatList: document.getElementById("opsHeatList"),
   tierGoal: document.getElementById("tierGoal"),
   missionList: document.getElementById("missionList"),
   sessionGoal: document.getElementById("sessionGoal"),
@@ -789,6 +793,10 @@ const els = {
   incidentInbox: document.getElementById("incidentInbox"),
   tickerLine: document.getElementById("tickerLine"),
   eventRail: document.getElementById("eventRail"),
+  dockStatus: document.getElementById("dockStatus"),
+  dockPeople: document.getElementById("dockPeople"),
+  dockRadarSvg: document.getElementById("dockRadarSvg"),
+  dockHeatList: document.getElementById("dockHeatList"),
   decisionFlash: document.getElementById("decisionFlash"),
   majorEventCard: document.getElementById("majorEventCard"),
   majorEventTitle: document.getElementById("majorEventTitle"),
@@ -820,6 +828,14 @@ function setTabAlert(el, active = false, critical = false) {
   if (!el) return;
   el.hidden = !active;
   el.classList.toggle("critical", critical);
+}
+function setActiveSideTab(tab) {
+  document.querySelectorAll(".side-tab").forEach((btn) => {
+    btn.classList.toggle("is-active", btn.getAttribute("data-tab") === tab);
+  });
+  document.querySelectorAll(".tab-pane").forEach((pane) => {
+    pane.classList.toggle("is-active", pane.getAttribute("data-pane") === tab);
+  });
 }
 function buildingTile(b) {
   return b?.tile || b?.homeTile || [12, 12];
@@ -867,6 +883,20 @@ function addApToast(text, kind = "") {
 function addDecisionToast(text, kind = "good") {
   state.ui.decisionToasts.unshift({ id: `dc_${Date.now()}_${Math.random()}`, text, kind, ttl: 3.2 });
   state.ui.decisionToasts = state.ui.decisionToasts.slice(0, 3);
+}
+function truthVerdict(q) {
+  if (q > 0) return "RIGHT";
+  if (q < 0) return "WRONG";
+  return "NEUTRAL";
+}
+function truthConfidence(options = []) {
+  const q = options.map((o) => Math.abs(o.truth_quality || 0));
+  if (q.length === 0) return "Low";
+  const max = Math.max(...q);
+  const nonZero = q.filter((v) => v > 0).length;
+  if (max >= 1 && nonZero === 2) return "High";
+  if (max >= 1) return "Medium";
+  return "Low";
 }
 
 const BUILDING_STATE_META = {
@@ -1410,9 +1440,41 @@ function resolveRapid(choice, timedOut = false) {
     const truthQuality = Number.isFinite(picked.truth_quality) ? picked.truth_quality : null;
     if (truthQuality !== null) {
       state.truth.total += 1;
-      if (truthQuality > 0) state.truth.wins += 1;
-      else if (truthQuality < 0) state.truth.misses += 1;
-      state.truth.score = clamp(round(50 + (state.truth.wins - state.truth.misses) * 3), 0, 100);
+      if (truthQuality > 0) {
+        state.truth.wins += 1;
+        state.truth.streak += 1;
+        state.truth.bestStreak = Math.max(state.truth.bestStreak, state.truth.streak);
+      } else if (truthQuality < 0) {
+        state.truth.misses += 1;
+        state.truth.played += 1;
+        state.truth.streak = 0;
+      } else {
+        state.truth.neutral += 1;
+      }
+      const ratio = state.truth.wins / Math.max(1, state.truth.total);
+      state.truth.score = clamp(round(ratio * 100 + Math.min(10, state.truth.streak * 1.5) - state.truth.played * 0.8), 0, 100);
+      if (state.truth.streak > 0 && state.truth.streak % 3 === 0) {
+        state.resources.actionPoints = clamp(state.resources.actionPoints + 1, 0, state.resources.maxActionPoints);
+        addApToast("+1 AP", "up");
+        pulseActionPill();
+        addTicker(`Credibility streak x${state.truth.streak}: bonus action point.`);
+      }
+      const speaker = active.speaker || "Unknown Source";
+      if (!state.truth.speakerReads[speaker]) {
+        state.truth.speakerReads[speaker] = { right: 0, wrong: 0, neutral: 0 };
+      }
+      if (truthQuality > 0) state.truth.speakerReads[speaker].right += 1;
+      else if (truthQuality < 0) state.truth.speakerReads[speaker].wrong += 1;
+      else state.truth.speakerReads[speaker].neutral += 1;
+      const verdictLabel = truthVerdict(truthQuality);
+      const verdictKind = verdictLabel === "RIGHT" ? "good" : verdictLabel === "WRONG" ? "bad" : "neutral";
+      const verdictMsg =
+        verdictLabel === "RIGHT"
+          ? `GOOD CALL · ${shorten(picked.outcome_blurb || "You read the room correctly.", 62)}`
+          : verdictLabel === "WRONG"
+            ? `YOU GOT PLAYED · ${shorten(picked.outcome_blurb || "Narrative trap landed.", 62)}`
+            : `FAIR HOLD · ${shorten(picked.outcome_blurb || "Data was mixed; neutral call.", 62)}`;
+      addDecisionToast(verdictMsg, verdictKind);
     }
     logDecisionImpact({
       title: active.title,
@@ -1446,7 +1508,7 @@ function resolveRapid(choice, timedOut = false) {
   const label = timedOut ? "🤖 Auto decision applied due to timeout." : "✅ Player rapid decision resolved.";
   addTicker(`${active.incidentCode}: ${active.title} - ${label}`);
   addRailEvent(timedOut ? "🤖 Rapid Auto-Resolved" : "✅ Rapid Player-Resolved", `${active.incidentCode}: ${active.title}`, timedOut);
-  if (!timedOut) {
+  if (!timedOut && active.mode !== "scenario") {
     const supportive = choice === "a";
     const dem = emptyDemImpact();
     dem.poverty += supportive ? 2 : -2;
@@ -1560,6 +1622,7 @@ function logDecisionImpact({
     confidence,
     explain: explain || "Decision effects are unfolding across demographics.",
     truthQuality,
+    truthVerdict: truthQuality === null ? null : truthVerdict(truthQuality),
   };
   decision.priority = computeDecisionPriority(decision);
   state.decisionLog.push(decision);
@@ -2217,6 +2280,18 @@ function updatePeopleMood() {
   }
 }
 
+function updateOpsHeat() {
+  const domains = ["health", "education", "safety", "climate", "integrity", "economy"];
+  for (const key of domains) {
+    const base = clamp((58 - state.kpi[key]) / 18, -0.3, 1);
+    const incidentPressure = state.incidents.filter((i) => !i.resolved && i.type.kpi === key).length * 0.08;
+    const majorPressure = state.majorEvents.filter((e) => (e.domain || "").includes(key === "safety" ? "security" : key)).length * 0.12;
+    const target = clamp(0.25 + Math.max(0, base) + incidentPressure + majorPressure, 0, 1);
+    const prev = state.ops.heat[key] ?? 0.2;
+    state.ops.heat[key] = clamp(prev + (target - prev) * 0.24, 0, 1);
+  }
+}
+
 function checkGameOver() {
   if (state.gameOver.active) return;
   const collapsedGroup = state.people.find((p) => p.happiness <= 0);
@@ -2264,6 +2339,8 @@ function runMonthlySummary() {
   const decisionLedger = buildMonthlyDecisionLedger(fromDay, toDay);
   const monthTruth = state.decisionLog.filter((d) => d.day >= fromDay && d.day <= toDay && Number.isFinite(d.truthQuality));
   const monthTruthWins = monthTruth.filter((d) => d.truthQuality > 0).length;
+  const monthTruthMisses = monthTruth.filter((d) => d.truthQuality < 0).length;
+  const monthTruthNeutral = monthTruth.filter((d) => d.truthQuality === 0).length;
   const monthTruthTotal = monthTruth.length;
   state.monthly.lastSummaryDay = state.day;
   const top = Object.entries(state.kpi).sort((a, b) => b[1] - a[1])[0];
@@ -2308,7 +2385,8 @@ function runMonthlySummary() {
       `💰 Treasury now ${formatMoneyMillions(state.budget.treasury)} · Debt ${round(state.budget.debt)}%.`,
       `👥 Mean demographic mood: ${round(fair)}%.`,
       `🧭 Identity drift: ${axisDriftTag(state.ideology)} · Trust ${round(state.ideology.trust)}%.`,
-      `🕵️ Truth rating: ${round(state.truth.score)}% (${monthTruthWins}/${monthTruthTotal} solid reads this month).`,
+      `🕵️ Truth rating: ${round(state.truth.score)}% · Right ${monthTruthWins} / Wrong ${monthTruthMisses} / Neutral ${monthTruthNeutral}.`,
+      `🎯 Credibility streak: ${state.truth.streak} (best ${state.truth.bestStreak}) · Played by spin: ${state.truth.played}.`,
     ],
     quotes: [
       `(${centre.label} · ${centreSource}) “${centreLine}”`,
@@ -2414,6 +2492,7 @@ function applySimTick() {
   updateIncidentsPerDay();
   updateGoalDaily();
   updatePeopleMood();
+  updateOpsHeat();
   runMonthlySummary();
   maybeGrowCity(avgLevel);
   if (state.day % 10 === 0) scaleCityActivity(avgLevel);
@@ -3046,7 +3125,13 @@ function renderRapidCard() {
       if (a.clues.data) parts.push(`Data: ${shorten(a.clues.data, 68)}`);
       if (a.clues.street) parts.push(`Street: ${shorten(a.clues.street, 68)}`);
       if (a.clues.motive) parts.push(`Motive: ${shorten(a.clues.motive, 68)}`);
-      els.rapidEvidence.textContent = parts.join("  |  ");
+      const conf = truthConfidence(a.options || []);
+      const speaker = a.speaker || "Source";
+      const reads = state.truth.speakerReads[speaker];
+      const speakerLine = reads
+        ? ` | You vs ${speaker}: ${reads.right}R/${reads.wrong}W`
+        : "";
+      els.rapidEvidence.textContent = `${parts.join("  |  ")}  |  Confidence: ${conf}${speakerLine}`;
     } else if (a.mode === "scenario" && Array.isArray(a.evidence) && a.evidence.length) {
       els.rapidEvidence.textContent = `Clues: ${a.evidence.map((x) => prettifyTag(x)).slice(0, 3).join(" · ")}`;
     } else {
@@ -3190,7 +3275,7 @@ function renderHud() {
   if (els.trafficPill) els.trafficPill.title = `Traffic light: ${tone}. ${majorHint}. ${rapidHint}. ${topIncidents ? `Open: ${topIncidents}.` : "No open incidents."}`;
   renderApFeedback();
 
-  els.tickerLine.textContent = state.tickerItems.join("  |  ");
+  if (els.tickerLine) els.tickerLine.textContent = state.tickerItems.join("  |  ");
 
   const kpiRows = [
     ["Health", state.kpi.health, "health"],
@@ -3218,9 +3303,19 @@ function renderHud() {
     return `<li class="${done ? "done" : ""}">${done ? "[Done]" : "[ ]"} ${c.label}</li>`;
   }).join("");
 
-  els.eventRail.innerHTML = state.railEvents.map((ev) => {
-    return `<article class="event-chip ${ev.hot ? "hot" : ""}"><div class="title">Day ${ev.day}: ${ev.title}</div><div class="meta">${ev.meta}</div></article>`;
-  }).join("");
+  if (els.eventRail) {
+    els.eventRail.innerHTML = state.railEvents.map((ev) => {
+      return `<article class="event-chip ${ev.hot ? "hot" : ""}"><div class="title">Day ${ev.day}: ${ev.title}</div><div class="meta">${ev.meta}</div></article>`;
+    }).join("");
+  }
+  if (els.dockStatus) {
+    const hottest = Object.entries(state.ops.heat).sort((a, b) => b[1] - a[1])[0];
+    const hotPct = hottest ? Math.round(hottest[1] * 100) : 0;
+    const label = hottest ? prettifyTag(hottest[0]) : "Systems";
+    const manual = state.incidents.filter((i) => !i.resolved && !i.contained).length;
+    const rapid = state.rapid.active ? 1 : 0;
+    els.dockStatus.textContent = `${label} pressure ${hotPct}% · Manual actions ${manual + rapid}`;
+  }
 
   const goal = currentGoal();
   els.sessionGoal.textContent = `${goal.label} (${state.session.progress}/${goal.target}) - ${state.session.daysLeft} days left`;
@@ -3281,6 +3376,8 @@ function renderHud() {
   applyUpgradeAvailabilityState();
   renderIncidentInbox();
   renderPeoplePanel();
+  renderPulseMiniBoard();
+  renderOpsRadar();
   renderInitiatives();
   renderTabAlerts();
   renderMonthlyModal();
@@ -3368,6 +3465,80 @@ function renderPeoplePanel() {
       </article>`;
     })
     .join("");
+}
+
+function renderPulseMiniBoard() {
+  const markup = state.people
+    .map((p) => {
+      const cls = p.trend > 0.2 ? "up" : p.trend < -0.2 ? "down" : "";
+      const trend = p.trend > 0 ? `+${round(p.trend)}` : `${round(p.trend)}`;
+      return `<article class="pulse-chip ${cls}">
+        <div class="name">${p.label.split(" ")[0]}</div>
+        <div class="val">${round(p.happiness)}%</div>
+        <div class="trend">${trend}</div>
+      </article>`;
+    })
+    .join("");
+  if (els.pulseMiniBoard) els.pulseMiniBoard.innerHTML = markup;
+  if (els.dockPeople) els.dockPeople.innerHTML = markup;
+}
+
+function renderOpsRadar() {
+  renderRadarInto(els.opsRadarSvg, els.opsHeatList);
+  renderRadarInto(els.dockRadarSvg, els.dockHeatList);
+}
+
+function renderRadarInto(svgEl, heatListEl) {
+  if (!svgEl) return;
+  const keys = ["health", "education", "safety", "climate", "integrity", "economy"];
+  const labels = ["Health", "Edu", "Safety", "Climate", "Integrity", "Economy"];
+  const cx = 110;
+  const cy = 110;
+  const maxR = 84;
+  const points = keys.map((k, i) => {
+    const a = -Math.PI / 2 + (i / keys.length) * Math.PI * 2;
+    const heat = clamp(state.ops.heat[k] ?? 0, 0, 1);
+    const r = 20 + heat * maxR;
+    const x = cx + Math.cos(a) * r;
+    const y = cy + Math.sin(a) * r;
+    return { k, x, y, a, heat, label: labels[i] };
+  });
+  const poly = points.map((p) => `${round(p.x)},${round(p.y)}`).join(" ");
+  const rings = [24, 44, 64, 84]
+    .map((r) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,124,36,0.16)" stroke-width="1"/>`)
+    .join("");
+  const rays = points
+    .map((p) => `<line x1="${cx}" y1="${cy}" x2="${round(cx + Math.cos(p.a) * 88)}" y2="${round(cy + Math.sin(p.a) * 88)}" stroke="rgba(136,162,200,0.2)" stroke-width="1"/>`)
+    .join("");
+  const tags = points
+    .map((p) => {
+      const tx = cx + Math.cos(p.a) * 98;
+      const ty = cy + Math.sin(p.a) * 98;
+      return `<text x="${round(tx)}" y="${round(ty)}" fill="#9db7db" font-size="10" text-anchor="middle" dominant-baseline="middle">${p.label}</text>`;
+    })
+    .join("");
+  svgEl.innerHTML = `
+    ${rings}
+    ${rays}
+    <polygon points="${poly}" fill="rgba(255,124,36,0.25)" stroke="rgba(255,150,88,0.92)" stroke-width="2"></polygon>
+    ${points
+      .map((p) => `<circle cx="${round(p.x)}" cy="${round(p.y)}" r="3.2" fill="${p.heat > 0.72 ? "#ff6c64" : p.heat > 0.5 ? "#ffb14a" : "#67e8ad"}"></circle>`)
+      .join("")}
+    ${tags}
+  `;
+
+  if (!heatListEl) return;
+  const hotRows = points
+    .slice()
+    .sort((a, b) => b.heat - a.heat)
+    .map((p) => {
+      const pct = Math.round(p.heat * 100);
+      const cls = pct > 72 ? "hot" : pct > 50 ? "warm" : "";
+      const status = pct > 72 ? "HOT" : pct > 50 ? "WARM" : "STABLE";
+      return `<div class="ops-heat-row ${cls}">${p.label}: ${status} (${pct}%)</div>`;
+    })
+    .join("");
+  heatListEl.innerHTML = hotRows;
 }
 
 function applyInitiative(id) {
@@ -3634,8 +3805,9 @@ function renderMonthlyModal() {
         ].join(" · ");
         const trustTag = d.trustDelta >= 0 ? `Trust +${round(d.trustDelta)}` : `Trust ${round(d.trustDelta)}`;
         const driftTag = axisDriftTag(d.axisDrift);
+        const verdictTag = d.truthVerdict ? ` · Verdict: ${d.truthVerdict}` : "";
         const riskTag = d.riskFlags && d.riskFlags.length ? ` · Risk: ${d.riskFlags[0]}` : "";
-        return `<li><strong>Day ${d.day}: ${d.title}</strong> (${d.choice})<br/>Impact: ${demRow}<br/>${trustTag} · ${driftTag}${riskTag}<br/><em>${d.explain}</em></li>`;
+        return `<li><strong>Day ${d.day}: ${d.title}</strong> (${d.choice})<br/>Impact: ${demRow}<br/>${trustTag} · ${driftTag}${verdictTag}${riskTag}<br/><em>${d.explain}</em></li>`;
       }).join("");
     }
   }
@@ -3782,10 +3954,7 @@ function bindInput() {
     btn.addEventListener("click", () => {
       const tab = btn.getAttribute("data-tab");
       if (!tab) return;
-      document.querySelectorAll(".side-tab").forEach((x) => x.classList.toggle("is-active", x === btn));
-      document.querySelectorAll(".tab-pane").forEach((pane) => {
-        pane.classList.toggle("is-active", pane.getAttribute("data-pane") === tab);
-      });
+      setActiveSideTab(tab);
     });
   });
   els.buildQueue?.addEventListener("click", (e) => {
