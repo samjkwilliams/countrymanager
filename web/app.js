@@ -699,7 +699,7 @@ const TUTORIAL_STEPS = [
     id: "industry",
     short: "Place first industry zone",
     title: "Step 3: Build Productive Capacity",
-    body: "Pick one industry project, place it on the map, and watch build timers and dependencies.",
+    body: "Open Production Economy, click any project icon to arm it, then click a green map area to place your first zone.",
     tab: "control",
   },
   {
@@ -980,6 +980,7 @@ const els = {
   tutorialFocusBtn: document.getElementById("tutorialFocusBtn"),
   tutorialSkipBtn: document.getElementById("tutorialSkipBtn"),
   industrySummary: document.getElementById("industrySummary"),
+  industryGuide: document.getElementById("industryGuide"),
   foundationGrid: document.getElementById("foundationGrid"),
   industryProjects: document.getElementById("industryProjects"),
   actionDock: document.getElementById("actionDock"),
@@ -995,6 +996,18 @@ function shorten(text, max = 96) {
   const s = String(text || "").trim();
   if (s.length <= max) return s;
   return `${s.slice(0, max - 1).trimEnd()}...`;
+}
+function compactChoiceLabel(text, maxWords = 3) {
+  const s = String(text || "").replace(/[,:]/g, " ").replace(/\s+/g, " ").trim();
+  if (!s) return "";
+  const lower = s.toLowerCase();
+  if (lower.includes("show receipts")) return "Show Receipts";
+  if (lower.includes("deny everything") || lower.includes("deny claim")) return "Deny Claim";
+  if (lower.includes("form committee")) return "Delay + Review";
+  if (lower.includes("ask for proof")) return "Ask For Proof";
+  if (lower.includes("call bluff")) return "Call Bluff";
+  if (lower.includes("back it now")) return "Back It";
+  return s.split(" ").slice(0, maxWords).join(" ");
 }
 function prettifyTag(tag) {
   return String(tag || "")
@@ -1020,6 +1033,13 @@ function focusControlPanel() {
   if (pane) pane.scrollTop = 0;
   const card = document.querySelector(".selected-card");
   if (card) card.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function setCardCollapsed(cardId, collapsed) {
+  const card = document.getElementById(cardId);
+  if (!card) return;
+  card.classList.toggle("collapsed", collapsed);
+  const btn = card.querySelector(".collapse-btn");
+  if (btn) btn.textContent = card.classList.contains("collapsed") ? "Expand" : "Minimize";
 }
 function buildingTile(b) {
   return b?.tile || b?.homeTile || [12, 12];
@@ -1156,6 +1176,7 @@ function setTutorialPhase(phase, announce = true) {
   }
 
   if (meta.tab) setActiveSideTab(meta.tab);
+  if (phase === "industry") tutorialFocusCurrentStep();
   if (phase === "freeplay") {
     for (const inc of state.incidents) {
       if (inc.tutorialManual) inc.tutorialManual = false;
@@ -1190,6 +1211,7 @@ function tutorialFocusCurrentStep() {
   }
   if (phase === "industry") {
     setActiveSideTab("control");
+    setCardCollapsed("industryCard", false);
     const pane = document.querySelector('[data-pane="control"]');
     const card = document.getElementById("industryCard");
     if (pane && card) {
@@ -2205,6 +2227,16 @@ function industryTierAllowed(project) {
 
 function projectById(id) {
   return INDUSTRY_PROJECT_DEFS.find((p) => p.id === id);
+}
+
+function recommendedIndustryProjectId() {
+  const unlocked = INDUSTRY_PROJECT_DEFS.filter((p) => industryTierAllowed(p));
+  if (unlocked.length === 0) return null;
+  const affordable = unlocked.filter((p) => state.budget.treasury >= round(p.cost * 0.55));
+  const pool = affordable.length ? affordable : unlocked;
+  return pool
+    .slice()
+    .sort((a, b) => a.size - b.size || a.cost - b.cost)[0]?.id || null;
 }
 
 function findIndustryZone(id) {
@@ -4536,22 +4568,15 @@ function renderRapidCard() {
     const oA = a.options.find((o) => o.key === "a");
     const oB = a.options.find((o) => o.key === "b");
     const oC = a.options.find((o) => o.key === "c");
-    const labelShort = (t) => {
-      if (!t) return "";
-      if (/back it now/i.test(t)) return "BACK IT";
-      if (/call bluff/i.test(t)) return "CALL BLUFF";
-      if (/ask for proof/i.test(t)) return "ASK PROOF";
-      return shorten(t.toUpperCase(), 18);
-    };
-    els.rapidBtnA.textContent = labelShort(oA?.label) || "OPTION A";
-    els.rapidBtnB.textContent = labelShort(oB?.label) || "OPTION B";
+    els.rapidBtnA.textContent = compactChoiceLabel(oA?.label, 3) || "Option A";
+    els.rapidBtnB.textContent = compactChoiceLabel(oB?.label, 3) || "Option B";
     els.rapidBtnA.title = oA?.outcome_blurb || "Make your call.";
     els.rapidBtnB.title = oB?.outcome_blurb || "Make your call.";
     if (els.rapidBtnC) {
       if (oC) {
         els.rapidBtnC.style.display = "";
         els.rapidBtnC.disabled = false;
-        els.rapidBtnC.textContent = labelShort(oC.label) || "OPTION C";
+        els.rapidBtnC.textContent = compactChoiceLabel(oC.label, 3) || "Option C";
         els.rapidBtnC.title = oC.outcome_blurb || "Make your call.";
       } else {
         els.rapidBtnC.style.display = "none";
@@ -4705,7 +4730,11 @@ function renderTutorialOverlay() {
       .join("");
   }
   if (els.tutorialFocusBtn) {
-    const focusLabel = meta.tab === "incidents" ? "Go To Incidents" : "Go To Control";
+    const focusLabel = state.tutorial.phase === "industry"
+      ? "Open Industry Panel"
+      : meta.tab === "incidents"
+        ? "Go To Incidents"
+        : "Go To Control";
     els.tutorialFocusBtn.textContent = focusLabel;
   }
 }
@@ -5182,6 +5211,9 @@ function renderInitiatives() {
 
 function renderIndustryPanel() {
   if (!els.industryProjects || !els.foundationGrid || !els.industrySummary) return;
+  const inIndustryTutorial = tutorialIsActive() && state.tutorial.phase === "industry";
+  const industryCard = document.getElementById("industryCard");
+  if (industryCard) industryCard.classList.toggle("tutorial-highlight", inIndustryTutorial);
   updateFoundations();
   const net = state.industry.metrics.net || 0;
   const util = state.industry.metrics.utilization || 0;
@@ -5189,6 +5221,25 @@ function renderIndustryPanel() {
   els.industrySummary.textContent = state.industry.zones.length === 0
     ? "No production districts online yet. Build one and satisfy dependencies to unlock revenue."
     : `Industry net ${formatMoneyMillions(net)}/day · Utilization ${Math.round(util)}%${missing.length ? ` · Missing: ${missing.join(", ")}` : ""}`;
+
+  if (els.industryGuide) {
+    const recId = recommendedIndustryProjectId();
+    const rec = recId ? projectById(recId) : null;
+    els.industryGuide.hidden = !inIndustryTutorial;
+    if (inIndustryTutorial) {
+      els.industryGuide.innerHTML = `<div class="title">Guided Placement</div>
+        <ol class="steps">
+          <li>Click a project icon below (${rec?.name || "first unlocked project"} recommended).</li>
+          <li>It will switch to placement mode.</li>
+          <li>Click any green-valid map area to place and start construction.</li>
+        </ol>
+        <div class="actions">
+          <button class="btn primary" data-industry-guide-arm="1">Arm Recommended Project</button>
+        </div>`;
+    } else {
+      els.industryGuide.innerHTML = "";
+    }
+  }
 
   els.foundationGrid.innerHTML = FOUNDATION_DEFS.map((f) => {
     const v = state.industry.foundations[f.id] || 0;
@@ -5784,6 +5835,21 @@ function bindInput() {
     if (!id) return;
     chooseIndustryProject(id);
     setActiveSideTab("control");
+    renderUI();
+  });
+  els.industryGuide?.addEventListener("click", (e) => {
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (!target.getAttribute("data-industry-guide-arm")) return;
+    const recId = recommendedIndustryProjectId();
+    if (!recId) {
+      addTicker("No industry projects unlocked yet at this tier.");
+      renderUI();
+      return;
+    }
+    chooseIndustryProject(recId);
+    setActiveSideTab("control");
+    tutorialFocusCurrentStep();
     renderUI();
   });
   els.industryProjects?.addEventListener("dragstart", (e) => {
