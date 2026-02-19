@@ -25,10 +25,10 @@
   <polygon points="80,30 142,66 80,102 18,66" fill="url(#ground)" stroke="#6f9685" stroke-width="2"/>
 
   <g filter="url(#softShadow)">
-    <polygon points="32,56 80,80 80,145 32,121" fill="url(#wallL)" stroke="#48545f" stroke-width="2.1"/>
-    <polygon points="128,56 80,80 80,145 128,121" fill="url(#wallR)" stroke="#48545f" stroke-width="2.1"/>
-    <polygon points="80,28 128,56 80,80 32,56" fill="url(#roofFace)" stroke="#48545f" stroke-width="2.3"/>
-    <polygon points="80,28 128,56 80,80 32,56" fill="url(#roofSpec)"/>
+    <polygon points="36,56 80,80 80,146 36,122" fill="url(#wallL)" stroke="#48545f" stroke-width="2.1"/>
+    <polygon points="124,56 80,80 80,146 124,122" fill="url(#wallR)" stroke="#48545f" stroke-width="2.1"/>
+    <polygon points="80,28 124,56 80,80 36,56" fill="url(#roofFace)" stroke="#48545f" stroke-width="2.3"/>
+    <polygon points="80,28 124,56 80,80 36,56" fill="url(#roofSpec)"/>
   </g>
 
   <polygon points="80,62 89,67 89,98 80,93" fill="#a9754d" stroke="#564333" stroke-width="1.4"/>
@@ -43,6 +43,7 @@
 
   <ellipse cx="80" cy="58" rx="12" ry="7" fill="#80499f" stroke="#3d4650" stroke-width="1.5"/>
   <text x="80" y="61" font-size="10" text-anchor="middle" fill="#ffffff" font-family="Verdana" font-weight="700">I</text>
+  <rect x="70" y="64" width="20" height="16" rx="2.5" fill="#e8def2" stroke="#4e5963" stroke-width="1.1"/><line x1="80" y1="65" x2="80" y2="79" stroke="#7f5aa6" stroke-width="1.3"/><line x1="72" y1="71" x2="88" y2="71" stroke="#7f5aa6" stroke-width="1.3"/>
   <rect x="73" y="32" width="14" height="8" rx="2" fill="#80499f" stroke="#424b56" stroke-width="1.2"/><rect x="76" y="26" width="8" height="6" rx="1.5" fill="#b9d4ea" stroke="#424b56" stroke-width="1"/>
   <path d="M80 18 L88 23 L85 32 L75 32 L72 23 Z" fill="#cdb3df" stroke="#4e5963" stroke-width="1.1"/><line x1="80" y1="24" x2="80" y2="32" stroke="#6f528d" stroke-width="1"/>
   </svg>

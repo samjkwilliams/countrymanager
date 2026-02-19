@@ -1,6 +1,6 @@
 {
   "pack": "cozy-civic-v1",
-  "generatedAt": "2026-02-18T03:29:31.346Z",
+  "generatedAt": "2026-02-19T00:20:51.094Z",
   "files": [
     "tiles/grass.svg",
     "tiles/road_straight.svg",
@@ -53,8 +53,12 @@
     "actors/prop_fountain.svg",
     "actors/prop_playground.svg",
     "actors/prop_oval.svg",
+    "actors/housing_zone_2.svg",
+    "actors/housing_zone_3.svg",
+    "actors/housing_zone_4.svg",
     "actors/vehicle_car.svg",
     "actors/vehicle_bus.svg",
+    "actors/vehicle_train.svg",
     "actors/vehicle_ambulance.svg",
     "actors/vehicle_police.svg",
     "actors/responder_utility.svg",
