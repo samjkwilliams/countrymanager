@@ -33,10 +33,30 @@
       <div id="decisionFlash" class="decision-flash" aria-live="polite"></div>
 
       <section id="statusBanner" class="status-banner">City systems nominal.</section>
+      <section id="actionDock" class="action-dock card" hidden></section>
 
       <section class="game-layout">
         <section class="map-panel card">
           <canvas id="isoCanvas" width="1280" height="760"></canvas>
+          <aside id="setupOverlay" class="setup-overlay">
+            <p class="eyebrow">Founding Phase</p>
+            <h3 id="setupTitle">Build Your Government</h3>
+            <p id="setupBody" class="muted">Place all core departments before simulation time begins. No incidents or budget drift occur until launch.</p>
+            <div class="actions">
+              <button id="startPlacementBtn" class="btn">Open Build Queue</button>
+              <button id="launchGovBtn" class="btn primary" disabled>Launch Government</button>
+            </div>
+          </aside>
+          <aside id="tutorialOverlay" class="tutorial-overlay" hidden>
+            <p id="tutorialKicker" class="eyebrow">Guided Command</p>
+            <h3 id="tutorialTitle">Step 1</h3>
+            <p id="tutorialBody" class="muted">Follow the guided setup to learn systems before full chaos unlocks.</p>
+            <div id="tutorialProgress" class="tutorial-progress"></div>
+            <div class="actions">
+              <button id="tutorialFocusBtn" class="btn primary">Show Me</button>
+              <button id="tutorialSkipBtn" class="btn">Skip Guide</button>
+            </div>
+          </aside>
           <aside id="majorEventCard" class="major-event-card" hidden>
             <p class="eyebrow">Major Event</p>
             <h3 id="majorEventTitle">No major event</h3>
@@ -51,7 +71,22 @@
               <button id="majorEventDismissBtn" class="btn">Defer</button>
             </div>
           </aside>
-          <div class="map-tip">Drag to pan. Scroll to zoom. Place departments on highlighted tiles, then tackle flashing MAJOR beacons and incidents.</div>
+          <aside id="housingCard" class="major-event-card housing-card" hidden>
+            <p class="eyebrow">Housing Mandate</p>
+            <h3 id="housingTitle">New Housing Development</h3>
+            <p id="housingBody" class="muted"></p>
+            <div class="mini-grid">
+              <div><span>Window</span><strong id="housingTimer">-</strong></div>
+              <div><span>Effect</span><strong id="housingImpact">-</strong></div>
+            </div>
+            <div class="actions">
+              <button id="housingBtnSmall" class="btn">2x2</button>
+              <button id="housingBtnMedium" class="btn">3x3</button>
+              <button id="housingBtnLarge" class="btn">4x4</button>
+              <button id="housingBtnDefer" class="btn">Defer</button>
+            </div>
+          </aside>
+          <div id="mapTip" class="map-tip">Drag to pan. Scroll to zoom. Place departments on highlighted tiles, then tackle flashing MAJOR beacons and incidents.</div>
         </section>
 
         <aside class="side-panel">
@@ -73,6 +108,18 @@
                 <div class="card-body">
                   <p class="muted">Pick a department then click a map tile to place it.</p>
                   <div id="buildQueue" class="event-rail"></div>
+                </div>
+              </section>
+
+              <section class="card collapsible-card" id="industryCard">
+                <div class="card-head">
+                  <h2>Production Economy</h2>
+                  <button class="btn collapse-btn" data-target="industryCard">Minimize</button>
+                </div>
+                <div class="card-body">
+                  <p id="industrySummary" class="muted">Build production projects and satisfy dependencies to generate sustained wealth.</p>
+                  <div id="foundationGrid" class="foundation-grid"></div>
+                  <div id="industryProjects" class="industry-grid"></div>
                 </div>
               </section>
 

@@ -52,6 +52,77 @@ const BUILDING_DEFS = [
   { id: "integrity", name: "Integrity Commission", desc: "Oversight and corruption control.", color: "#b98dc9", tile: [13, 16], kpi: "integrity" },
 ];
 
+const FOUNDATION_DEFS = [
+  { id: "power", label: "Grid Reliability", emoji: "⚡", help: "Climate + Transport + Treasury coordination keeps power dependable." },
+  { id: "freight", label: "Freight Capacity", emoji: "🚛", help: "Transport throughput and treasury discipline keep goods moving." },
+  { id: "skills", label: "Workforce Skills", emoji: "👷", help: "Education quality and welfare stability provide trained workers." },
+  { id: "water", label: "Water Security", emoji: "💧", help: "Climate resilience and transport maintenance reduce supply disruption." },
+  { id: "trust", label: "Policy Certainty", emoji: "🧭", help: "Integrity and stability influence investor confidence and long-term planning." },
+];
+
+const INDUSTRY_PROJECT_DEFS = [
+  {
+    id: "food_hub",
+    name: "Food Processing Hub",
+    desc: "Mid-scale food processing for local supply and exports.",
+    size: 2,
+    tier: 0,
+    cost: 26,
+    buildDays: 10,
+    baseRevenue: 10.5,
+    baseUpkeep: 4.2,
+    jobs: 0.35,
+    art: "prop_market",
+    impact: { climate: -0.18, stability: 0.22, economy: 0.45 },
+    needs: { power: 42, freight: 46, skills: 40, water: 52, trust: 36 },
+  },
+  {
+    id: "assembly_plant",
+    name: "Assembly Plant",
+    desc: "Large manufacturing plant. Strong upside, high dependency pressure.",
+    size: 3,
+    tier: 1,
+    cost: 72,
+    buildDays: 16,
+    baseRevenue: 27,
+    baseUpkeep: 12.5,
+    jobs: 0.6,
+    art: "prop_shop_corner",
+    impact: { climate: -0.4, stability: 0.28, economy: 0.95 },
+    needs: { power: 60, freight: 62, skills: 58, water: 44, trust: 48 },
+  },
+  {
+    id: "tech_park",
+    name: "Tech Services Campus",
+    desc: "High-value services district with lower climate load.",
+    size: 3,
+    tier: 1,
+    cost: 84,
+    buildDays: 18,
+    baseRevenue: 31,
+    baseUpkeep: 13.2,
+    jobs: 0.68,
+    art: "prop_apartment",
+    impact: { climate: 0.08, stability: 0.34, economy: 1.05 },
+    needs: { power: 56, freight: 42, skills: 68, water: 32, trust: 58 },
+  },
+  {
+    id: "battery_complex",
+    name: "Battery Gigafactory",
+    desc: "Mega-project with high risk/reward and heavy land demand.",
+    size: 4,
+    tier: 2,
+    cost: 148,
+    buildDays: 24,
+    baseRevenue: 56,
+    baseUpkeep: 25,
+    jobs: 1.1,
+    art: "prop_skyscraper",
+    impact: { climate: -0.2, stability: 0.44, economy: 1.6 },
+    needs: { power: 72, freight: 74, skills: 70, water: 58, trust: 62 },
+  },
+];
+
 const INCIDENT_TYPES = [
   { id: "crime", title: "Street Crime Spike", kpi: "safety", perDayPenalty: 0.55, responder: "police", color: "#cc5b5b", icon: "!" },
   { id: "medical", title: "Medical Overflow", kpi: "health", perDayPenalty: 0.6, responder: "ambulance", color: "#d46a6a", icon: "+" },
@@ -602,6 +673,58 @@ const MONTHLY_CHARACTERS = {
 };
 
 const IDENTITY_AXIS_KEYS = ["careAusterity", "libertyControl", "publicDonor", "truthSpin"];
+const TUTORIAL_STEPS = [
+  {
+    id: "founding",
+    short: "Place all departments",
+    title: "Founding: Place Core Departments",
+    body: "Place all 8 departments first. Time and incidents are paused until launch.",
+    tab: "control",
+  },
+  {
+    id: "budget",
+    short: "Tune one budget",
+    title: "Step 1: Tune One Department Budget",
+    body: "Click a department on the map, move the budget slider, then press Apply Budget.",
+    tab: "control",
+  },
+  {
+    id: "upgrade",
+    short: "Upgrade one facility",
+    title: "Step 2: Upgrade a Facility",
+    body: "Upgrade one department so the player sees cost, AP spend, and delayed payoff.",
+    tab: "control",
+  },
+  {
+    id: "industry",
+    short: "Place first industry zone",
+    title: "Step 3: Build Productive Capacity",
+    body: "Pick one industry project, place it on the map, and watch build timers and dependencies.",
+    tab: "control",
+  },
+  {
+    id: "incident",
+    short: "Resolve one incident",
+    title: "Step 4: Handle Your First Incident",
+    body: "A manual incident is now live. Click its marker and fund emergency response.",
+    tab: "incidents",
+  },
+  {
+    id: "rapid",
+    short: "Resolve one rapid brief",
+    title: "Step 5: Make an Evidence Call",
+    body: "Read clues, choose a response, and see how trust and demographics react.",
+    tab: "incidents",
+  },
+  {
+    id: "freeplay",
+    short: "Full simulation unlocked",
+    title: "Freeplay Unlocked",
+    body: "All systems are now live: random incidents, major events, and full policy pressure.",
+    tab: "control",
+  },
+];
+const TUTORIAL_STEP_INDEX = Object.fromEntries(TUTORIAL_STEPS.map((s, i) => [s.id, i]));
 
 function emptyDemImpact() {
   return { poverty: 0, working: 0, middle: 0, business: 0, elite: 0 };
@@ -617,6 +740,7 @@ const state = {
   paused: false,
   tierIndex: 0,
   selectedBuildingId: null,
+  selectedIndustryId: null,
   buildings: BUILDING_DEFS.map((b) => ({ ...b, homeTile: [...b.tile], tile: null, placed: false, level: 1, budget: 60, state: "unbuilt" })),
   kpi: { stability: 70, health: 70, education: 70, safety: 70, climate: 66, integrity: 64, economy: 70 },
   budget: { revenue: 100, expenditure: 103, deficit: -3, debt: 72, treasury: 48 },
@@ -640,6 +764,15 @@ const state = {
     upgradedOrDispatched: false,
     rapidResolved: false,
     rewarded: false,
+  },
+  tutorial: {
+    enabled: true,
+    completed: false,
+    phase: "founding",
+    enteredDay: 0,
+    firstIncidentSpawned: false,
+    firstRapidSpawned: false,
+    manualIncidentId: null,
   },
   session: { goalId: "resolve", progress: 0, daysLeft: 10, metrics: { actions: 0, resolves: 0, stabilityDays: 0 } },
   combo: { recentActions: [] },
@@ -673,6 +806,20 @@ const state = {
   },
   people: DEMOGRAPHICS.map((d) => ({ id: d.id, label: d.label, happiness: 65, trend: 0, note: "Watching policy signals." })),
   gameOver: { active: false, reason: "", facts: [] },
+  sim: {
+    started: false,
+  },
+  housing: {
+    active: null,
+    zones: [],
+    nextAtDay: 16,
+  },
+  industry: {
+    zones: [],
+    foundations: { power: 40, freight: 40, skills: 40, water: 40, trust: 40 },
+    metrics: { revenue: 0, upkeep: 0, net: 0, utilization: 0, missing: [] },
+    selectedProjectId: null,
+  },
   growth: {
     radius: 10.5,
     maxRadius: 18.5,
@@ -688,6 +835,7 @@ const state = {
   visual: {
     hour: 7,
     vehicles: [],
+    traffic: null,
     civilians: [],
     responders: [],
     decorProps: [],
@@ -712,6 +860,8 @@ const state = {
     placementRecommendations: [],
     budgetDraftByBuilding: {},
     focusedMajorEventId: null,
+    housingPlacement: null,
+    industryPlacement: null,
     touch: {
       mode: null,
       tapStartX: 0,
@@ -742,6 +892,7 @@ const els = {
   trafficPill: document.getElementById("trafficPill"),
   trafficLight: document.getElementById("trafficLight"),
   statusBanner: document.getElementById("statusBanner"),
+  mapTip: document.getElementById("mapTip"),
   selectedName: document.getElementById("selectedName"),
   selectedDesc: document.getElementById("selectedDesc"),
   selectedLevel: document.getElementById("selectedLevel"),
@@ -807,6 +958,31 @@ const els = {
   majorEventImpact: document.getElementById("majorEventImpact"),
   majorEventRespondBtn: document.getElementById("majorEventRespondBtn"),
   majorEventDismissBtn: document.getElementById("majorEventDismissBtn"),
+  housingCard: document.getElementById("housingCard"),
+  housingTitle: document.getElementById("housingTitle"),
+  housingBody: document.getElementById("housingBody"),
+  housingTimer: document.getElementById("housingTimer"),
+  housingImpact: document.getElementById("housingImpact"),
+  housingBtnSmall: document.getElementById("housingBtnSmall"),
+  housingBtnMedium: document.getElementById("housingBtnMedium"),
+  housingBtnLarge: document.getElementById("housingBtnLarge"),
+  housingBtnDefer: document.getElementById("housingBtnDefer"),
+  setupOverlay: document.getElementById("setupOverlay"),
+  setupTitle: document.getElementById("setupTitle"),
+  setupBody: document.getElementById("setupBody"),
+  startPlacementBtn: document.getElementById("startPlacementBtn"),
+  launchGovBtn: document.getElementById("launchGovBtn"),
+  tutorialOverlay: document.getElementById("tutorialOverlay"),
+  tutorialKicker: document.getElementById("tutorialKicker"),
+  tutorialTitle: document.getElementById("tutorialTitle"),
+  tutorialBody: document.getElementById("tutorialBody"),
+  tutorialProgress: document.getElementById("tutorialProgress"),
+  tutorialFocusBtn: document.getElementById("tutorialFocusBtn"),
+  tutorialSkipBtn: document.getElementById("tutorialSkipBtn"),
+  industrySummary: document.getElementById("industrySummary"),
+  foundationGrid: document.getElementById("foundationGrid"),
+  industryProjects: document.getElementById("industryProjects"),
+  actionDock: document.getElementById("actionDock"),
 };
 
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
@@ -838,6 +1014,13 @@ function setActiveSideTab(tab) {
     pane.classList.toggle("is-active", pane.getAttribute("data-pane") === tab);
   });
 }
+function focusControlPanel() {
+  setActiveSideTab("control");
+  const pane = document.querySelector('[data-pane="control"]');
+  if (pane) pane.scrollTop = 0;
+  const card = document.querySelector(".selected-card");
+  if (card) card.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 function buildingTile(b) {
   return b?.tile || b?.homeTile || [12, 12];
 }
@@ -855,8 +1038,31 @@ function activeRoadLines() {
   return lines.filter((v) => v > 1 && v < MAP_W - 2);
 }
 function isRoadTile(x, y) {
+  if (isHousingTile(x, y) || isIndustryTile(x, y)) return false;
   const lines = activeRoadLines();
   return lines.includes(x) || lines.includes(y);
+}
+function activeRailLines() {
+  const roads = activeRoadLines();
+  if (roads.length < 2) return [];
+  return [roads[roads.length - 1]];
+}
+function isRailTile(x, y) {
+  if (isHousingTile(x, y) || isIndustryTile(x, y)) return false;
+  const lines = activeRailLines();
+  return lines.includes(x) || lines.includes(y);
+}
+function isHousingTile(x, y) {
+  for (const z of state.housing.zones) {
+    if (x >= z.x && x < z.x + z.size && y >= z.y && y < z.y + z.size) return true;
+  }
+  return false;
+}
+function isIndustryTile(x, y) {
+  for (const z of state.industry.zones) {
+    if (x >= z.x && x < z.x + z.size && y >= z.y && y < z.y + z.size) return true;
+  }
+  return false;
 }
 function isDevelopedTile(x, y, margin = 0) {
   const dx = x - CITY_CORE_TILE[0];
@@ -868,6 +1074,8 @@ function isTileBuildable(x, y) {
   if (x < 1 || y < 1 || x > MAP_W - 2 || y > MAP_H - 2) return false;
   if (!isDevelopedTile(x, y, -0.4)) return false;
   if (isRoadTile(x, y)) return false;
+  if (isHousingTile(x, y)) return false;
+  if (isIndustryTile(x, y)) return false;
   return !state.buildings.some((b) => b.placed && b.tile && b.tile[0] === x && b.tile[1] === y);
 }
 function screenToTile(sx, sy) {
@@ -924,6 +1132,234 @@ const BUILDING_STATE_META = {
 
 function currentGoal() {
   return SESSION_GOALS.find((g) => g.id === state.session.goalId) || SESSION_GOALS[0];
+}
+
+function tutorialIsActive() {
+  return Boolean(state.tutorial?.enabled) && !Boolean(state.tutorial?.completed);
+}
+
+function tutorialStepMeta(phase = state.tutorial.phase) {
+  return TUTORIAL_STEPS.find((s) => s.id === phase) || TUTORIAL_STEPS[0];
+}
+
+function setTutorialPhase(phase, announce = true) {
+  if (!tutorialIsActive()) return;
+  if (!Object.hasOwn(TUTORIAL_STEP_INDEX, phase)) return;
+  if (state.tutorial.phase === phase) return;
+  state.tutorial.phase = phase;
+  state.tutorial.enteredDay = state.day;
+
+  const meta = tutorialStepMeta(phase);
+  if (announce) {
+    addTicker(`Guided step: ${meta.title}.`);
+    addRailEvent("🧭 Guided Step", meta.short, true);
+  }
+
+  if (meta.tab) setActiveSideTab(meta.tab);
+  if (phase === "freeplay") {
+    for (const inc of state.incidents) {
+      if (inc.tutorialManual) inc.tutorialManual = false;
+    }
+    if (state.rapid.active?.incidentCode?.startsWith("BRIEF-")) {
+      state.rapid.active = null;
+    }
+    state.tutorial.completed = true;
+    state.rapid.nextAtDay = Math.max(state.rapid.nextAtDay, state.day + 8);
+    state.major.nextAtDay = Math.max(state.major.nextAtDay, state.day + 10);
+    state.housing.nextAtDay = Math.max(state.housing.nextAtDay, state.day + 12);
+    addTicker("Guided mode complete. Full simulation chaos is now unlocked.");
+    addRailEvent("✅ Tutorial Complete", "All systems unlocked: random incidents, major events, and rapid briefs.", true);
+  }
+}
+
+function tutorialFocusCurrentStep() {
+  if (!tutorialIsActive()) return;
+  const phase = state.tutorial.phase;
+  if (phase === "budget" || phase === "upgrade") {
+    const target = state.selectedBuildingId
+      ? findBuilding(state.selectedBuildingId)
+      : state.buildings.find((b) => b.placed) || findBuilding("health");
+    if (target?.id) {
+      state.selectedBuildingId = target.id;
+      state.selectedIndustryId = null;
+      markOnboarding("selectedBuilding");
+      focusCameraOnTile(buildingTile(target));
+    }
+    focusControlPanel();
+    return;
+  }
+  if (phase === "industry") {
+    setActiveSideTab("control");
+    const pane = document.querySelector('[data-pane="control"]');
+    const card = document.getElementById("industryCard");
+    if (pane && card) {
+      pane.scrollTo({ top: Math.max(0, card.offsetTop - 8), behavior: "smooth" });
+    }
+    return;
+  }
+  if (phase === "incident") {
+    setActiveSideTab("incidents");
+    const inc = state.incidents.find((i) => i.id === state.tutorial.manualIncidentId && !i.resolved);
+    if (inc) focusCameraOnTile(inc.tile);
+    return;
+  }
+  if (phase === "rapid") {
+    setActiveSideTab("incidents");
+    if (state.rapid.active?.mapMarkerTile) focusCameraOnTile(state.rapid.active.mapMarkerTile);
+  }
+}
+
+function maybeSpawnTutorialIncident() {
+  if (!tutorialIsActive()) return;
+  if (state.tutorial.phase !== "incident") return;
+  if (state.tutorial.firstIncidentSpawned) return;
+  if (state.incidents.some((i) => !i.resolved && !i.contained && i.tutorialManual)) return;
+
+  const byRisk = [
+    { id: "medical", k: state.kpi.health },
+    { id: "crime", k: state.kpi.safety },
+    { id: "flood", k: state.kpi.climate },
+    { id: "corruption", k: state.kpi.integrity },
+  ].sort((a, b) => a.k - b.k);
+  const typeId = byRisk[0]?.id || "medical";
+  const inc = spawnIncident(typeId, { severity: 2, tutorialManual: true, codePrefix: "DRILL" });
+  if (!inc) return;
+  state.tutorial.firstIncidentSpawned = true;
+  state.tutorial.manualIncidentId = inc.id;
+  addTicker("Guided incident spawned. Click the map marker to dispatch emergency response.");
+  addRailEvent("❗ Tutorial Incident", "Manual response required. Tap marker on map.", true);
+  setActiveSideTab("incidents");
+  focusCameraOnTile(inc.tile);
+}
+
+function maybeSpawnTutorialRapid() {
+  if (!tutorialIsActive()) return;
+  if (state.tutorial.phase !== "rapid") return;
+  if (state.onboarding.rapidResolved) return;
+  if (state.rapid.active) return;
+  if (state.tutorial.firstRapidSpawned && state.day - state.tutorial.enteredDay < 4) return;
+
+  const focus = findBuilding("treasury") || findBuilding("integrity") || state.buildings.find((b) => b.placed);
+  const marker = focus ? buildingTile(focus) : [12, 12];
+  const pass = Math.max(1, state.day - state.tutorial.enteredDay + 1);
+  state.rapid.active = {
+    mode: "scenario",
+    incidentCode: `BRIEF-${String(pass).padStart(2, "0")}`,
+    title: "Rumor Storm Before Budget Vote",
+    speaker: "Press Desk",
+    claim: "A viral clip says clinics were secretly defunded overnight.",
+    clues: {
+      data: "Published ledger shows no clinical cut, but prevention funds were delayed.",
+      street: "Emergency rooms are busy and citizens feel ignored.",
+      motive: "Opposition influencers amplified an out-of-context chart.",
+    },
+    options: [
+      {
+        id: "show_receipts",
+        key: "a",
+        label: "Show receipts + fix delay",
+        outcome_blurb: "Trust rises. You own the delay and fix it with evidence.",
+        truth_quality: 1,
+        dem_now: { poverty: 3, working: 3, middle: 2, business: 0, elite: 0 },
+        treasury_delta_now: -4,
+        kpi_now: { integrity: 1.2, health: 0.4, stability: 0.4 },
+        axis_drift: { careAusterity: 1, libertyControl: 0, publicDonor: 0.2, truthSpin: 1.1 },
+        risk_flags: [],
+      },
+      {
+        id: "deny_hard",
+        key: "b",
+        label: "Deny everything",
+        outcome_blurb: "Short-term noise drops, but fact-check backlash hurts trust.",
+        truth_quality: -1,
+        dem_now: { poverty: -2, working: -2, middle: -2, business: 1, elite: 1 },
+        treasury_delta_now: 0,
+        kpi_now: { integrity: -1.1, stability: -0.6 },
+        axis_drift: { careAusterity: -0.4, libertyControl: -0.1, publicDonor: -0.2, truthSpin: -1.2 },
+        risk_flags: ["credibility_backlash"],
+      },
+      {
+        id: "stall_committee",
+        key: "c",
+        label: "Form committee, no action",
+        outcome_blurb: "Neutral optics now, but frustration lingers in affected suburbs.",
+        truth_quality: 0,
+        dem_now: { poverty: -1, working: -1, middle: 0, business: 0, elite: 0 },
+        treasury_delta_now: -1,
+        kpi_now: { stability: -0.2 },
+        axis_drift: { careAusterity: 0, libertyControl: 0, publicDonor: 0, truthSpin: -0.2 },
+        risk_flags: [],
+      },
+    ],
+    defaultChoice: "c",
+    focusBuildingId: focus?.id || "treasury",
+    mapMarkerTile: marker,
+    expiresDay: state.day + RAPID_WINDOW_DAYS + 8,
+  };
+  state.tutorial.firstRapidSpawned = true;
+  state.rapid.nextAtDay = Math.max(state.rapid.nextAtDay, state.day + RAPID_INTERVAL_DAYS);
+  addTicker("Guided civic brief live. Read clues and pick the most evidence-based response.");
+  addRailEvent("🧠 Tutorial Brief", "Use clues to judge what is true, spin, or uncertain.", true);
+  setActiveSideTab("incidents");
+  focusCameraOnTile(marker);
+}
+
+function updateTutorialProgress() {
+  if (!tutorialIsActive()) return;
+  if (!state.sim.started) {
+    state.tutorial.phase = "founding";
+    return;
+  }
+
+  if (state.tutorial.phase === "founding") {
+    setTutorialPhase("budget");
+    return;
+  }
+  if (state.tutorial.phase === "budget") {
+    if (state.onboarding.selectedBuilding && state.onboarding.budgetApplied) setTutorialPhase("upgrade");
+    return;
+  }
+  if (state.tutorial.phase === "upgrade") {
+    if (state.onboarding.upgradedOrDispatched) setTutorialPhase("industry");
+    return;
+  }
+  if (state.tutorial.phase === "industry") {
+    if (state.industry.zones.length > 0) setTutorialPhase("incident");
+    return;
+  }
+  if (state.tutorial.phase === "incident") {
+    const inc = state.incidents.find((i) => i.id === state.tutorial.manualIncidentId && !i.resolved);
+    if (!inc || inc.contained) setTutorialPhase("rapid");
+    return;
+  }
+  if (state.tutorial.phase === "rapid") {
+    if (state.onboarding.rapidResolved) setTutorialPhase("freeplay");
+  }
+}
+
+function tutorialStepDone(stepId) {
+  if (stepId === "founding") return allBuildingsPlaced();
+  if (stepId === "budget") return state.onboarding.selectedBuilding && state.onboarding.budgetApplied;
+  if (stepId === "upgrade") return state.onboarding.upgradedOrDispatched;
+  if (stepId === "industry") return state.industry.zones.length > 0;
+  if (stepId === "incident") {
+    const inc = state.incidents.find((i) => i.id === state.tutorial.manualIncidentId);
+    return Boolean(inc && (inc.contained || inc.resolved)) || (state.tutorial.phase === "rapid" || state.tutorial.phase === "freeplay");
+  }
+  if (stepId === "rapid") return state.onboarding.rapidResolved;
+  if (stepId === "freeplay") return state.tutorial.completed;
+  return false;
+}
+
+function skipTutorial() {
+  if (!tutorialIsActive()) return;
+  for (const inc of state.incidents) {
+    if (inc.tutorialManual) inc.tutorialManual = false;
+  }
+  state.tutorial.firstIncidentSpawned = true;
+  state.tutorial.firstRapidSpawned = true;
+  state.tutorial.manualIncidentId = null;
+  setTutorialPhase("freeplay");
 }
 
 function markOnboarding(step) {
@@ -1150,6 +1586,20 @@ function allBuildingsPlaced() {
   return state.buildings.every((b) => b.placed);
 }
 
+function beginSimulation() {
+  if (state.sim.started) return true;
+  if (!allBuildingsPlaced()) return false;
+  state.sim.started = true;
+  initTrafficVehicles();
+  initCivilians(220);
+  initResponders();
+  updateTutorialProgress();
+  tutorialFocusCurrentStep();
+  addTicker("Government launched. Time is now running and system pressures are live.");
+  addRailEvent("▶ Simulation Live", "Founding complete. Incidents, trends, and consequences are now active.", true);
+  return true;
+}
+
 function placementEvaluation(buildingId, tile) {
   const b = findBuilding(buildingId);
   if (!b) return { score: -3, label: "Poor", reason: "Unknown department." };
@@ -1227,7 +1677,8 @@ function placeBuilding(buildingId, tile) {
   state.ui.placementBuildingId = state.buildings.find((d) => !d.placed)?.id || null;
   state.ui.placementRecommendations = computePlacementRecommendations(state.ui.placementBuildingId);
   if (allBuildingsPlaced()) {
-    addRailEvent("🏙️ Founding Complete", "All core departments are now active.", true);
+    addRailEvent("🏙️ Founding Complete", "All core departments placed. Press Launch Government to begin time.", true);
+    addTicker("All departments placed. Launch Government when ready.");
   }
   return true;
 }
@@ -1235,6 +1686,7 @@ function placeBuilding(buildingId, tile) {
 function applyDepartmentBudget() {
   const b = findBuilding(state.selectedBuildingId);
   if (!b) return;
+  markOnboarding("selectedBuilding");
   const draft = state.ui.budgetDraftByBuilding[b.id];
   const target = Number.isFinite(draft) ? draft : Number(els.budgetSlider.value);
   const delta = target - b.budget;
@@ -1289,9 +1741,15 @@ function applyDepartmentBudget() {
     confidence: "medium",
     explain: `${delta > 0 ? "Expanded" : "Tightened"} ${b.name} funding signal; demographic trust moved accordingly.`,
   });
+  updateTutorialProgress();
 }
 
 function applyBudgetAvailabilityState() {
+  if (state.selectedIndustryId) {
+    els.applyBudgetBtn.disabled = true;
+    els.applyBudgetBtn.title = "Budget slider applies to departments, not industry facilities.";
+    return;
+  }
   const b = findBuilding(state.selectedBuildingId);
   if (!b) {
     els.applyBudgetBtn.disabled = true;
@@ -1316,6 +1774,38 @@ function applyBudgetAvailabilityState() {
 }
 
 function applyUpgradeAvailabilityState() {
+  if (state.selectedIndustryId) {
+    const z = findIndustryZone(state.selectedIndustryId);
+    if (!z) {
+      els.upgradeBtn.disabled = true;
+      els.upgradeBtn.title = "Select an industry facility first.";
+      return;
+    }
+    if (z.status !== "active") {
+      els.upgradeBtn.disabled = true;
+      els.upgradeBtn.title = "Facility must be active before upgrading.";
+      return;
+    }
+    if ((z.level || 1) >= 5) {
+      els.upgradeBtn.disabled = true;
+      els.upgradeBtn.title = "Industry facility is at max level.";
+      return;
+    }
+    const { cost } = industryUpgradeCostDays(z);
+    if (state.resources.actionPoints < 2) {
+      els.upgradeBtn.disabled = true;
+      els.upgradeBtn.title = "Need 2 Action Points.";
+      return;
+    }
+    if (state.budget.treasury < cost) {
+      els.upgradeBtn.disabled = true;
+      els.upgradeBtn.title = `Need ${formatMoneyMillions(cost)} in treasury.`;
+      return;
+    }
+    els.upgradeBtn.disabled = false;
+    els.upgradeBtn.title = `Spend 2 AP and ${formatMoneyMillions(cost)} to upgrade facility.`;
+    return;
+  }
   const b = findBuilding(state.selectedBuildingId);
   if (!b) {
     els.upgradeBtn.disabled = true;
@@ -1343,6 +1833,10 @@ function applyUpgradeAvailabilityState() {
 }
 
 function upgradeSelected() {
+  if (state.selectedIndustryId) {
+    upgradeSelectedIndustry();
+    return;
+  }
   const b = findBuilding(state.selectedBuildingId);
   if (!b) return;
   if (b.level >= 10) {
@@ -1390,11 +1884,13 @@ function upgradeSelected() {
   scheduleDelayed(5, `${b.name} expansion came online and boosted outcomes.`, () => {
     state.kpi[b.kpi] = clamp(state.kpi[b.kpi] + 1.7 + b.level * 0.22, 0, 100);
   });
+  updateTutorialProgress();
 }
 
-function triggerRapidDecision() {
+function triggerRapidDecision(options = {}) {
   if (state.rapid.active) return;
   if (state.day < state.rapid.nextAtDay) return;
+  const shouldFocus = Boolean(options.focus);
   const truthCards = state.content.truthChecks || [];
   const useScenario = truthCards.length > 0 && Math.random() < 0.95;
   if (useScenario) {
@@ -1422,6 +1918,10 @@ function triggerRapidDecision() {
     state.rapid.nextAtDay = state.day + RAPID_INTERVAL_DAYS;
     addTicker(`${incidentCode}: ${scenario.title}`);
     addRailEvent(`🧠 ${incidentCode}`, "Truth Check live: read clues, then make the call.", true);
+    if (shouldFocus) {
+      setActiveSideTab("incidents");
+      focusCameraOnTile(state.rapid.active.mapMarkerTile);
+    }
     return;
   }
   const pick = RAPID_DECISIONS[Math.floor(Math.random() * RAPID_DECISIONS.length)];
@@ -1442,6 +1942,10 @@ function triggerRapidDecision() {
   state.rapid.nextAtDay = state.day + RAPID_INTERVAL_DAYS;
   addTicker(`${incidentCode}: ${pick.title}`);
   addRailEvent(`🚨 ${incidentCode}`, pick.title, true);
+  if (shouldFocus) {
+    setActiveSideTab("incidents");
+    focusCameraOnTile(state.rapid.active.mapMarkerTile);
+  }
 }
 
 function resolveRapid(choice, timedOut = false) {
@@ -1512,7 +2016,7 @@ function resolveRapid(choice, timedOut = false) {
     state.rapid.momentum = clamp(state.rapid.momentum + 1, 0, 12);
     awardStreak("rapid decision");
     markOnboarding("rapidResolved");
-    recordAction(choice === "a" ? "integrity" : "security");
+    recordAction(choice === "a" ? "integrity" : choice === "b" ? "security" : "treasury");
     state.monthly.stats.rapidDirect += 1;
   } else {
     state.rapid.momentum = clamp(state.rapid.momentum - 1, 0, 12);
@@ -1552,6 +2056,7 @@ function resolveRapid(choice, timedOut = false) {
     });
   }
   state.rapid.active = null;
+  updateTutorialProgress();
 }
 
 function majorEventAnchorBuildingId(domain) {
@@ -1666,6 +2171,366 @@ function majorImpactLabel(ev) {
     return `${label.split(" ")[0]} ${v.toFixed(1)}/day`;
   });
   return worst.length ? worst.join(" · ") : "Systemwide pressure";
+}
+
+function foundationValue(id) {
+  const transport = findBuilding("transport");
+  const treasury = findBuilding("treasury");
+  const education = findBuilding("education");
+  const welfare = findBuilding("welfare");
+  const climate = findBuilding("climate");
+  const integrity = findBuilding("integrity");
+  const reliability =
+    id === "power"
+      ? state.kpi.climate * 0.34 + state.kpi.economy * 0.18 + (transport?.level || 1) * 5 + (treasury?.budget || 60) * 0.15
+      : id === "freight"
+        ? state.kpi.economy * 0.36 + (transport?.budget || 60) * 0.36 + (transport?.level || 1) * 6 + (treasury?.level || 1) * 4
+        : id === "skills"
+          ? state.kpi.education * 0.4 + (education?.budget || 60) * 0.3 + (welfare?.budget || 60) * 0.14 + (education?.level || 1) * 7
+          : id === "water"
+            ? state.kpi.climate * 0.42 + (climate?.budget || 60) * 0.28 + (transport?.budget || 60) * 0.18
+            : state.kpi.integrity * 0.48 + state.kpi.stability * 0.24 + (integrity?.budget || 60) * 0.2 + (treasury?.level || 1) * 3;
+  return clamp(round(reliability), 0, 100);
+}
+
+function updateFoundations() {
+  for (const f of FOUNDATION_DEFS) {
+    state.industry.foundations[f.id] = foundationValue(f.id);
+  }
+}
+
+function industryTierAllowed(project) {
+  return state.tierIndex >= project.tier;
+}
+
+function projectById(id) {
+  return INDUSTRY_PROJECT_DEFS.find((p) => p.id === id);
+}
+
+function findIndustryZone(id) {
+  return state.industry.zones.find((z) => z.id === id);
+}
+
+function canPlaceIndustryZone(tile, size) {
+  const sx = Math.round(tile[0] - (size - 1) / 2);
+  const sy = Math.round(tile[1] - (size - 1) / 2);
+  for (let x = sx; x < sx + size; x += 1) {
+    for (let y = sy; y < sy + size; y += 1) {
+      if (!isTileBuildable(x, y)) return null;
+      if (isRailTile(x, y)) return null;
+      if (!isDevelopedTile(x, y, 0.6)) return null;
+    }
+  }
+  return { x: sx, y: sy };
+}
+
+function chooseIndustryProject(id) {
+  const p = projectById(id);
+  if (!p) return;
+  state.industry.selectedProjectId = id;
+  state.ui.placementBuildingId = null;
+  state.ui.housingPlacement = null;
+  state.selectedBuildingId = null;
+  state.selectedIndustryId = null;
+  if (!industryTierAllowed(p)) {
+    addTicker(`${p.name} is locked until ${TIER_CONFIG[p.tier].name} tier.`);
+    state.ui.industryPlacement = null;
+    return;
+  }
+  const deposit = round(p.cost * 0.55);
+  if (state.budget.treasury < deposit) {
+    addTicker(`Need ${formatMoneyMillions(deposit)} treasury deposit to break ground on ${p.name}.`);
+    state.ui.industryPlacement = null;
+    return;
+  }
+  state.ui.industryPlacement = { projectId: id, size: p.size };
+  addTicker(`Industry placement armed: ${p.name} (${p.size}x${p.size}).`);
+}
+
+function placeIndustryZone(tile) {
+  const mode = state.ui.industryPlacement;
+  if (!mode) return false;
+  const project = projectById(mode.projectId);
+  if (!project) return false;
+  const anchor = canPlaceIndustryZone(tile, project.size);
+  if (!anchor) return false;
+
+  const deposit = round(project.cost * 0.55);
+  if (state.budget.treasury < deposit) {
+    addTicker(`Need ${formatMoneyMillions(deposit)} treasury deposit to place ${project.name}.`);
+    return false;
+  }
+  state.budget.treasury -= deposit;
+  const zone = {
+    id: `ind_${project.id}_${state.day}_${Math.floor(Math.random() * 9999)}`,
+    projectId: project.id,
+    name: project.name,
+    x: anchor.x,
+    y: anchor.y,
+    size: project.size,
+    status: "building",
+    level: 1,
+    startDay: state.day,
+    completeDay: state.day + project.buildDays,
+    paid: deposit,
+    efficiency: 0,
+    output: 0,
+    why: [],
+  };
+  state.industry.zones.push(zone);
+  state.buildQueue.push({ id: zone.id, name: `${project.name} Build`, completeDay: zone.completeDay, cost: deposit, type: "industry" });
+  state.ui.industryPlacement = null;
+  initDecorProps();
+  normalizeTrafficLanes();
+  addRailEvent("🏭 Ground Broken", `${project.name} started (${project.size}x${project.size})`, true);
+  addTicker(`${project.name} construction started. Completion in ${project.buildDays} days.`);
+  updateTutorialProgress();
+  return true;
+}
+
+function hasRoadAdjacency(zone) {
+  for (let x = zone.x - 1; x <= zone.x + zone.size; x += 1) {
+    if (isRoadTile(x, zone.y - 1) || isRoadTile(x, zone.y + zone.size)) return true;
+  }
+  for (let y = zone.y - 1; y <= zone.y + zone.size; y += 1) {
+    if (isRoadTile(zone.x - 1, y) || isRoadTile(zone.x + zone.size, y)) return true;
+  }
+  return false;
+}
+
+function evaluateIndustryZone(zone) {
+  const project = projectById(zone.projectId);
+  if (!project) return { eff: 0, revenue: 0, upkeep: 0, why: ["Unknown project"] };
+  const missing = [];
+  let shortage = 0;
+  for (const [need, min] of Object.entries(project.needs)) {
+    const got = state.industry.foundations[need] || 0;
+    if (got < min) {
+      const gap = min - got;
+      shortage += gap;
+      missing.push(`${need} -${Math.round(gap)}`);
+    }
+  }
+  const roadAdj = hasRoadAdjacency(zone) ? 1 : 0;
+  if (!roadAdj) missing.push("road access");
+  const footprintPenalty = project.size >= 4 && cityRadius() < 14 ? 0.12 : 0;
+  const baseEff = 1 - shortage / 220 - (roadAdj ? 0 : 0.12) - footprintPenalty;
+  const eff = clamp(baseEff, 0.16, 1.12);
+  const lvl = Math.max(1, zone.level || 1);
+  const revenue = round(project.baseRevenue * eff * (0.9 + lvl * 0.2));
+  const upkeep = round(project.baseUpkeep * (0.75 + eff * 0.45) * (0.85 + lvl * 0.18));
+  return { eff, revenue, upkeep, why: missing };
+}
+
+function industryUpgradeCostDays(zone) {
+  const p = projectById(zone.projectId);
+  if (!p) return { cost: 0, days: 0 };
+  const lvl = Math.max(1, zone.level || 1);
+  return {
+    cost: round(p.cost * 0.33 + lvl * 16),
+    days: 5 + lvl * 2,
+  };
+}
+
+function upgradeSelectedIndustry() {
+  const z = findIndustryZone(state.selectedIndustryId);
+  if (!z) return;
+  if (z.status !== "active") {
+    addTicker("Facility must be active before upgrading.");
+    return;
+  }
+  if ((z.level || 1) >= 5) {
+    addTicker(`${z.name} is already max level.`);
+    return;
+  }
+  const { cost, days } = industryUpgradeCostDays(z);
+  if (!spendActionPoints(2, "industry upgrade")) return;
+  if (state.budget.treasury < cost) {
+    state.resources.actionPoints = clamp(state.resources.actionPoints + 2, 0, state.resources.maxActionPoints);
+    addTicker(`Need ${formatMoneyMillions(cost)} to upgrade ${z.name}.`);
+    return;
+  }
+  state.budget.treasury -= cost;
+  z.status = "upgrading";
+  z.startDay = state.day;
+  z.completeDay = state.day + days;
+  z.targetLevel = (z.level || 1) + 1;
+  state.buildQueue.push({
+    id: `upg_${z.id}_${state.day}`,
+    name: `${z.name} upgrade to L${z.targetLevel}`,
+    completeDay: z.completeDay,
+    cost,
+    type: "industry-upgrade",
+  });
+  addTicker(`${z.name} upgrade started. ${days} days.`);
+  addRailEvent("🏭 Facility Upgrade", `${z.name} upgrading to level ${z.targetLevel}.`, true);
+}
+
+function updateIndustryPerDay() {
+  updateFoundations();
+  let totalRevenue = 0;
+  let totalUpkeep = 0;
+  let utilizationAcc = 0;
+  let activeCount = 0;
+  const globalMissing = new Map();
+
+  for (const zone of state.industry.zones) {
+    const project = projectById(zone.projectId);
+    if (!project) continue;
+    const queueItem = state.buildQueue.find((q) => q.id === zone.id);
+    const upgradeQueueItem = state.buildQueue.find((q) => q.id === `upg_${zone.id}_${zone.startDay}`);
+    if (zone.status === "building" && state.day >= zone.completeDay) {
+      const remaining = Math.max(0, round(project.cost - zone.paid));
+      if (state.budget.treasury >= remaining) {
+        state.budget.treasury -= remaining;
+        zone.status = "active";
+        zone.paid = project.cost;
+        if (queueItem) queueItem.completeDay = state.day;
+        addTicker(`${project.name} is now online.`);
+        addRailEvent("✅ Project Online", `${project.name} completed and entered production.`, true);
+      } else {
+        zone.completeDay += 3;
+        if (queueItem) queueItem.completeDay = zone.completeDay;
+        zone.why = [`Funding gap ${formatMoneyMillions(remaining)}`];
+        addTicker(`${project.name} delayed: need ${formatMoneyMillions(remaining)} completion funds.`);
+      }
+    }
+    if (zone.status === "upgrading" && state.day >= zone.completeDay) {
+      zone.level = Math.max(zone.level || 1, zone.targetLevel || (zone.level || 1));
+      zone.targetLevel = null;
+      zone.status = "active";
+      if (upgradeQueueItem) upgradeQueueItem.completeDay = state.day;
+      addTicker(`${project.name} upgrade completed (L${zone.level}).`);
+      addRailEvent("✅ Upgrade Online", `${project.name} is now level ${zone.level}.`, false);
+    }
+    if (zone.status !== "active") continue;
+    activeCount += 1;
+    const r = evaluateIndustryZone(zone);
+    zone.efficiency = r.eff;
+    zone.output = r.revenue - r.upkeep;
+    zone.why = r.why;
+    totalRevenue += r.revenue;
+    totalUpkeep += r.upkeep;
+    utilizationAcc += r.eff;
+    for (const w of r.why) globalMissing.set(w, (globalMissing.get(w) || 0) + 1);
+  }
+
+  const utilization = activeCount ? utilizationAcc / activeCount : 0;
+  state.industry.metrics = {
+    revenue: round(totalRevenue),
+    upkeep: round(totalUpkeep),
+    net: round(totalRevenue - totalUpkeep),
+    utilization: round(utilization * 100),
+    missing: [...globalMissing.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k).slice(0, 3),
+  };
+}
+
+function canPlaceHousingZone(tile, size) {
+  const sx = Math.round(tile[0] - (size - 1) / 2);
+  const sy = Math.round(tile[1] - (size - 1) / 2);
+  for (let x = sx; x < sx + size; x += 1) {
+    for (let y = sy; y < sy + size; y += 1) {
+      if (!isTileBuildable(x, y)) return null;
+      if (isRailTile(x, y)) return null;
+    }
+  }
+  return { x: sx, y: sy };
+}
+
+function spawnHousingMandate() {
+  if (state.housing.active) return;
+  const id = `house_${state.day}_${Math.floor(Math.random() * 10000)}`;
+  state.housing.active = {
+    id,
+    title: "Housing Supply Crisis",
+    body: "Affordability pressure is rising. Approve a footprint size and place it on the map.",
+    expiresDay: state.day + 14,
+    size: null,
+    costBySize: { 2: 14, 3: 26, 4: 42 },
+  };
+  addTicker("Housing mandate issued: choose development size and place it on the map.");
+  addRailEvent("🏘️ Housing Mandate", "Select 2x2, 3x3, or 4x4 footprint, then place on map.", true);
+}
+
+function maybeSpawnHousingMandate() {
+  if (!state.sim.started || state.housing.active) return;
+  if (state.day < state.housing.nextAtDay) return;
+  const housingPressure =
+    clamp((62 - state.people.find((p) => p.id === "poverty")?.happiness || 0) / 62, 0, 1) +
+    clamp((58 - state.people.find((p) => p.id === "working")?.happiness || 0) / 58, 0, 1);
+  const chance = 0.32 + Math.min(0.4, housingPressure * 0.22);
+  if (Math.random() < chance) spawnHousingMandate();
+  state.housing.nextAtDay = state.day + 26 + Math.floor(Math.random() * 20);
+}
+
+function chooseHousingFootprint(size) {
+  const m = state.housing.active;
+  if (!m) return;
+  m.size = size;
+  setActiveSideTab("control");
+  state.ui.housingPlacement = { mandateId: m.id, size };
+  state.ui.placementBuildingId = null;
+  state.ui.industryPlacement = null;
+  state.selectedIndustryId = null;
+  state.ui.placementRecommendations = [];
+  addTicker(`Housing footprint selected: ${size}x${size}. Click map to place.`);
+}
+
+function placeHousingZone(tile) {
+  const m = state.housing.active;
+  const mode = state.ui.housingPlacement;
+  if (!m || !mode || mode.mandateId !== m.id || !m.size) return false;
+  const anchor = canPlaceHousingZone(tile, m.size);
+  if (!anchor) return false;
+  const cost = m.costBySize[m.size] || (m.size * m.size * 2);
+  if (state.budget.treasury < cost) {
+    addTicker(`Need ${formatMoneyMillions(cost)} treasury to place ${m.size}x${m.size} housing.`);
+    return false;
+  }
+  state.budget.treasury -= cost;
+  state.housing.zones.push({ x: anchor.x, y: anchor.y, size: m.size, dayPlaced: state.day });
+  const area = m.size * m.size;
+  const demNow = {
+    poverty: round(1.2 + area * 0.35),
+    working: round(0.9 + area * 0.28),
+    middle: round(area >= 9 ? -0.3 : 0.2),
+    business: round(area >= 16 ? -0.5 : 0.1),
+    elite: round(area >= 16 ? -0.8 : 0),
+  };
+  applyDemographicShiftMap(demNow, 1);
+  applyKpiShiftMap({ stability: 0.6 + area * 0.08, health: 0.25 + area * 0.05, climate: -0.1 * m.size, economy: 0.18 + area * 0.04 });
+  logDecisionImpact({
+    title: "Housing Development Approved",
+    category: "welfare",
+    choice: `${m.size}x${m.size} Zone`,
+    demNow,
+    kpiNow: { stability: 0.5 + area * 0.07, economy: 0.2 + area * 0.04, climate: -0.08 * m.size },
+    treasuryDeltaNow: -cost,
+    trustDelta: 0.7,
+    axisDrift: { careAusterity: 1.1, libertyControl: 0.1, publicDonor: 0.4, truthSpin: 0.2 },
+    confidence: "medium",
+    explain: "Housing supply expansion reduced affordability stress, with short-term environmental/build costs.",
+  });
+  addRailEvent("🏗️ Housing Built", `${m.size}x${m.size} zone placed for ${formatMoneyMillions(cost)}.`, true);
+  addTicker(`Housing zone placed (${m.size}x${m.size}).`);
+  state.housing.active = null;
+  state.ui.housingPlacement = null;
+  initDecorProps();
+  normalizeTrafficLanes();
+  return true;
+}
+
+function updateHousingMandatePerDay() {
+  const m = state.housing.active;
+  if (!m) return;
+  if (state.day <= m.expiresDay) return;
+  const penalty = m.size ? 0.8 : 1.4;
+  applyDemographicShiftMap({ poverty: -2.5 * penalty, working: -2.1 * penalty, middle: -0.8 * penalty, business: 0, elite: 0 }, 1);
+  applyKpiShiftMap({ stability: -1.2 * penalty, economy: -0.6 * penalty }, 1);
+  addTicker("Housing mandate expired without delivery. Affordability pressure increased.");
+  addRailEvent("❌ Housing Missed", "No development placed before deadline.", true);
+  state.housing.active = null;
+  state.ui.housingPlacement = null;
 }
 
 function pickMajorEventTemplate() {
@@ -1799,10 +2664,11 @@ function maybeTriggerEvents() {
   }
 }
 
-function spawnIncident(forceTypeId = null) {
+function spawnIncident(forceTypeId = null, options = {}) {
   const type = forceTypeId
     ? INCIDENT_TYPES.find((t) => t.id === forceTypeId) || INCIDENT_TYPES[0]
     : INCIDENT_TYPES[Math.floor(Math.random() * INCIDENT_TYPES.length)];
+  const opts = options || {};
 
   const anchorMap = {
     health: "medical",
@@ -1825,7 +2691,7 @@ function spawnIncident(forceTypeId = null) {
     id: `inc_${Date.now()}_${Math.floor(Math.random() * 9999)}`,
     type,
     tile: [buildingTile(targetBuilding)[0] + rand(-1.5, 1.5), buildingTile(targetBuilding)[1] + rand(-1.5, 1.5)],
-    severity: 1 + Math.floor(Math.random() * 3),
+    severity: Number.isFinite(opts.severity) ? clamp(Math.round(opts.severity), 1, 4) : 1 + Math.floor(Math.random() * 3),
     daysOpen: 0,
     contained: false,
     resolved: false,
@@ -1833,14 +2699,17 @@ function spawnIncident(forceTypeId = null) {
     assignedResponderId: null,
     districtId: districtForTile(buildingTile(targetBuilding)),
     streakBroken: false,
+    tutorialManual: Boolean(opts.tutorialManual),
   };
 
   state.incidents.push(incident);
   state.monthly.stats.incidentsSpawned += 1;
-  const code = `INCIDENT-${String(state.day).padStart(3, "0")}-${String(state.incidents.length).padStart(2, "0")}`;
+  const prefix = opts.codePrefix || "INCIDENT";
+  const code = `${prefix}-${String(state.day).padStart(3, "0")}-${String(state.incidents.length).padStart(2, "0")}`;
   incident.code = code;
   addTicker(`${code}: ${incident.type.title} near ${targetBuilding.name}.`);
-  addRailEvent(incident.type.title, "Tap incident on map for emergency intervention.", true);
+  addRailEvent(incident.type.title, incident.tutorialManual ? "Guided response: tap marker for emergency intervention." : "Tap incident on map for emergency intervention.", true);
+  return incident;
 }
 
 function updateIncidentsPerDay() {
@@ -1929,39 +2798,176 @@ function getResponderKindColor(kind) {
   return "#935cc6";
 }
 
+function roadKey(x, y) {
+  return `${x},${y}`;
+}
+
+function parseRoadKey(key) {
+  const [x, y] = key.split(",").map(Number);
+  return [x, y];
+}
+
+function isDriveableRoadTile(x, y) {
+  return isDevelopedTile(x, y, 0.8) && isRoadTile(x, y) && !isRailTile(x, y);
+}
+
+function isTrackTile(x, y) {
+  return isDevelopedTile(x, y, 0.8) && isRailTile(x, y);
+}
+
+function rebuildTrafficNetwork() {
+  const roadNodes = [];
+  const railNodes = [];
+  for (let x = 1; x < MAP_W - 1; x += 1) {
+    for (let y = 1; y < MAP_H - 1; y += 1) {
+      if (isDriveableRoadTile(x, y)) roadNodes.push([x, y]);
+      if (isTrackTile(x, y)) railNodes.push([x, y]);
+    }
+  }
+  state.visual.traffic = { roadNodes, railNodes };
+}
+
+function nearestTrafficNode(x, y, mode = "road") {
+  const nodes = mode === "rail" ? (state.visual.traffic?.railNodes || []) : (state.visual.traffic?.roadNodes || []);
+  if (!nodes.length) return null;
+  let best = nodes[0];
+  let bestDist = tileDist([x, y], best);
+  for (let i = 1; i < nodes.length; i += 1) {
+    const d = tileDist([x, y], nodes[i]);
+    if (d < bestDist) {
+      best = nodes[i];
+      bestDist = d;
+    }
+  }
+  return best;
+}
+
+function randomTrafficNode(mode = "road") {
+  const nodes = mode === "rail" ? (state.visual.traffic?.railNodes || []) : (state.visual.traffic?.roadNodes || []);
+  if (!nodes.length) return null;
+  return nodes[Math.floor(Math.random() * nodes.length)];
+}
+
+function trafficNeighbors(node, mode = "road") {
+  const [x, y] = node;
+  const check = mode === "rail" ? isTrackTile : isDriveableRoadTile;
+  const out = [];
+  const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  for (const [dx, dy] of dirs) {
+    const nx = x + dx;
+    const ny = y + dy;
+    if (nx < 1 || ny < 1 || nx > MAP_W - 2 || ny > MAP_H - 2) continue;
+    if (check(nx, ny)) out.push([nx, ny]);
+  }
+  return out;
+}
+
+function findTrafficPath(start, end, mode = "road") {
+  if (!start || !end) return [];
+  const sKey = roadKey(start[0], start[1]);
+  const eKey = roadKey(end[0], end[1]);
+  if (sKey === eKey) return [start];
+
+  const q = [start];
+  const seen = new Set([sKey]);
+  const prev = new Map();
+  let found = false;
+
+  while (q.length) {
+    const cur = q.shift();
+    const cKey = roadKey(cur[0], cur[1]);
+    if (cKey === eKey) {
+      found = true;
+      break;
+    }
+    for (const n of trafficNeighbors(cur, mode)) {
+      const nKey = roadKey(n[0], n[1]);
+      if (seen.has(nKey)) continue;
+      seen.add(nKey);
+      prev.set(nKey, cKey);
+      q.push(n);
+    }
+  }
+  if (!found) return [start];
+
+  const path = [];
+  let cursor = eKey;
+  while (cursor) {
+    path.push(parseRoadKey(cursor));
+    if (cursor === sKey) break;
+    cursor = prev.get(cursor);
+  }
+  return path.reverse();
+}
+
+function planVehicleRoute(v, from = null) {
+  const mode = v.mode || "road";
+  const start = from || nearestTrafficNode(v.x, v.y, mode) || randomTrafficNode(mode);
+  if (!start) {
+    v.path = [];
+    v.pathIndex = 0;
+    return;
+  }
+  let end = randomTrafficNode(mode);
+  if (!end) {
+    v.path = [start];
+    v.pathIndex = 0;
+    return;
+  }
+  let guard = 0;
+  while (tileDist(start, end) < 5 && guard < 8) {
+    end = randomTrafficNode(mode) || end;
+    guard += 1;
+  }
+  const path = findTrafficPath(start, end, mode);
+  v.path = path.length > 1 ? path : [start];
+  v.pathIndex = 0;
+  v.x = start[0];
+  v.y = start[1];
+}
+
+function spawnVehicle(kind = "car") {
+  let mode = kind === "train" ? "rail" : "road";
+  if (mode === "rail" && !(state.visual.traffic?.railNodes?.length)) {
+    mode = "road";
+    kind = "bus";
+  }
+  const start = randomTrafficNode(mode) || (mode === "road" ? randomTrafficNode("rail") : randomTrafficNode("road"));
+  if (!start) return null;
+  const v = {
+    mode,
+    kind,
+    x: start[0],
+    y: start[1],
+    speed: kind === "bus" ? 1.0 + Math.random() * 0.4 : kind === "train" ? 1.7 + Math.random() * 0.6 : 1.1 + Math.random() * 0.7,
+    color: kind === "bus" ? "#ffd17b" : kind === "train" ? "#8fd8ff" : "#9dc8ff",
+    sprite: kind === "bus" ? "vehicle_bus" : kind === "train" ? "vehicle_train" : "vehicle_car",
+    path: [],
+    pathIndex: 0,
+    stopTimer: 0,
+  };
+  planVehicleRoute(v, start);
+  return v;
+}
+
 function initTrafficVehicles() {
-  const vehicleSprites = ["vehicle_car", "vehicle_bus", "vehicle_car", "vehicle_car"];
-  const lines = activeRoadLines();
+  rebuildTrafficNetwork();
   state.visual.vehicles = [];
-  for (let i = 0; i < 34; i += 1) {
-    const lane = i % 2 === 0 ? "x" : "y";
-    const laneOffset = lines[i % lines.length] ?? 10;
-    state.visual.vehicles.push({
-      lane,
-      laneOffset,
-      t: Math.random() * MAP_W,
-      speed: 0.9 + Math.random() * 1.6,
-      color: i % 3 === 0 ? "#f5f5f5" : i % 3 === 1 ? "#ffd17b" : "#9dc8ff",
-      sprite: vehicleSprites[i % vehicleSprites.length],
-    });
+  const total = 34;
+  for (let i = 0; i < total; i += 1) {
+    const kind = i % 11 === 0 ? "train" : i % 5 === 0 ? "bus" : "car";
+    const v = spawnVehicle(kind);
+    if (v) state.visual.vehicles.push(v);
   }
 }
 
 function addTrafficVehicles(count) {
-  const vehicleSprites = ["vehicle_car", "vehicle_bus", "vehicle_car", "vehicle_car"];
-  const lines = activeRoadLines();
+  if (!state.visual.traffic) rebuildTrafficNetwork();
   for (let i = 0; i < count; i += 1) {
-    const idx = state.visual.vehicles.length + i;
-    const lane = idx % 2 === 0 ? "x" : "y";
-    const laneOffset = lines[idx % lines.length] ?? 10;
-    state.visual.vehicles.push({
-      lane,
-      laneOffset,
-      t: Math.random() * MAP_W,
-      speed: 0.9 + Math.random() * 1.6,
-      color: idx % 3 === 0 ? "#f5f5f5" : idx % 3 === 1 ? "#ffd17b" : "#9dc8ff",
-      sprite: vehicleSprites[idx % vehicleSprites.length],
-    });
+    const idx = state.visual.vehicles.length;
+    const kind = idx % 13 === 0 ? "train" : idx % 4 === 0 ? "bus" : "car";
+    const v = spawnVehicle(kind);
+    if (v) state.visual.vehicles.push(v);
   }
 }
 
@@ -2059,7 +3065,7 @@ function initDecorProps() {
   const out = [];
   for (let x = 2; x < MAP_W - 2; x += 1) {
     for (let y = 2; y < MAP_H - 2; y += 1) {
-      if (!isDevelopedTile(x, y, 1.2) || isRoadTile(x, y)) continue;
+      if (!isDevelopedTile(x, y, 1.2) || isRoadTile(x, y) || isHousingTile(x, y) || isIndustryTile(x, y)) continue;
       const dist = tileDist([x, y], CITY_CORE_TILE);
       const edgeBias = clamp((dist - (cityRadius() - 5)) / 6, 0, 1);
       const hash = ((x * 73856093) ^ (y * 19349663)) >>> 0;
@@ -2098,7 +3104,7 @@ function getResidentialAnchors() {
 }
 
 function nearestUnassignedIncidentFor(kind) {
-  const relevant = state.incidents.filter((i) => !i.resolved && !i.contained && !i.assignedResponderId);
+  const relevant = state.incidents.filter((i) => !i.resolved && !i.contained && !i.assignedResponderId && !i.tutorialManual);
   if (relevant.length === 0) return null;
   const scored = relevant.map((i) => ({ i, score: i.type.responder === kind ? 0 : 1 }));
   scored.sort((a, b) => a.score - b.score);
@@ -2183,10 +3189,32 @@ function updateVisual(dt) {
     if (c.x > state.camera.viewW + 220) c.x = -220;
   }
 
+  if (!state.sim.started) return;
+
   for (const v of state.visual.vehicles) {
-    v.t += v.speed * dt;
-    const laneLimit = v.lane === "x" ? MAP_W : MAP_H;
-    if (v.t > laneLimit + 2) v.t = -2;
+    if (v.stopTimer > 0) {
+      v.stopTimer -= dt;
+      continue;
+    }
+    if (!v.path || v.path.length < 2) {
+      planVehicleRoute(v);
+      continue;
+    }
+    const nextIdx = Math.min(v.path.length - 1, v.pathIndex + 1);
+    const target = v.path[nextIdx];
+    moveToward(v, target, dt, v.speed);
+    if (tileDist([v.x, v.y], target) < 0.06) {
+      v.pathIndex = nextIdx;
+      if (v.kind === "bus" && ((target[0] + target[1]) % 7 === 0)) {
+        v.stopTimer = 0.45 + Math.random() * 0.6;
+      }
+      if (v.kind === "train" && ((target[0] + target[1]) % 9 === 0)) {
+        v.stopTimer = 0.65 + Math.random() * 0.8;
+      }
+      if (v.pathIndex >= v.path.length - 1) {
+        planVehicleRoute(v, target);
+      }
+    }
   }
 
   updateCivilians(dt);
@@ -2314,18 +3342,30 @@ function updatePeopleMood() {
 
 function updateOpsHeat() {
   const domains = ["health", "education", "safety", "climate", "integrity", "economy"];
+  const mapKeyToBuilding = {
+    health: "health",
+    education: "education",
+    safety: "security",
+    climate: "climate",
+    integrity: "integrity",
+    economy: "transport",
+  };
   for (const key of domains) {
     const base = clamp((58 - state.kpi[key]) / 18, -0.3, 1);
     const incidentPressure = state.incidents.filter((i) => !i.resolved && i.type.kpi === key).length * 0.08;
     const majorPressure = state.majorEvents.filter((e) => (e.domain || "").includes(key === "safety" ? "security" : key)).length * 0.12;
-    const target = clamp(0.25 + Math.max(0, base) + incidentPressure + majorPressure, 0, 1);
+    const b = findBuilding(mapKeyToBuilding[key]);
+    const investRelief = b ? clamp((Math.max(0, b.budget - 60) * 0.006) + Math.max(0, b.level - 1) * 0.03, 0, 0.36) : 0;
+    const climateExtraRelief = key === "climate" ? clamp((Math.max(0, (findBuilding("climate")?.budget || 60) - 60) * 0.004), 0, 0.14) : 0;
+    const target = clamp(0.22 + Math.max(0, base) + incidentPressure + majorPressure - investRelief - climateExtraRelief, 0, 1);
     const prev = state.ops.heat[key] ?? 0.2;
-    state.ops.heat[key] = clamp(prev + (target - prev) * 0.24, 0, 1);
+    state.ops.heat[key] = clamp(prev + (target - prev) * 0.32, 0, 1);
   }
 }
 
 function checkGameOver() {
   if (state.gameOver.active) return;
+  if (tutorialIsActive() && state.tutorial.phase !== "freeplay") return;
   const collapsedGroup = state.people.find((p) => p.happiness <= 0);
   if (state.budget.treasury <= 0) {
     state.gameOver = {
@@ -2496,13 +3536,9 @@ function computeGrowthScore(avgLevel) {
 }
 
 function normalizeTrafficLanes() {
-  const lines = activeRoadLines();
-  if (lines.length === 0) return;
-  for (let i = 0; i < state.visual.vehicles.length; i += 1) {
-    const v = state.visual.vehicles[i];
-    if (!lines.includes(v.laneOffset)) {
-      v.laneOffset = lines[i % lines.length];
-    }
+  rebuildTrafficNetwork();
+  for (const v of state.visual.vehicles) {
+    planVehicleRoute(v);
   }
 }
 
@@ -2532,6 +3568,7 @@ function maybeGrowCity(avgLevel) {
 function applySimTick() {
   state.day += 1;
   state.year = 2026 + Math.floor(state.day / DAYS_PER_YEAR);
+  updateTutorialProgress();
   if (state.day % AP_REGEN_DAYS === 0) {
     state.resources.actionPoints = clamp(state.resources.actionPoints + 1, 0, state.resources.maxActionPoints);
     addApToast("+1 AP", "up");
@@ -2549,11 +3586,15 @@ function applySimTick() {
   const avgLevel = activeBuildings.reduce((acc, b) => acc + b.level, 0) / activeBuildings.length;
   const momentumBonus = state.rapid.momentum * 0.2;
 
-  state.budget.revenue = round(clamp(84 + state.kpi.economy * 0.42 + (avgLevel - 1) * 4 + momentumBonus, 70, 195));
-  state.budget.expenditure = round(clamp(82 + avgBudget * 0.33 + (100 - state.kpi.health) * 0.12 + state.budget.debt * 0.03, 75, 215));
+  updateIndustryPerDay();
+  const baseRevenue = 68 + state.kpi.economy * 0.3 + (avgLevel - 1) * 2.8 + momentumBonus;
+  const inflationDrag = Math.max(0, state.budget.treasury - 340) * 0.012;
+  state.budget.revenue = round(clamp(baseRevenue + state.industry.metrics.revenue - inflationDrag, 36, 320));
+  const baseExpenditure = 64 + avgBudget * 0.26 + (100 - state.kpi.health) * 0.09 + state.budget.debt * 0.03;
+  state.budget.expenditure = round(clamp(baseExpenditure + state.industry.metrics.upkeep, 62, 340));
   state.budget.deficit = round(state.budget.revenue - state.budget.expenditure);
   state.budget.debt = round(clamp(state.budget.debt - state.budget.deficit * 0.05, 25, 250));
-  const treasuryCeiling = 320 + state.kpi.economy * 9 + avgLevel * 90 + Math.max(0, state.resources.bestStreak * 6);
+  const treasuryCeiling = 420 + state.kpi.economy * 12 + avgLevel * 110 + Math.max(0, state.resources.bestStreak * 8) + Math.max(0, state.industry.metrics.net) * 9;
   state.budget.treasury = round(clamp(state.budget.treasury + state.budget.deficit * 0.25, -120, treasuryCeiling));
 
   const healthB = findBuilding("health");
@@ -2569,18 +3610,34 @@ function applySimTick() {
   state.kpi.climate = clamp(state.kpi.climate + (climateB.budget - 60) * 0.018 + (climateB.level - 1) * 0.12 - (state.kpi.economy > 78 ? 0.12 : 0), 0, 100);
   state.kpi.integrity = clamp(state.kpi.integrity + (integrityB.budget - 60) * 0.02 + (integrityB.level - 1) * 0.13 - (state.budget.treasury < 0 ? 0.22 : 0), 0, 100);
   state.kpi.economy = clamp(state.kpi.economy + (transportB.budget - 60) * 0.017 + (transportB.level - 1) * 0.15 - (state.budget.debt > 110 ? 0.2 : 0), 0, 100);
-
-  maybeTriggerEvents();
-  maybeSpawnMajorEvent();
-  maybeSpawnIncident();
+  const industryUtil = (state.industry.metrics.utilization || 0) / 100;
+  state.kpi.economy = clamp(state.kpi.economy + (industryUtil - 0.45) * 1.2 + Math.max(0, state.industry.metrics.net) * 0.008, 0, 100);
+  state.kpi.stability = clamp(state.kpi.stability + (industryUtil - 0.42) * 0.42, 0, 100);
+  state.kpi.climate = clamp(state.kpi.climate - Math.max(0, state.industry.metrics.revenue - state.industry.metrics.upkeep) * 0.004, 0, 100);
+  const guided = tutorialIsActive() && state.tutorial.phase !== "freeplay";
+  const allowChaos = !guided;
+  if (allowChaos) maybeTriggerEvents();
+  if (allowChaos) maybeSpawnMajorEvent();
+  if (allowChaos) maybeSpawnHousingMandate();
+  if (allowChaos) maybeSpawnIncident();
+  if (guided) {
+    maybeSpawnTutorialIncident();
+    maybeSpawnTutorialRapid();
+  }
   updateMajorEventsPerDay();
+  updateHousingMandatePerDay();
   updateIncidentsPerDay();
   updateGoalDaily();
   updatePeopleMood();
   updateOpsHeat();
-  runMonthlySummary();
+  if (allowChaos) runMonthlySummary();
   maybeGrowCity(avgLevel);
   if (state.day % 10 === 0) scaleCityActivity(avgLevel);
+
+  if (guided) {
+    state.budget.treasury = Math.max(state.budget.treasury, 42);
+    state.kpi.stability = Math.max(state.kpi.stability, 54);
+  }
 
   state.kpi.stability = clamp(
     0.2 * state.kpi.health +
@@ -2609,7 +3666,8 @@ function applySimTick() {
   recalcBuildingStates();
   buildQueueSweep();
   maybePromoteTier();
-  triggerRapidDecision();
+  if (allowChaos) triggerRapidDecision();
+  updateTutorialProgress();
   maybeRewardOnboardingComplete();
   checkGameOver();
 
@@ -2757,14 +3815,11 @@ function drawAtmosphere() {
 
 function drawTraffic() {
   for (const v of state.visual.vehicles) {
-    const laneOffset = v.laneOffset ?? 10;
-    const tileX = v.lane === "x" ? v.t : laneOffset;
-    const tileY = v.lane === "x" ? laneOffset : v.t;
-    const p = isoToScreen(tileX, tileY);
+    const p = isoToScreen(v.x, v.y);
     const sprite = state.assets.actors[v.sprite];
     if (state.assets.loaded && sprite) {
-      const w = 14 * state.camera.zoom;
-      const h = 10 * state.camera.zoom;
+      const w = (v.kind === "train" ? 24 : v.kind === "bus" ? 17 : 14) * state.camera.zoom;
+      const h = (v.kind === "train" ? 13 : v.kind === "bus" ? 11 : 10) * state.camera.zoom;
       drawSpriteCentered(sprite, p.x, p.y - 8 * state.camera.zoom, w, h);
       continue;
     }
@@ -2985,6 +4040,7 @@ function drawIncidents() {
 
 function tileSpriteFor(x, y) {
   if (!isDevelopedTile(x, y, 1.6)) return "grass";
+  if (isHousingTile(x, y) || isIndustryTile(x, y)) return "grass";
   const lines = activeRoadLines();
   if (lines.includes(x) && lines.includes(y)) return "plaza";
   if (lines.includes(x) || lines.includes(y)) {
@@ -3032,6 +4088,174 @@ function drawMap() {
         }
       }
     }
+  }
+
+  for (let x = 1; x < MAP_W - 1; x += 1) {
+    for (let y = 1; y < MAP_H - 1; y += 1) {
+      if (!isTrackTile(x, y)) continue;
+      const p = isoToScreen(x, y);
+      const hasLR = isTrackTile(x - 1, y) || isTrackTile(x + 1, y);
+      const hasUD = isTrackTile(x, y - 1) || isTrackTile(x, y + 1);
+      ctx.strokeStyle = "rgba(126, 160, 188, 0.9)";
+      ctx.lineWidth = 1.8 * state.camera.zoom;
+      if (hasLR) {
+        ctx.beginPath();
+        ctx.moveTo(p.x - TILE_W * 0.22 * state.camera.zoom, p.y);
+        ctx.lineTo(p.x + TILE_W * 0.22 * state.camera.zoom, p.y);
+        ctx.stroke();
+      }
+      if (hasUD) {
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y - TILE_H * 0.22 * state.camera.zoom);
+        ctx.lineTo(p.x, p.y + TILE_H * 0.22 * state.camera.zoom);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = "rgba(64, 86, 110, 0.65)";
+      ctx.lineWidth = 1 * state.camera.zoom;
+      ctx.beginPath();
+      ctx.moveTo(p.x - TILE_W * 0.12 * state.camera.zoom, p.y - TILE_H * 0.08 * state.camera.zoom);
+      ctx.lineTo(p.x + TILE_W * 0.12 * state.camera.zoom, p.y + TILE_H * 0.08 * state.camera.zoom);
+      ctx.stroke();
+    }
+  }
+
+  for (const z of state.industry.zones) {
+    const live = z.status === "active";
+    const upgrading = z.status === "upgrading";
+    const fill = live ? "rgba(122,214,178,0.23)" : "rgba(255,170,94,0.2)";
+    const stroke = live ? "rgba(82,217,173,0.9)" : "rgba(255,170,94,0.9)";
+    for (let x = z.x; x < z.x + z.size; x += 1) {
+      for (let y = z.y; y < z.y + z.size; y += 1) {
+        const p = isoToScreen(x, y);
+        drawDiamond(
+          p.x,
+          p.y - 2 * state.camera.zoom,
+          TILE_W * 0.9 * state.camera.zoom,
+          TILE_H * 0.78 * state.camera.zoom,
+          fill,
+          stroke
+        );
+      }
+    }
+    const cp = isoToScreen(z.x + (z.size - 1) / 2, z.y + (z.size - 1) / 2);
+    const pDef = projectById(z.projectId);
+    const art = pDef ? state.assets.actors[pDef.art] : null;
+    if (state.assets.loaded && art) {
+      const w = (54 + z.size * 24) * state.camera.zoom;
+      const h = (46 + z.size * 18) * state.camera.zoom;
+      drawSpriteCentered(art, cp.x, cp.y - 16 * state.camera.zoom, w, h);
+    }
+
+    if (z.id === state.selectedIndustryId) {
+      drawDiamond(cp.x, cp.y + 2, TILE_W * (0.66 + z.size * 0.12) * state.camera.zoom, TILE_H * (0.62 + z.size * 0.1) * state.camera.zoom, "rgba(255,220,130,0.32)", "#f0b35c");
+    }
+
+    const total = Math.max(1, (z.completeDay || 0) - (z.startDay || 0));
+    const elapsed = clamp(state.day - (z.startDay || 0), 0, total);
+    const progress = clamp(elapsed / total, 0, 1);
+    if (!live || upgrading) {
+      const bw = (58 + z.size * 12) * state.camera.zoom;
+      const bh = 5 * state.camera.zoom;
+      const bx = cp.x - bw / 2;
+      const by = cp.y - (32 + z.size * 3) * state.camera.zoom;
+      ctx.fillStyle = "rgba(20,35,52,0.9)";
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.fillStyle = "rgba(255,170,94,0.9)";
+      ctx.fillRect(bx, by, bw * progress, bh);
+      ctx.strokeStyle = "rgba(255,210,168,0.8)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx, by, bw, bh);
+    }
+
+    ctx.fillStyle = "#fff2dd";
+    ctx.font = `${Math.max(9, 10 * state.camera.zoom)}px sans-serif`;
+    ctx.textAlign = "center";
+    const short = z.name.split(" ").slice(0, 2).join(" ");
+    const lvlTag = `L${z.level || 1}`;
+    const tag = live && !upgrading
+      ? `${short} ${lvlTag} ${Math.round(z.efficiency * 100)}%`
+      : `${short} ${lvlTag} (${Math.max(0, z.completeDay - state.day)}d)`;
+    ctx.fillText(tag, cp.x, cp.y - (12 + z.size * 2) * state.camera.zoom);
+  }
+
+  for (const z of state.housing.zones) {
+    const cx = z.x + (z.size - 1) / 2;
+    const cy = z.y + (z.size - 1) / 2;
+    const cp = isoToScreen(cx, cy);
+    const zoneSprite = state.assets.actors[`housing_zone_${z.size}`];
+    if (state.assets.loaded && zoneSprite) {
+      const w = (58 + z.size * 26) * state.camera.zoom;
+      const h = (56 + z.size * 18) * state.camera.zoom;
+      drawSpriteCentered(zoneSprite, cp.x, cp.y - 20 * state.camera.zoom, w, h);
+    } else {
+      for (let x = z.x; x < z.x + z.size; x += 1) {
+        for (let y = z.y; y < z.y + z.size; y += 1) {
+          const p = isoToScreen(x, y);
+          drawDiamond(
+            p.x,
+            p.y - 2 * state.camera.zoom,
+            TILE_W * 0.9 * state.camera.zoom,
+            TILE_H * 0.78 * state.camera.zoom,
+            "rgba(255,184,92,0.22)",
+            "rgba(255,184,92,0.75)"
+          );
+        }
+      }
+    }
+  }
+
+  if (state.ui.industryPlacement && state.ui.hoverTile) {
+    const size = state.ui.industryPlacement.size || 2;
+    const anchor = canPlaceIndustryZone(state.ui.hoverTile, size);
+    const ok = Boolean(anchor);
+    const sx = anchor ? anchor.x : Math.round(state.ui.hoverTile[0] - (size - 1) / 2);
+    const sy = anchor ? anchor.y : Math.round(state.ui.hoverTile[1] - (size - 1) / 2);
+    for (let x = sx; x < sx + size; x += 1) {
+      for (let y = sy; y < sy + size; y += 1) {
+        if (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) continue;
+        const p = isoToScreen(x, y);
+        drawDiamond(
+          p.x,
+          p.y - 2 * state.camera.zoom,
+          TILE_W * 0.94 * state.camera.zoom,
+          TILE_H * 0.84 * state.camera.zoom,
+          ok ? "rgba(74,205,160,0.28)" : "rgba(255,94,87,0.3)",
+          ok ? "#4aca95" : "#ff5e57"
+        );
+      }
+    }
+    const cp = isoToScreen(sx + size / 2, sy + size / 2);
+    ctx.fillStyle = "#fff3e4";
+    ctx.font = `${Math.max(10, 12 * state.camera.zoom)}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.fillText(`Industry ${size}x${size} ${ok ? "ready" : "blocked"}`, cp.x, cp.y - 22 * state.camera.zoom);
+  }
+
+  if (state.ui.housingPlacement && state.ui.hoverTile) {
+    const size = state.ui.housingPlacement.size || 2;
+    const anchor = canPlaceHousingZone(state.ui.hoverTile, size);
+    const ok = Boolean(anchor);
+    const sx = anchor ? anchor.x : Math.round(state.ui.hoverTile[0] - (size - 1) / 2);
+    const sy = anchor ? anchor.y : Math.round(state.ui.hoverTile[1] - (size - 1) / 2);
+    for (let x = sx; x < sx + size; x += 1) {
+      for (let y = sy; y < sy + size; y += 1) {
+        if (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) continue;
+        const p = isoToScreen(x, y);
+        drawDiamond(
+          p.x,
+          p.y - 2 * state.camera.zoom,
+          TILE_W * 0.94 * state.camera.zoom,
+          TILE_H * 0.84 * state.camera.zoom,
+          ok ? "rgba(72,212,149,0.3)" : "rgba(255,94,87,0.3)",
+          ok ? "#49d895" : "#ff5e57"
+        );
+      }
+    }
+    const cp = isoToScreen(sx + size / 2, sy + size / 2);
+    ctx.fillStyle = "#fff3e4";
+    ctx.font = `${Math.max(10, 12 * state.camera.zoom)}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.fillText(`Housing ${size}x${size} ${ok ? "ready" : "blocked"}`, cp.x, cp.y - 22 * state.camera.zoom);
   }
 
   if (state.ui.placementBuildingId && state.ui.hoverTile) {
@@ -3153,6 +4377,14 @@ function pickBuildingAt(sx, sy) {
   return null;
 }
 
+function pickIndustryAt(sx, sy) {
+  const t = screenToTile(sx, sy);
+  for (const z of state.industry.zones) {
+    if (t[0] >= z.x && t[0] < z.x + z.size && t[1] >= z.y && t[1] < z.y + z.size) return z;
+  }
+  return null;
+}
+
 function pickIncidentAt(sx, sy) {
   for (const inc of state.incidents) {
     if (inc.resolved) continue;
@@ -3207,12 +4439,43 @@ function emergencyTapIncident(inc) {
     confidence: "medium",
     explain: "Fast funding prevented escalation and signaled active governance.",
   });
+  updateTutorialProgress();
 }
 
 function renderRapidCard() {
   const a = state.rapid.active;
   els.rapidMomentum.textContent = String(state.rapid.momentum);
+  if (!state.sim.started) {
+    els.rapidTitle.textContent = "Founding phase active.";
+    els.rapidBody.textContent = "Rapid INCIDENT briefs unlock after you launch government.";
+    if (els.rapidEvidence) els.rapidEvidence.textContent = "";
+    els.rapidTimer.textContent = "-";
+    els.rapidBtnA.disabled = true;
+    els.rapidBtnB.disabled = true;
+    if (els.rapidBtnC) els.rapidBtnC.disabled = true;
+    els.rapidBtnA.textContent = "Option A";
+    els.rapidBtnB.textContent = "Option B";
+    if (els.rapidBtnC) els.rapidBtnC.textContent = "Option C";
+    if (els.rapidBtnC) els.rapidBtnC.style.display = "none";
+    els.rapidCard.classList.remove("urgent");
+    return;
+  }
   if (!a) {
+    if (tutorialIsActive() && !["incident", "rapid", "freeplay"].includes(state.tutorial.phase)) {
+      els.rapidTitle.textContent = "Guided mode in progress.";
+      els.rapidBody.textContent = "Rapid INCIDENT briefs unlock after budget, upgrade, industry, and first manual incident.";
+      if (els.rapidEvidence) els.rapidEvidence.textContent = "";
+      els.rapidTimer.textContent = "-";
+      els.rapidBtnA.disabled = true;
+      els.rapidBtnB.disabled = true;
+      if (els.rapidBtnC) els.rapidBtnC.disabled = true;
+      els.rapidBtnA.textContent = "Option A";
+      els.rapidBtnB.textContent = "Option B";
+      if (els.rapidBtnC) els.rapidBtnC.textContent = "Option C";
+      if (els.rapidBtnC) els.rapidBtnC.style.display = "none";
+      els.rapidCard.classList.remove("urgent");
+      return;
+    }
     const hasManual = state.incidents.some((i) => !i.resolved && !i.contained);
     if (hasManual) {
       els.rapidTitle.textContent = "No timed civic brief right now.";
@@ -3320,6 +4583,14 @@ function majorEventCardTarget() {
 
 function renderMajorEventCard() {
   if (!els.majorEventCard) return;
+  if (state.housing.active) {
+    els.majorEventCard.hidden = true;
+    return;
+  }
+  if (!state.sim.started) {
+    els.majorEventCard.hidden = true;
+    return;
+  }
   const ev = majorEventCardTarget();
   if (!ev) {
     els.majorEventCard.hidden = true;
@@ -3353,6 +4624,92 @@ function renderMajorEventCard() {
   }
 }
 
+function renderHousingCard() {
+  if (!els.housingCard) return;
+  const m = state.housing.active;
+  if (!state.sim.started || !m) {
+    els.housingCard.hidden = true;
+    return;
+  }
+  els.housingCard.hidden = false;
+  setText(els.housingTitle, m.title);
+  const selecting = !m.size;
+  setText(els.housingBody, selecting
+    ? `${m.body} Smaller zones are cheaper; bigger zones calm affordability faster.`
+    : `Footprint selected: ${m.size}x${m.size}. Click on the map to place the development zone.`);
+  setText(els.housingTimer, `${Math.max(0, m.expiresDay - state.day)} days`);
+  setText(els.housingImpact, selecting ? "Affordability + stability" : `${m.size}x${m.size} pending placement`);
+  if (els.housingBtnSmall) {
+    const c = m.costBySize[2];
+    els.housingBtnSmall.textContent = `2x2 (${formatMoneyMillions(c)})`;
+    els.housingBtnSmall.disabled = !selecting;
+  }
+  if (els.housingBtnMedium) {
+    const c = m.costBySize[3];
+    els.housingBtnMedium.textContent = `3x3 (${formatMoneyMillions(c)})`;
+    els.housingBtnMedium.disabled = !selecting;
+  }
+  if (els.housingBtnLarge) {
+    const c = m.costBySize[4];
+    els.housingBtnLarge.textContent = `4x4 (${formatMoneyMillions(c)})`;
+    els.housingBtnLarge.disabled = !selecting;
+  }
+  if (els.housingBtnDefer) {
+    els.housingBtnDefer.textContent = "Defer 30d";
+    els.housingBtnDefer.disabled = false;
+  }
+}
+
+function renderSetupOverlay() {
+  if (!els.setupOverlay) return;
+  if (state.sim.started) {
+    els.setupOverlay.hidden = true;
+    return;
+  }
+  els.setupOverlay.hidden = false;
+  const remaining = state.buildings.filter((b) => !b.placed).length;
+  const ready = remaining === 0;
+  if (els.setupTitle) els.setupTitle.textContent = ready ? "Ready to Launch" : "Build Your Government";
+  if (els.setupBody) {
+    els.setupBody.textContent = ready
+      ? "All departments are placed. Launch Government to begin guided steps: Budget -> Upgrade -> Industry -> Incident -> Rapid Brief."
+      : `Place all departments first (${remaining} remaining). During Founding Phase, time and emergencies are paused so setup stays calm.`;
+  }
+  if (els.launchGovBtn) {
+    els.launchGovBtn.disabled = !ready;
+    els.launchGovBtn.textContent = ready ? "Launch Government" : `Place ${remaining} More`;
+  }
+}
+
+function renderTutorialOverlay() {
+  if (!els.tutorialOverlay) return;
+  const guided = tutorialIsActive() && state.sim.started && state.tutorial.phase !== "founding" && state.tutorial.phase !== "freeplay";
+  els.tutorialOverlay.hidden = !guided;
+  if (!guided) return;
+
+  const meta = tutorialStepMeta();
+  const current = TUTORIAL_STEP_INDEX[state.tutorial.phase] ?? 0;
+  const steps = TUTORIAL_STEPS.filter((s) => s.id !== "founding" && s.id !== "freeplay");
+  const localIndex = Math.max(1, steps.findIndex((s) => s.id === state.tutorial.phase) + 1);
+  if (els.tutorialKicker) els.tutorialKicker.textContent = `Guided Command · Step ${localIndex}/${steps.length}`;
+  if (els.tutorialTitle) els.tutorialTitle.textContent = meta.title;
+  if (els.tutorialBody) els.tutorialBody.textContent = meta.body;
+  if (els.tutorialProgress) {
+    els.tutorialProgress.innerHTML = steps
+      .map((s) => {
+        const idx = TUTORIAL_STEP_INDEX[s.id];
+        const done = idx < current;
+        const active = idx === current;
+        return `<div class="tutorial-step ${done ? "done" : active ? "active" : ""}">${done ? "✔" : active ? "➜" : "•"} ${s.short}</div>`;
+      })
+      .join("");
+  }
+  if (els.tutorialFocusBtn) {
+    const focusLabel = meta.tab === "incidents" ? "Go To Incidents" : "Go To Control";
+    els.tutorialFocusBtn.textContent = focusLabel;
+  }
+}
+
 function renderHud() {
   setText(els.tierLabel, TIER_CONFIG[state.tierIndex].name);
   setText(els.dayLabel, String(state.day));
@@ -3361,7 +4718,8 @@ function renderHud() {
   setText(els.actionPoints, String(state.resources.actionPoints));
   setText(els.streakLabel, String(state.resources.streak));
   setText(els.civilianCount, String(state.visual.civilians.length));
-  const incidentTotal = state.incidents.length + state.majorEvents.length + (state.rapid.active ? 1 : 0);
+  const manualIncidentTotal = state.incidents.filter((i) => !i.resolved && !i.contained).length;
+  const incidentTotal = manualIncidentTotal + state.majorEvents.length + (state.rapid.active ? 1 : 0);
   setText(els.incidentCount, String(incidentTotal));
 
   const hist = state.history.stability || [];
@@ -3377,6 +4735,41 @@ function renderHud() {
     light = "🟠";
     tone = "buildout";
     els.statusBanner.textContent = `Status: Founding phase - place ${remainingToPlace} remaining departments.`;
+    els.statusBanner?.classList.add("warn");
+    els.trafficPill?.classList.add("warn");
+  } else if (!state.sim.started) {
+    light = "🟠";
+    tone = "ready";
+    els.statusBanner.textContent = "Status: Founding complete - launch government to start simulation.";
+    els.statusBanner?.classList.add("warn");
+    els.trafficPill?.classList.add("warn");
+  } else if (tutorialIsActive() && state.tutorial.phase !== "freeplay") {
+    light = "🟠";
+    tone = "guided";
+    const meta = tutorialStepMeta();
+    const steps = TUTORIAL_STEPS.filter((s) => s.id !== "founding" && s.id !== "freeplay");
+    const stepNum = Math.max(1, steps.findIndex((s) => s.id === state.tutorial.phase) + 1);
+    els.statusBanner.textContent = `Status: Guided step ${stepNum}/${steps.length} - ${meta.short}.`;
+    els.statusBanner?.classList.add("warn");
+    els.trafficPill?.classList.add("warn");
+  } else if (state.housing.active) {
+    light = "🟠";
+    tone = "housing";
+    const days = Math.max(0, state.housing.active.expiresDay - state.day);
+    els.statusBanner.textContent = `Status: Housing mandate active - choose footprint and place before ${days} day deadline.`;
+    els.statusBanner?.classList.add("warn");
+    els.trafficPill?.classList.add("warn");
+  } else if (state.ui.industryPlacement) {
+    light = "🟠";
+    tone = "industry-placement";
+    const p = projectById(state.ui.industryPlacement.projectId);
+    els.statusBanner.textContent = `Status: Place ${p?.name || "industry project"} on the map to start construction.`;
+    els.statusBanner?.classList.add("warn");
+    els.trafficPill?.classList.add("warn");
+  } else if (state.industry.zones.some((z) => z.status === "active") && (state.industry.metrics.utilization || 0) < 52) {
+    light = "🟠";
+    tone = "industry-bottleneck";
+    els.statusBanner.textContent = "Status: Industry bottleneck - dependencies are incomplete, output is underperforming.";
     els.statusBanner?.classList.add("warn");
     els.trafficPill?.classList.add("warn");
   } else if (state.kpi.stability < 40 || state.incidents.length >= 6 || majorOpen > 0) {
@@ -3401,6 +4794,16 @@ function renderHud() {
   const majorHint = majorOpen > 0 ? `${majorOpen} major event(s) active` : "No major events";
   const topIncidents = state.incidents.slice(0, 2).map((i) => i.code || i.type.title).join(", ");
   if (els.trafficPill) els.trafficPill.title = `Traffic light: ${tone}. ${majorHint}. ${rapidHint}. ${topIncidents ? `Open: ${topIncidents}.` : "No open incidents."}`;
+  if (els.mapTip) {
+    if (!state.sim.started) {
+      els.mapTip.textContent = "Founding phase: pick a department icon, place all 8 buildings, then launch government.";
+    } else if (tutorialIsActive() && state.tutorial.phase !== "freeplay") {
+      const meta = tutorialStepMeta();
+      els.mapTip.textContent = `Guided mode: ${meta.body}`;
+    } else {
+      els.mapTip.textContent = "Drag to pan. Scroll to zoom. Place districts, then tackle flashing MAJOR beacons and incidents.";
+    }
+  }
   renderApFeedback();
 
   if (els.tickerLine) els.tickerLine.textContent = state.tickerItems.join("  |  ");
@@ -3446,15 +4849,32 @@ function renderHud() {
   }
 
   const goal = currentGoal();
-  els.sessionGoal.textContent = `${goal.label} (${state.session.progress}/${goal.target}) - ${state.session.daysLeft} days left`;
-  els.onboardingList.innerHTML = [
-    [state.onboarding.selectedBuilding, "Select any department building"],
-    [state.onboarding.budgetApplied, "Spend 1 action point on budget"],
-    [state.onboarding.upgradedOrDispatched, "Upgrade a building or emergency-dispatch an incident"],
-    [state.onboarding.rapidResolved, "Resolve one rapid decision before timeout"],
-  ]
-    .map(([done, label]) => `<li class="${done ? "done" : ""}">${done ? "[Done]" : "[ ]"} ${label}</li>`)
-    .join("");
+  if (tutorialIsActive() && state.tutorial.phase !== "freeplay") {
+    const meta = tutorialStepMeta();
+    els.sessionGoal.textContent = `Guided Objective: ${meta.short}`;
+  } else {
+    els.sessionGoal.textContent = `${goal.label} (${state.session.progress}/${goal.target}) - ${state.session.daysLeft} days left`;
+  }
+  if (tutorialIsActive()) {
+    const currentIdx = TUTORIAL_STEP_INDEX[state.tutorial.phase] ?? 0;
+    const rows = TUTORIAL_STEPS.filter((s) => s.id !== "freeplay").map((s) => {
+      const idx = TUTORIAL_STEP_INDEX[s.id];
+      const done = tutorialStepDone(s.id) || idx < currentIdx;
+      const active = idx === currentIdx && state.tutorial.phase !== "freeplay";
+      const lead = done ? "[Done]" : active ? "[Now]" : "[ ]";
+      return `<li class="${done ? "done" : ""}">${lead} ${s.short}</li>`;
+    });
+    els.onboardingList.innerHTML = rows.join("");
+  } else {
+    els.onboardingList.innerHTML = [
+      [state.onboarding.selectedBuilding, "Select any department building"],
+      [state.onboarding.budgetApplied, "Spend 1 action point on budget"],
+      [state.onboarding.upgradedOrDispatched, "Upgrade a building or emergency-dispatch an incident"],
+      [state.onboarding.rapidResolved, "Resolve one rapid decision before timeout"],
+    ]
+      .map(([done, label]) => `<li class="${done ? "done" : ""}">${done ? "[Done]" : "[ ]"} ${label}</li>`)
+      .join("");
+  }
 
   const unplaced = state.buildings.filter((b) => !b.placed);
   const hasUnplaced = unplaced.length > 0;
@@ -3478,23 +4898,14 @@ function renderHud() {
           </button>`;
         }).join("")}
       </div>
+      <div class="meta">Remaining: ${unplaced.map((b) => b.name).join(", ")}</div>
     </article>`
-    : "";
-  const placementCards = hasUnplaced
-    ? unplaced.map((b) => {
-      const active = state.ui.placementBuildingId === b.id;
-      const rec = state.ui.placementRecommendations[0] && active ? `Best tile: ${state.ui.placementRecommendations[0].tile[0]},${state.ui.placementRecommendations[0].tile[1]} (${state.ui.placementRecommendations[0].label})` : "Select from icons above, then place on map.";
-      return `<article class="event-chip ${active ? "hot" : ""}">
-        <div class="title planner-card" draggable="true" data-place-id="${b.id}">🧱 ${b.name}</div>
-        <div class="meta">${rec}</div>
-        <button class="btn place-dept" data-place-id="${b.id}">${active ? "Armed" : "Arm"}</button>
-      </article>`;
-    }).join("")
     : "";
   const constructionCards = state.buildQueue.map(
     (q) => `<article class="event-chip"><div class="title">🏗️ ${q.name}</div><div class="meta">Completes in ${Math.max(0, q.completeDay - state.day)} days · Cost ${formatMoneyMillions(q.cost)}</div></article>`
   ).join("");
-  els.buildQueue.innerHTML = `${plannerHead}${placementCards}${constructionCards || (hasUnplaced ? "" : `<article class="event-chip"><div class="title">Queue Empty</div><div class="meta">Founding complete. Ongoing upgrades appear here with completion timers.</div></article>`)}`;
+  els.buildQueue.innerHTML = `${plannerHead}${constructionCards || (hasUnplaced ? "" : `<article class="event-chip"><div class="title">Queue Empty</div><div class="meta">Founding complete. Ongoing upgrades appear here with completion timers.</div></article>`)}`;
+  renderIndustryPanel();
 
   els.advisorBrief.innerHTML = state.monthly.advisorLines.length
     ? state.monthly.advisorLines.map((line) => `<li>${line}</li>`).join("")
@@ -3511,10 +4922,42 @@ function renderHud() {
   renderMonthlyModal();
   renderGameOverModal();
   renderRapidCard();
+  renderHousingCard();
   renderMajorEventCard();
+  renderActionDock();
 }
 
 function renderTabAlerts() {
+  if (!state.sim.started) {
+    setTabAlert(els.tabIncidentsAlert, false);
+    setTabAlert(els.tabPulseAlert, false);
+    setTabAlert(els.tabPeopleAlert, false);
+    const onboardingLeft = [
+      state.onboarding.selectedBuilding,
+      state.onboarding.budgetApplied,
+      state.onboarding.upgradedOrDispatched,
+      state.onboarding.rapidResolved,
+    ].filter((x) => !x).length;
+    setTabAlert(els.tabMissionsAlert, onboardingLeft > 0);
+    const controlNeed = state.buildings.some((b) => !b.placed) || Boolean(state.ui.industryPlacement);
+    setTabAlert(els.tabControlAlert, controlNeed);
+    return;
+  }
+
+  if (tutorialIsActive() && state.tutorial.phase !== "freeplay") {
+    setTabAlert(els.tabControlAlert, false);
+    setTabAlert(els.tabIncidentsAlert, false);
+    setTabAlert(els.tabPulseAlert, false);
+    setTabAlert(els.tabPeopleAlert, false);
+    setTabAlert(els.tabMissionsAlert, true);
+    if (state.tutorial.phase === "incident" || state.tutorial.phase === "rapid") {
+      setTabAlert(els.tabIncidentsAlert, true, true);
+    } else {
+      setTabAlert(els.tabControlAlert, true);
+    }
+    return;
+  }
+
   const manualOpen = state.incidents.filter((i) => !i.resolved && !i.contained).length;
   const hasRapid = Boolean(state.rapid.active);
   const incidentsNeed = manualOpen > 0 || hasRapid;
@@ -3550,12 +4993,25 @@ function renderTabAlerts() {
   const missionsNeed = goalUrgent || onboardingLeft > 0;
   setTabAlert(els.tabMissionsAlert, missionsNeed, goalUrgent);
 
-  const controlNeed = state.buildings.some((b) => !b.placed || b.state === "overloaded" || b.state === "strained") || state.majorEvents.length > 0;
+  const controlNeed =
+    state.buildings.some((b) => !b.placed || b.state === "overloaded" || b.state === "strained")
+    || state.majorEvents.length > 0
+    || Boolean(state.housing.active)
+    || Boolean(state.ui.industryPlacement)
+    || (state.industry.metrics.utilization > 0 && state.industry.metrics.utilization < 55);
   setTabAlert(els.tabControlAlert, controlNeed);
 }
 
 function renderIncidentInbox() {
   if (!els.incidentInbox) return;
+  if (!state.sim.started) {
+    els.incidentInbox.innerHTML = "<li>🛠️ Founding phase active. Incident system unlocks after Launch Government.</li>";
+    return;
+  }
+  if (tutorialIsActive() && state.tutorial.phase !== "incident" && state.tutorial.phase !== "rapid" && state.tutorial.phase !== "freeplay") {
+    els.incidentInbox.innerHTML = "<li>🧭 Guided mode: INCIDENTS unlock after you finish budget, upgrade, and first industry placement.</li>";
+    return;
+  }
   const manual = state.incidents
     .filter((i) => !i.resolved && !i.contained)
     .sort((a, b) => (b.severity - a.severity) || (b.daysOpen - a.daysOpen))
@@ -3600,10 +5056,11 @@ function renderPulseMiniBoard() {
     .map((p) => {
       const cls = p.trend > 0.2 ? "up" : p.trend < -0.2 ? "down" : "";
       const trend = p.trend > 0 ? `+${round(p.trend)}` : `${round(p.trend)}`;
+      const short = p.label.split(" ")[0];
       return `<article class="pulse-chip ${cls}">
-        <div class="name">${p.label.split(" ")[0]}</div>
+        <div class="head"><div class="name">${short}</div><div class="trend">${trend}</div></div>
         <div class="val">${round(p.happiness)}%</div>
-        <div class="trend">${trend}</div>
+        <div class="bar"><div class="bar-fill" style="width:${clamp(p.happiness, 0, 100)}%"></div></div>
       </article>`;
     })
     .join("");
@@ -3613,10 +5070,10 @@ function renderPulseMiniBoard() {
 
 function renderOpsRadar() {
   renderRadarInto(els.opsRadarSvg, els.opsHeatList);
-  renderRadarInto(els.dockRadarSvg, els.dockHeatList);
+  renderRadarInto(els.dockRadarSvg, els.dockHeatList, 4);
 }
 
-function renderRadarInto(svgEl, heatListEl) {
+function renderRadarInto(svgEl, heatListEl, maxRows = 6) {
   if (!svgEl) return;
   const keys = ["health", "education", "safety", "climate", "integrity", "economy"];
   const labels = ["Health", "Edu", "Safety", "Climate", "Integrity", "Economy"];
@@ -3659,6 +5116,7 @@ function renderRadarInto(svgEl, heatListEl) {
   const hotRows = points
     .slice()
     .sort((a, b) => b.heat - a.heat)
+    .slice(0, Math.max(1, maxRows))
     .map((p) => {
       const pct = Math.round(p.heat * 100);
       const cls = pct > 72 ? "hot" : pct > 50 ? "warm" : "";
@@ -3722,7 +5180,136 @@ function renderInitiatives() {
   }).join("");
 }
 
+function renderIndustryPanel() {
+  if (!els.industryProjects || !els.foundationGrid || !els.industrySummary) return;
+  updateFoundations();
+  const net = state.industry.metrics.net || 0;
+  const util = state.industry.metrics.utilization || 0;
+  const missing = state.industry.metrics.missing || [];
+  els.industrySummary.textContent = state.industry.zones.length === 0
+    ? "No production districts online yet. Build one and satisfy dependencies to unlock revenue."
+    : `Industry net ${formatMoneyMillions(net)}/day · Utilization ${Math.round(util)}%${missing.length ? ` · Missing: ${missing.join(", ")}` : ""}`;
+
+  els.foundationGrid.innerHTML = FOUNDATION_DEFS.map((f) => {
+    const v = state.industry.foundations[f.id] || 0;
+    const cls = v >= 65 ? "good" : v >= 50 ? "warn" : "bad";
+    return `<article class="foundation-chip ${cls}" title="${f.help}">
+      <div class="head"><span>${f.emoji} ${f.label}</span><strong>${Math.round(v)}</strong></div>
+      <div class="track"><div class="fill" style="width:${clamp(v, 0, 100)}%"></div></div>
+    </article>`;
+  }).join("");
+
+  const palette = `<div class="industry-palette">${INDUSTRY_PROJECT_DEFS.map((p) => {
+    const selected = state.ui.industryPlacement?.projectId === p.id || state.industry.selectedProjectId === p.id;
+    const locked = !industryTierAllowed(p);
+    const icon = `./assets/cozy-pack/actors/${p.art}.svg`;
+    return `<button class="industry-palette-btn ${selected ? "active" : ""} ${locked ? "locked" : ""}" data-industry-build="${p.id}" data-industry-id="${p.id}" draggable="${locked ? "false" : "true"}" ${locked ? "disabled" : ""} title="${p.name}">
+      <img src="${icon}" alt="${p.name}" />
+      <span>${p.name.split(" ")[0]}</span>
+    </button>`;
+  }).join("")}</div>`;
+
+  els.industryProjects.innerHTML = `${palette}${INDUSTRY_PROJECT_DEFS.map((p) => {
+    const selected = state.ui.industryPlacement?.projectId === p.id || state.industry.selectedProjectId === p.id;
+    const locked = !industryTierAllowed(p);
+    const deposit = round(p.cost * 0.55);
+    const zoneCount = state.industry.zones.filter((z) => z.projectId === p.id).length;
+    const fRows = FOUNDATION_DEFS.map((f) => {
+      const need = p.needs[f.id] || 0;
+      const got = state.industry.foundations[f.id] || 0;
+      const ok = got >= need;
+      return `<span class="dep ${ok ? "ok" : "miss"}">${f.emoji} ${Math.round(got)}/${need}</span>`;
+    }).join("");
+    const label = locked ? `Locked (${TIER_CONFIG[p.tier].name})` : selected ? "Drag to map or click to arm" : "Build Project";
+    const disabled = locked ? "disabled" : "";
+    return `<article class="industry-card ${selected ? "active" : ""}">
+      <div class="title">${p.name}</div>
+      <div class="meta">${p.desc}</div>
+      <div class="meta">Footprint ${p.size}x${p.size} · Build ${p.buildDays}d · Deposit ${formatMoneyMillions(deposit)} · Total ${formatMoneyMillions(p.cost)} · Built ${zoneCount}</div>
+      <div class="dep-row">${fRows}</div>
+      <button class="btn industry-build-btn ${selected && !locked ? "primary" : ""}" data-industry-build="${p.id}" data-industry-id="${p.id}" ${disabled}>${label}</button>
+    </article>`;
+  }).join("")}`;
+}
+
+function renderActionDock() {
+  if (!els.actionDock) return;
+  if (!state.sim.started) {
+    els.actionDock.hidden = true;
+    return;
+  }
+  if (tutorialIsActive() && state.tutorial.phase !== "freeplay") {
+    const meta = tutorialStepMeta();
+    const extra =
+      state.tutorial.phase === "incident"
+        ? (state.incidents.find((i) => i.id === state.tutorial.manualIncidentId && !i.resolved)
+            ? " · manual incident live"
+            : " · waiting for incident spawn")
+        : state.tutorial.phase === "rapid"
+          ? (state.rapid.active ? ` · ${Math.max(0, state.rapid.active.expiresDay - state.day)}d` : " · brief incoming")
+          : "";
+    els.actionDock.hidden = false;
+    els.actionDock.innerHTML = `<button class="action-chip hot" data-action-dock="tutorial-focus">🧭 Guided: ${meta.short}${extra}</button>`;
+    return;
+  }
+  const manual = state.incidents.filter((i) => !i.resolved && !i.contained);
+  const overloaded = state.buildings.filter((b) => b.placed && (b.state === "overloaded" || b.state === "strained"));
+  const activeMajor = state.majorEvents.length;
+  const items = [];
+  if (state.rapid.active) {
+    items.push(`<button class="action-chip hot" data-action-dock="rapid">🚨 INCIDENT ${state.rapid.active.incidentCode} (${Math.max(0, state.rapid.active.expiresDay - state.day)}d)</button>`);
+  }
+  if (manual.length > 0) {
+    items.push(`<button class="action-chip" data-action-dock="incidents">❗ Incidents ${manual.length}</button>`);
+  }
+  if (activeMajor > 0) {
+    items.push(`<button class="action-chip hot" data-action-dock="major">🧨 Major ${activeMajor}</button>`);
+  }
+  if (state.housing.active) {
+    items.push(`<button class="action-chip" data-action-dock="housing">🏘️ Housing (${Math.max(0, state.housing.active.expiresDay - state.day)}d)</button>`);
+  }
+  if (overloaded.length > 0) {
+    items.push(`<button class="action-chip" data-action-dock="building">🏛️ Services Need Support ${overloaded.length}</button>`);
+  }
+  const lowFoundations = FOUNDATION_DEFS.filter((f) => (state.industry.foundations[f.id] || 0) < 52);
+  if (lowFoundations.length > 0 && state.industry.zones.some((z) => z.status === "active")) {
+    items.push(`<button class="action-chip" data-action-dock="industry">🏭 Industry Bottlenecks ${lowFoundations.length}</button>`);
+  }
+  if (items.length === 0) {
+    els.actionDock.hidden = true;
+    return;
+  }
+  els.actionDock.hidden = false;
+  els.actionDock.innerHTML = items.join("");
+}
+
 function renderSelection() {
+  const z = findIndustryZone(state.selectedIndustryId);
+  if (z) {
+    const p = projectById(z.projectId);
+    const { cost, days } = industryUpgradeCostDays(z);
+    const lvl = z.level || 1;
+    const stars = "⭐".repeat(Math.max(1, lvl));
+    els.selectedName.textContent = `${z.name} Level ${lvl} ${stars}`;
+    els.selectedDesc.textContent = p
+      ? `${p.desc} ${z.status === "active" ? `Current efficiency ${Math.round((z.efficiency || 0) * 100)}%.` : `Status: ${z.status}.`}`
+      : "Industry facility.";
+    els.selectedLevel.textContent = `Level ${lvl}`;
+    els.selectedBudget.textContent = z.status === "active"
+      ? `${formatMoneyMillions(z.output || 0)}/day net`
+      : `Complete in ${Math.max(0, z.completeDay - state.day)}d`;
+    const statusText = z.status === "active"
+      ? "Producing ✅"
+      : z.status === "upgrading"
+        ? `Upgrading (${Math.max(0, z.completeDay - state.day)}d)`
+        : `Constructing (${Math.max(0, z.completeDay - state.day)}d)`;
+    els.selectedStatus.textContent = statusText;
+    els.selectedCost.textContent = (lvl >= 5 || z.status !== "active") ? "-" : `${formatMoneyMillions(cost)} · ${days}d`;
+    els.budgetSlider.disabled = true;
+    els.budgetSlider.value = "60";
+    if (els.upgradeBtn) els.upgradeBtn.textContent = "Upgrade Facility";
+    return;
+  }
   const b = findBuilding(state.selectedBuildingId);
   if (!b) {
     els.selectedName.textContent = "Select a Department";
@@ -3731,10 +5318,14 @@ function renderSelection() {
     els.selectedBudget.textContent = "-";
     els.selectedStatus.textContent = "-";
     els.selectedCost.textContent = "-";
+    els.budgetSlider.disabled = true;
+    if (els.upgradeBtn) els.upgradeBtn.textContent = "Upgrade Building";
     return;
   }
 
   const cost = 12 + b.level * 8;
+  els.budgetSlider.disabled = false;
+  if (els.upgradeBtn) els.upgradeBtn.textContent = "Upgrade Building";
   if (!Number.isFinite(state.ui.budgetDraftByBuilding[b.id])) {
     state.ui.budgetDraftByBuilding[b.id] = b.budget;
   }
@@ -3756,6 +5347,8 @@ function renderSelection() {
 function renderUI() {
   renderHud();
   renderSelection();
+  renderSetupOverlay();
+  renderTutorialOverlay();
 }
 
 function resizeCanvas() {
@@ -4009,6 +5602,28 @@ function handleCanvasPress(sx, sy) {
   if (state.gameOver.active) return;
   state.ui.ripples.push({ x: sx, y: sy, ttl: 0.45 });
 
+  if (state.ui.industryPlacement) {
+    const t = screenToTile(sx, sy);
+    if (placeIndustryZone(t)) {
+      renderUI();
+    } else {
+      const p = projectById(state.ui.industryPlacement.projectId);
+      addTicker(`Cannot place ${p?.name || "project"} here. Use clear developed tiles with road access nearby.`);
+    }
+    return;
+  }
+
+  if (state.ui.housingPlacement) {
+    const t = screenToTile(sx, sy);
+    if (placeHousingZone(t)) {
+      renderUI();
+    } else {
+      const s = state.ui.housingPlacement.size || state.housing.active?.size || 2;
+      addTicker(`Cannot place ${s}x${s} housing here. Try a clear developed block.`);
+    }
+    return;
+  }
+
   if (state.ui.placementBuildingId) {
     const t = screenToTile(sx, sy);
     if (placeBuilding(state.ui.placementBuildingId, t)) {
@@ -4016,6 +5631,16 @@ function handleCanvasPress(sx, sy) {
     } else {
       addTicker("Cannot place here. Choose an empty non-road tile.");
     }
+    return;
+  }
+
+  const pickedIndustry = pickIndustryAt(sx, sy);
+  if (pickedIndustry) {
+    state.selectedIndustryId = pickedIndustry.id;
+    state.selectedBuildingId = null;
+    addTicker(`Selected ${pickedIndustry.name} (L${pickedIndustry.level || 1}).`);
+    focusControlPanel();
+    renderUI();
     return;
   }
 
@@ -4047,12 +5672,14 @@ function handleCanvasPress(sx, sy) {
 
   const picked = pickBuildingAt(sx, sy);
   if (picked) {
+    state.selectedIndustryId = null;
     state.selectedBuildingId = picked.id;
     if (!Number.isFinite(state.ui.budgetDraftByBuilding[picked.id])) {
       state.ui.budgetDraftByBuilding[picked.id] = picked.budget;
     }
     markOnboarding("selectedBuilding");
     focusCameraOnTile(picked.tile);
+    focusControlPanel();
     renderUI();
   }
 }
@@ -4067,6 +5694,31 @@ function bindInput() {
     state.ui.focusMode = !state.ui.focusMode;
     document.body.classList.toggle("focus-mode", state.ui.focusMode);
     els.focusBtn.textContent = state.ui.focusMode ? "Focus: On" : "Focus: Off";
+  });
+  els.startPlacementBtn?.addEventListener("click", () => {
+    setActiveSideTab("control");
+    state.ui.placementBuildingId = state.buildings.find((b) => !b.placed)?.id || null;
+    state.ui.placementRecommendations = computePlacementRecommendations(state.ui.placementBuildingId);
+    state.ui.industryPlacement = null;
+    state.selectedIndustryId = null;
+    addTicker("Placement mode armed. Select a tile on the map.");
+    renderUI();
+  });
+  els.launchGovBtn?.addEventListener("click", () => {
+    if (!beginSimulation()) {
+      addTicker("Place all departments before launching government.");
+      renderUI();
+      return;
+    }
+    renderUI();
+  });
+  els.tutorialFocusBtn?.addEventListener("click", () => {
+    tutorialFocusCurrentStep();
+    renderUI();
+  });
+  els.tutorialSkipBtn?.addEventListener("click", () => {
+    skipTutorial();
+    renderUI();
   });
   document.querySelectorAll(".collapse-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -4095,12 +5747,17 @@ function bindInput() {
       } else {
         state.ui.placementBuildingId = state.buildings.find((b) => !b.placed)?.id || null;
         state.ui.placementRecommendations = computePlacementRecommendations(state.ui.placementBuildingId);
+        state.ui.industryPlacement = null;
+        state.selectedIndustryId = null;
       }
       renderUI();
       return;
     }
     const id = target.getAttribute("data-place-id");
     if (!id) return;
+    state.ui.housingPlacement = null;
+    state.ui.industryPlacement = null;
+    state.selectedIndustryId = null;
     state.ui.placementBuildingId = id;
     state.ui.placementRecommendations = computePlacementRecommendations(id);
     addTicker(`Placement armed: ${findBuilding(id)?.name || id}.`);
@@ -4112,8 +5769,76 @@ function bindInput() {
     const id = target.getAttribute("data-place-id");
     if (!id) return;
     e.dataTransfer?.setData("text/place-id", id);
+    state.ui.housingPlacement = null;
+    state.ui.industryPlacement = null;
+    state.selectedIndustryId = null;
     state.ui.placementBuildingId = id;
     state.ui.placementRecommendations = computePlacementRecommendations(id);
+  });
+  els.industryProjects?.addEventListener("click", (e) => {
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+    const btn = target.closest("[data-industry-build]");
+    if (!(btn instanceof HTMLElement)) return;
+    const id = btn.getAttribute("data-industry-build");
+    if (!id) return;
+    chooseIndustryProject(id);
+    setActiveSideTab("control");
+    renderUI();
+  });
+  els.industryProjects?.addEventListener("dragstart", (e) => {
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+    const btn = target.closest("[data-industry-id]");
+    if (!(btn instanceof HTMLElement)) return;
+    const id = btn.getAttribute("data-industry-id");
+    if (!id) return;
+    e.dataTransfer?.setData("text/industry-id", id);
+    chooseIndustryProject(id);
+    renderUI();
+  });
+  els.actionDock?.addEventListener("click", (e) => {
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+    const action = target.getAttribute("data-action-dock");
+    if (!action) return;
+    if (action === "tutorial-focus") {
+      tutorialFocusCurrentStep();
+    } else if (action === "rapid" && state.rapid.active) {
+      setActiveSideTab("incidents");
+      focusCameraOnTile(state.rapid.active.mapMarkerTile);
+    } else if (action === "incidents") {
+      const manual = state.incidents
+        .filter((i) => !i.resolved && !i.contained)
+        .sort((a, b) => (b.severity - a.severity) || (b.daysOpen - a.daysOpen));
+      if (manual[0]) focusCameraOnTile(manual[0].tile);
+      setActiveSideTab("incidents");
+    } else if (action === "major") {
+      const ev = state.majorEvents[0];
+      if (ev) focusCameraOnTile(ev.tile);
+      setActiveSideTab("control");
+    } else if (action === "housing") {
+      setActiveSideTab("control");
+    } else if (action === "building") {
+      const b = state.buildings
+        .filter((x) => x.placed && (x.state === "overloaded" || x.state === "strained"))
+        .sort((a, b2) => (a.state === "overloaded" ? -1 : 1) - (b2.state === "overloaded" ? -1 : 1))[0];
+      if (b?.tile) {
+        state.selectedBuildingId = b.id;
+        state.selectedIndustryId = null;
+        focusCameraOnTile(b.tile);
+      }
+      focusControlPanel();
+    } else if (action === "industry") {
+      const z = state.industry.zones.find((x) => x.status === "active");
+      if (z) {
+        state.selectedIndustryId = z.id;
+        state.selectedBuildingId = null;
+        focusCameraOnTile([z.x + (z.size - 1) / 2, z.y + (z.size - 1) / 2]);
+      }
+      focusControlPanel();
+    }
+    renderUI();
   });
   els.initiativeGrid?.addEventListener("click", (e) => {
     const target = e.target;
@@ -4177,6 +5902,30 @@ function bindInput() {
     deferMajorEventCard(ev.id);
     renderUI();
   });
+  els.housingBtnSmall?.addEventListener("click", () => {
+    chooseHousingFootprint(2);
+    renderUI();
+  });
+  els.housingBtnMedium?.addEventListener("click", () => {
+    chooseHousingFootprint(3);
+    renderUI();
+  });
+  els.housingBtnLarge?.addEventListener("click", () => {
+    chooseHousingFootprint(4);
+    renderUI();
+  });
+  els.housingBtnDefer?.addEventListener("click", () => {
+    if (!state.housing.active) return;
+    const title = state.housing.active.title;
+    state.ui.housingPlacement = null;
+    state.housing.active = null;
+    state.housing.nextAtDay = state.day + 30 + Math.floor(Math.random() * 12);
+    applyDemographicShiftMap({ poverty: -1.2, working: -0.9, middle: -0.2, business: 0, elite: 0 }, 1);
+    applyKpiShiftMap({ stability: -0.4 }, 1);
+    addTicker(`${title} deferred. It will resurface later with higher pressure.`);
+    addRailEvent("⏸️ Housing Deferred", "Mandate deferred for roughly a month.", false);
+    renderUI();
+  });
 
   canvas.addEventListener("mousedown", (e) => {
     state.camera.dragging = true;
@@ -4209,9 +5958,16 @@ function bindInput() {
     const sy = e.clientY - rect.top;
     state.ui.hoverTile = screenToTile(sx, sy);
     const building = pickBuildingAt(sx, sy);
+    const industry = pickIndustryAt(sx, sy);
     state.ui.hoveredBuildingId = building?.id || null;
-    if (state.ui.placementBuildingId) canvas.style.cursor = isTileBuildable(state.ui.hoverTile[0], state.ui.hoverTile[1]) ? "copy" : "not-allowed";
-    else canvas.style.cursor = building ? "pointer" : "grab";
+    if (state.ui.industryPlacement) {
+      const ok = Boolean(canPlaceIndustryZone(state.ui.hoverTile, state.ui.industryPlacement.size || 2));
+      canvas.style.cursor = ok ? "copy" : "not-allowed";
+    } else if (state.ui.housingPlacement) {
+      const ok = Boolean(canPlaceHousingZone(state.ui.hoverTile, state.ui.housingPlacement.size || 2));
+      canvas.style.cursor = ok ? "copy" : "not-allowed";
+    } else if (state.ui.placementBuildingId) canvas.style.cursor = isTileBuildable(state.ui.hoverTile[0], state.ui.hoverTile[1]) ? "copy" : "not-allowed";
+    else canvas.style.cursor = (building || industry) ? "pointer" : "grab";
   });
   canvas.addEventListener("mouseleave", () => {
     canvas.style.cursor = "grab";
@@ -4219,17 +5975,33 @@ function bindInput() {
     state.ui.hoverTile = null;
   });
   canvas.addEventListener("dragover", (e) => {
-    if (!state.ui.placementBuildingId) return;
+    if (!state.ui.placementBuildingId && !state.ui.housingPlacement && !state.ui.industryPlacement) return;
     e.preventDefault();
     const rect = canvas.getBoundingClientRect();
     state.ui.hoverTile = screenToTile(e.clientX - rect.left, e.clientY - rect.top);
   });
   canvas.addEventListener("drop", (e) => {
     e.preventDefault();
+    const industryId = e.dataTransfer?.getData("text/industry-id");
+    if (industryId) {
+      chooseIndustryProject(industryId);
+    }
     const pid = e.dataTransfer?.getData("text/place-id");
     if (pid) {
       state.ui.placementBuildingId = pid;
       state.ui.placementRecommendations = computePlacementRecommendations(pid);
+    }
+    if (state.ui.industryPlacement) {
+      const rect = canvas.getBoundingClientRect();
+      const t = screenToTile(e.clientX - rect.left, e.clientY - rect.top);
+      if (placeIndustryZone(t)) renderUI();
+      return;
+    }
+    if (state.ui.housingPlacement) {
+      const rect = canvas.getBoundingClientRect();
+      const t = screenToTile(e.clientX - rect.left, e.clientY - rect.top);
+      if (placeHousingZone(t)) renderUI();
+      return;
     }
     if (!state.ui.placementBuildingId) return;
     const rect = canvas.getBoundingClientRect();
@@ -4397,23 +6169,21 @@ async function bootstrap() {
   } catch {
     addTicker("Asset pack unavailable; using fallback visuals.");
   }
-  initTrafficVehicles();
   initDecorProps();
-  initCivilians(220);
-  initResponders();
+  updateFoundations();
   recalcBuildingStates();
   refreshAdvisorBrief();
   bindInput();
   resizeCanvas();
   renderUI();
 
-  addTicker("Living city active: civilians commute, incidents spawn, responders dispatch in realtime.");
+  addTicker("Founding phase active: place departments, then launch government to begin simulation.");
   if (truthChecks.length > 0) addTicker(`Truth Check deck loaded: ${truthChecks.length} briefs ready.`);
   else if (scenarios.length > 0) addTicker(`Scenario library loaded: ${scenarios.length} civic briefs ready.`);
-  addRailEvent("Tip", "Tap flashing incidents on-map to fund emergency response.", true);
+  addRailEvent("Tip", "Place all departments first. Then press Launch Government.", true);
 
   setInterval(() => {
-    if (state.paused) return;
+    if (state.paused || !state.sim.started) return;
     applySimTick();
     renderUI();
   }, TICK_MS);
