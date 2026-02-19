@@ -1079,6 +1079,53 @@ h1 {
   margin-bottom: 8px;
 }
 
+.election-paper {
+  border-color: rgba(255, 140, 58, 0.55);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45), 0 0 22px rgba(255, 124, 36, 0.22);
+}
+
+.election-poll-bars {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.election-row {
+  border: 1px solid rgba(100, 84, 66, 0.22);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.election-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.election-track {
+  margin-top: 6px;
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(88, 98, 120, 0.2);
+  border: 1px solid rgba(100, 84, 66, 0.18);
+  overflow: hidden;
+}
+
+.election-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff7c24, #ffb65e);
+}
+
+.election-meta {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #3e4654;
+}
+
 .people-grid {
   margin-top: 10px;
   display: grid;

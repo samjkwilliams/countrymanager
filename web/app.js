@@ -11,7 +11,56 @@ const RAPID_WINDOW_DAYS = 28;
 const MONTHLY_REPORT_DAYS = 120;
 const MAJOR_EVENT_INTERVAL_DAYS = 18;
 const MAX_ACTIVE_MAJOR_EVENTS = 2;
+const ELECTION_INTERVAL_DAYS = 540;
+const CAMPAIGN_LEAD_DAYS = 90;
+const ELECTION_DEBATE_MARKS = [60, 30, 10];
+const ELECTION_FINAL_SPRINT_DAYS = 7;
 const CITY_CORE_TILE = [12, 12];
+
+const ELECTION_OPPOSITION = [
+  {
+    name: "Rhea Harlow",
+    bloc: "Civic Conservative Front",
+    style: "cost-of-living pressure attack",
+    baseSwing: -0.9,
+    demBias: { poverty: -0.6, working: -0.2, middle: 0.1, business: 0.8, elite: 0.9 },
+  },
+  {
+    name: "Milo Ventor",
+    bloc: "Liberty Growth Coalition",
+    style: "anti-regulation growth narrative",
+    baseSwing: -0.3,
+    demBias: { poverty: -0.3, working: 0.1, middle: 0.2, business: 1.0, elite: 0.8 },
+  },
+  {
+    name: "Priya Calder",
+    bloc: "Community Futures Bloc",
+    style: "public-services and fairness critique",
+    baseSwing: 0.2,
+    demBias: { poverty: 0.8, working: 0.5, middle: 0.2, business: -0.4, elite: -0.5 },
+  },
+  {
+    name: "Dax Rowe",
+    bloc: "National Order Alliance",
+    style: "law-and-order fear campaign",
+    baseSwing: -0.5,
+    demBias: { poverty: -0.2, working: -0.1, middle: 0.5, business: 0.7, elite: 0.6 },
+  },
+  {
+    name: "Sonia Vale",
+    bloc: "Green Civic Network",
+    style: "climate accountability push",
+    baseSwing: 0.1,
+    demBias: { poverty: 0.5, working: 0.2, middle: 0.4, business: -0.5, elite: -0.3 },
+  },
+  {
+    name: "Grant Aster",
+    bloc: "Centrist Reform Movement",
+    style: "competence and delivery audit",
+    baseSwing: -0.1,
+    demBias: { poverty: 0.1, working: 0.2, middle: 0.3, business: 0.1, elite: 0.1 },
+  },
+];
 
 const TIER_CONFIG = [
   {
@@ -733,6 +782,16 @@ function emptyAxisImpact() {
   return { careAusterity: 0, libertyControl: 0, publicDonor: 0, truthSpin: 0 };
 }
 
+function pickOppositionCandidate(previousName = "") {
+  const pool = ELECTION_OPPOSITION.filter((c) => c.name !== previousName);
+  const source = pool.length ? pool : ELECTION_OPPOSITION;
+  const picked = source[Math.floor(Math.random() * source.length)] || ELECTION_OPPOSITION[0];
+  return {
+    ...picked,
+    demBias: { ...(picked.demBias || {}) },
+  };
+}
+
 const state = {
   day: 0,
   year: 2026,
@@ -792,6 +851,20 @@ const state = {
       majorResolved: 0,
       majorMissed: 0,
     },
+  },
+  election: {
+    term: 1,
+    nextElectionDay: ELECTION_INTERVAL_DAYS,
+    campaignLeadDays: CAMPAIGN_LEAD_DAYS,
+    campaignActive: false,
+    campaignStartDay: null,
+    momentum: 0,
+    debateTriggered: Object.fromEntries(ELECTION_DEBATE_MARKS.map((d) => [d, false])),
+    finalSprintLastDay: 0,
+    debateUsedIds: [],
+    currentOpponent: null,
+    report: null,
+    modalOpen: false,
   },
   decisionLog: [],
   ideology: { careAusterity: 0, libertyControl: 0, publicDonor: 0, truthSpin: 0, trust: 62 },
@@ -941,6 +1014,13 @@ const els = {
   monthlyQuotes: document.getElementById("monthlyQuotes"),
   monthlyDecisionList: document.getElementById("monthlyDecisionList"),
   monthlyCloseBtn: document.getElementById("monthlyCloseBtn"),
+  electionModal: document.getElementById("electionModal"),
+  electionHeadline: document.getElementById("electionHeadline"),
+  electionSubhead: document.getElementById("electionSubhead"),
+  electionLead: document.getElementById("electionLead"),
+  electionPollBars: document.getElementById("electionPollBars"),
+  electionFacts: document.getElementById("electionFacts"),
+  electionCloseBtn: document.getElementById("electionCloseBtn"),
   gameOverModal: document.getElementById("gameOverModal"),
   gameOverHeadline: document.getElementById("gameOverHeadline"),
   gameOverReason: document.getElementById("gameOverReason"),
@@ -2160,12 +2240,14 @@ function triggerRapidDecision(options = {}) {
 function resolveRapid(choice, timedOut = false) {
   const active = state.rapid.active;
   if (!active) return;
+  let scenarioTruthQuality = null;
   if (active.mode === "scenario" && Array.isArray(active.options)) {
     const picked = active.options.find((o) => o.key === choice) || active.options[0];
     applyDemographicShiftMap(picked.dem_now || {});
     applyKpiShiftMap(picked.kpi_now || {});
     state.budget.treasury = round(state.budget.treasury + (picked.treasury_delta_now || 0));
     const truthQuality = Number.isFinite(picked.truth_quality) ? picked.truth_quality : null;
+    scenarioTruthQuality = truthQuality;
     if (truthQuality !== null) {
       state.truth.total += 1;
       if (truthQuality > 0) {
@@ -2220,6 +2302,16 @@ function resolveRapid(choice, timedOut = false) {
     });
   } else if (choice === "a") active.applyA(state);
   else active.applyB(state);
+
+  if (active.incidentCode?.startsWith("DEBATE-")) {
+    let swing = 0;
+    if (timedOut) swing = -0.35;
+    else if (scenarioTruthQuality > 0) swing = 0.65;
+    else if (scenarioTruthQuality < 0) swing = -0.75;
+    else swing = 0.12;
+    state.election.momentum = clamp(state.election.momentum + swing, -4, 4);
+    addDecisionToast(`Campaign swing ${swing >= 0 ? "+" : ""}${round(swing * 6)}`, swing > 0 ? "good" : swing < 0 ? "bad" : "neutral");
+  }
 
   if (!timedOut) {
     state.rapid.momentum = clamp(state.rapid.momentum + 1, 0, 12);
@@ -3471,6 +3563,7 @@ function refreshAdvisorBrief() {
 
 function openMonthlyModal(report) {
   if (!els.monthlyModal) return;
+  state.election.modalOpen = false;
   state.monthly.report = report;
   state.monthly.modalOpen = true;
   if (!state.paused) {
@@ -3486,6 +3579,238 @@ function closeMonthlyModal() {
     state.paused = false;
     state.ui.pausedByModal = false;
     els.pauseBtn.textContent = "Pause";
+  }
+}
+
+function openElectionModal(report) {
+  if (!els.electionModal) return;
+  state.monthly.modalOpen = false;
+  state.election.report = report;
+  state.election.modalOpen = true;
+  if (!state.paused) {
+    state.paused = true;
+    state.ui.pausedByModal = true;
+    els.pauseBtn.textContent = "Resume";
+  }
+}
+
+function closeElectionModal() {
+  state.election.modalOpen = false;
+  if (state.ui.pausedByModal) {
+    state.paused = false;
+    state.ui.pausedByModal = false;
+    els.pauseBtn.textContent = "Pause";
+  }
+}
+
+function electionProjection(includeNoise = false) {
+  const e = state.election;
+  const opponent = e.currentOpponent || pickOppositionCandidate();
+  const groupWeights = { poverty: 0.22, working: 0.27, middle: 0.23, business: 0.16, elite: 0.12 };
+  const groupRows = [];
+  let weighted = 0;
+
+  for (const p of state.people) {
+    const groupBias = opponent.demBias?.[p.id] || 0;
+    const econTilt = (state.kpi.economy - 60) * (p.id === "business" || p.id === "elite" ? 0.08 : 0.04);
+    const integrityTilt = (state.kpi.integrity - 60) * (p.id === "middle" ? 0.06 : 0.04);
+    const trendTilt = (p.trend || 0) * 1.8;
+    const noise = includeNoise ? rand(-2.4, 2.4) : 0;
+    const support = clamp(
+      p.happiness * 0.7 + state.ideology.trust * 0.18 + state.kpi.stability * 0.08 + e.momentum * 3 + groupBias + econTilt + integrityTilt + trendTilt + noise,
+      8,
+      94
+    );
+    groupRows.push({ id: p.id, label: p.label, support: round(support), trend: round(p.trend || 0) });
+    weighted += support * (groupWeights[p.id] || 0.2);
+  }
+
+  const stabilityHist = state.history.stability || [];
+  const stabilityTrend = stabilityHist.length > 31 ? (stabilityHist.at(-1) ?? 0) - (stabilityHist.at(-31) ?? 0) : 0;
+  const treasuryAdj = clamp((state.budget.treasury - 110) * 0.02, -5, 7);
+  const debtAdj = -clamp((state.budget.debt - 95) * 0.055, 0, 9);
+  const trendAdj = clamp(stabilityTrend * 0.35, -4.5, 4.5);
+  const kpiAdj = (state.kpi.economy - 60) * 0.06 + (state.kpi.climate - 60) * 0.03 + (state.kpi.health - 60) * 0.03;
+  const oppositionAdj = opponent.baseSwing || 0;
+  const macroNoise = includeNoise ? rand(-1.6, 1.6) : 0;
+  const national = clamp(weighted + treasuryAdj + debtAdj + trendAdj + kpiAdj + oppositionAdj + macroNoise, 20, 80);
+
+  const offset = national - weighted;
+  const adjustedGroups = groupRows.map((g) => ({ ...g, support: round(clamp(g.support + offset * 0.9, 5, 95)) }));
+
+  return {
+    national: round(national),
+    challenger: round(100 - national),
+    groups: adjustedGroups,
+    breakdown: {
+      treasuryAdj: round(treasuryAdj),
+      debtAdj: round(debtAdj),
+      trendAdj: round(trendAdj),
+      kpiAdj: round(kpiAdj),
+      oppositionAdj: round(oppositionAdj),
+      momentum: round(e.momentum),
+    },
+  };
+}
+
+function triggerCampaignDebate(daysLeft) {
+  const e = state.election;
+  if (state.rapid.active) return false;
+  const deck = state.content.truthChecks || [];
+  if (deck.length === 0) return false;
+  const pool = deck.filter((s) => !e.debateUsedIds.includes(s.id));
+  const scenario = (pool.length ? pool : deck)[Math.floor(Math.random() * (pool.length ? pool.length : deck.length))];
+  if (!scenario) return false;
+  e.debateUsedIds.push(scenario.id);
+  e.debateUsedIds = e.debateUsedIds.slice(-24);
+  const opts = (scenario.options || []).slice(0, 3);
+  const withKeys = opts.map((o, idx) => ({ ...o, key: idx === 0 ? "a" : idx === 1 ? "b" : "c" }));
+  const fallbackDefault = withKeys.find((o) => o.id === "ask_proof")?.key || withKeys[0]?.key || "a";
+  const focus = findBuilding(majorEventAnchorBuildingId(scenario.category?.includes("_") ? scenario.category.split("_")[0] : scenario.category))
+    || findBuilding("integrity")
+    || findBuilding("treasury");
+  state.rapid.active = {
+    mode: "scenario",
+    incidentCode: `DEBATE-${e.term}-${daysLeft}`,
+    title: `Debate ${daysLeft}d: ${scenario.title}`,
+    speaker: `${e.currentOpponent?.name || "Opposition Leader"} (${e.currentOpponent?.bloc || "Opposition"})`,
+    claim: scenario.claim || "",
+    body: scenario.prompt,
+    clues: scenario.clues || null,
+    options: withKeys,
+    defaultChoice: fallbackDefault,
+    focusBuildingId: focus?.id || "integrity",
+    mapMarkerTile: focus ? buildingTile(focus) : [12, 12],
+    expiresDay: state.day + 12,
+  };
+  state.rapid.nextAtDay = Math.max(state.rapid.nextAtDay, state.day + 8);
+  addTicker(`Debate window open (${daysLeft}d): ${scenario.title}.`);
+  addRailEvent("🗳️ Debate Brief", `Election debate frame dropped: ${scenario.title}.`, true);
+  setActiveSideTab("incidents");
+  focusCameraOnTile(state.rapid.active.mapMarkerTile);
+  return true;
+}
+
+function concludeElectionCycle() {
+  const e = state.election;
+  if (state.rapid.active) {
+    resolveRapid(state.rapid.active.defaultChoice || "a", true);
+  }
+  const projection = electionProjection(true);
+  const opponent = e.currentOpponent || pickOppositionCandidate();
+  let result = "coalition";
+  let headline = "Coalition Retained";
+  let summary = "You held enough ground to continue governing, but every bloc expects delivery.";
+  let effectLine = "+1 AP now, +1 trust, slight stability bump.";
+  if (projection.national >= 56) {
+    result = "mandate";
+    headline = "Strong Mandate Secured";
+    summary = "A clear win gives you policy runway and public confidence.";
+    effectLine = "+2 AP, +3 trust, +2 stability, treasury confidence bump.";
+    state.resources.maxActionPoints = clamp(state.resources.maxActionPoints + 1, 3, 8);
+    state.resources.actionPoints = clamp(state.resources.actionPoints + 2, 0, state.resources.maxActionPoints);
+    state.ideology.trust = clamp(state.ideology.trust + 3, 0, 100);
+    state.kpi.stability = clamp(state.kpi.stability + 2, 0, 100);
+    state.budget.treasury = round(state.budget.treasury + 14);
+    e.momentum = clamp(e.momentum + 0.7, -4, 4);
+  } else if (projection.national >= 50) {
+    state.resources.actionPoints = clamp(state.resources.actionPoints + 1, 0, state.resources.maxActionPoints);
+    state.ideology.trust = clamp(state.ideology.trust + 1.2, 0, 100);
+    state.kpi.stability = clamp(state.kpi.stability + 0.9, 0, 100);
+    state.budget.treasury = round(state.budget.treasury + 6);
+    e.momentum = clamp(e.momentum + 0.3, -4, 4);
+  } else if (projection.national >= 46) {
+    result = "hung";
+    headline = "Hung Parliament Pressure";
+    summary = "You fall short and must govern under a hostile chamber dynamic.";
+    effectLine = "-2 trust, -1.8 stability, faster incident pressure.";
+    state.ideology.trust = clamp(state.ideology.trust - 2, 0, 100);
+    state.kpi.stability = clamp(state.kpi.stability - 1.8, 0, 100);
+    state.rapid.nextAtDay = Math.min(state.rapid.nextAtDay, state.day + 10);
+    e.momentum = clamp(e.momentum - 0.6, -4, 4);
+  } else {
+    result = "defeat";
+    headline = "Heavy Election Defeat";
+    summary = "Public confidence collapsed across key groups. You remain in office, but legitimacy is fragile.";
+    effectLine = "-4 trust, -3 stability, debt pressure, stronger opposition swings.";
+    state.ideology.trust = clamp(state.ideology.trust - 4, 0, 100);
+    state.kpi.stability = clamp(state.kpi.stability - 3, 0, 100);
+    state.budget.debt = clamp(state.budget.debt + 3, 0, 250);
+    state.major.nextAtDay = Math.min(state.major.nextAtDay, state.day + 8);
+    e.momentum = clamp(e.momentum - 1.1, -4, 4);
+  }
+
+  const strongest = [...projection.groups].sort((a, b) => b.support - a.support)[0];
+  const weakest = [...projection.groups].sort((a, b) => a.support - b.support)[0];
+  const report = {
+    result,
+    headline,
+    subhead: `Term ${e.term} · You ${projection.national}% vs ${opponent.name} ${projection.challenger}% (${opponent.bloc})`,
+    lead: `${summary} Opposition style this cycle: ${opponent.style}.`,
+    effectLine,
+    groups: projection.groups,
+    facts: [
+      `Strongest support: ${strongest?.label || "n/a"} at ${strongest?.support || 0}%.`,
+      `Weakest support: ${weakest?.label || "n/a"} at ${weakest?.support || 0}%.`,
+      `Breakdown: Treasury ${projection.breakdown.treasuryAdj >= 0 ? "+" : ""}${projection.breakdown.treasuryAdj}, Debt ${projection.breakdown.debtAdj}, Trend ${projection.breakdown.trendAdj >= 0 ? "+" : ""}${projection.breakdown.trendAdj}, KPI ${projection.breakdown.kpiAdj >= 0 ? "+" : ""}${projection.breakdown.kpiAdj}.`,
+      `Campaign momentum on close: ${projection.breakdown.momentum >= 0 ? "+" : ""}${projection.breakdown.momentum}.`,
+      `Election effects: ${effectLine}`,
+      `Next election in ${ELECTION_INTERVAL_DAYS} days.`,
+    ],
+  };
+  addTicker(`Election result: ${headline} (${projection.national}%).`);
+  addRailEvent("🗳️ Election Night", `${headline} · Vote ${projection.national}%`, true);
+  addDecisionToast(`Election ${projection.national}% · ${headline}`, result === "defeat" ? "bad" : result === "hung" ? "neutral" : "good");
+  openElectionModal(report);
+
+  const prevName = opponent.name;
+  e.term += 1;
+  e.nextElectionDay = state.day + ELECTION_INTERVAL_DAYS;
+  e.campaignActive = false;
+  e.campaignStartDay = null;
+  e.debateTriggered = Object.fromEntries(ELECTION_DEBATE_MARKS.map((d) => [d, false]));
+  e.finalSprintLastDay = 0;
+  e.debateUsedIds = [];
+  e.currentOpponent = pickOppositionCandidate(prevName);
+}
+
+function updateElectionCycle(allowChaos) {
+  if (!allowChaos) return;
+  const e = state.election;
+  if (!e.currentOpponent) e.currentOpponent = pickOppositionCandidate();
+  const daysLeft = e.nextElectionDay - state.day;
+
+  if (!e.campaignActive && daysLeft <= e.campaignLeadDays && daysLeft > 0) {
+    e.campaignActive = true;
+    e.campaignStartDay = state.day;
+    e.debateTriggered = Object.fromEntries(ELECTION_DEBATE_MARKS.map((d) => [d, false]));
+    e.finalSprintLastDay = 0;
+    e.debateUsedIds = [];
+    e.momentum = clamp(e.momentum * 0.35, -3, 3);
+    addRailEvent("🗳️ Campaign Begins", `Election in ${daysLeft} days. Opponent: ${e.currentOpponent.name} (${e.currentOpponent.bloc}).`, true);
+    addTicker(`Campaign started (${daysLeft}d): ${e.currentOpponent.name} pushing ${e.currentOpponent.style}.`);
+  }
+
+  if (e.campaignActive) {
+    for (const mark of ELECTION_DEBATE_MARKS) {
+      if (daysLeft <= mark && !e.debateTriggered[mark]) {
+        if (triggerCampaignDebate(mark)) {
+          e.debateTriggered[mark] = true;
+        }
+      }
+    }
+    if (daysLeft <= ELECTION_FINAL_SPRINT_DAYS && e.finalSprintLastDay !== state.day) {
+      e.finalSprintLastDay = state.day;
+      const swing = round(rand(-0.22, 0.22));
+      e.momentum = clamp(e.momentum + swing, -4, 4);
+      if (daysLeft === ELECTION_FINAL_SPRINT_DAYS || daysLeft === 3 || daysLeft === 1) {
+        addTicker(`Campaign sprint (${daysLeft}d): polling swing ${swing >= 0 ? "+" : ""}${round(swing * 6)}.`);
+      }
+    }
+  }
+
+  if (daysLeft <= 0) {
+    concludeElectionCycle();
   }
 }
 
@@ -3611,6 +3936,8 @@ function checkGameOver() {
   state.paused = true;
   state.monthly.modalOpen = false;
   state.monthly.report = null;
+  state.election.modalOpen = false;
+  state.election.report = null;
   if (els.pauseBtn) els.pauseBtn.textContent = "Resume";
 }
 
@@ -3849,6 +4176,7 @@ function applySimTick() {
   updateGoalDaily();
   updatePeopleMood();
   updateOpsHeat();
+  updateElectionCycle(allowChaos);
   if (allowChaos) runMonthlySummary();
   maybeGrowCity(avgLevel);
   if (state.day % 10 === 0) scaleCityActivity(avgLevel);
@@ -4968,6 +5296,14 @@ function renderHud() {
     els.statusBanner.textContent = `Status: Guided step ${stepNum}/${steps.length} - ${meta.short}.`;
     els.statusBanner?.classList.add("warn");
     els.trafficPill?.classList.add("warn");
+  } else if (state.election.campaignActive) {
+    light = "🟠";
+    tone = "campaign";
+    const daysLeft = Math.max(0, state.election.nextElectionDay - state.day);
+    const projection = electionProjection(false);
+    els.statusBanner.textContent = `Status: Campaign live - ${daysLeft} days to election · projected vote ${round(projection.national)}%.`;
+    els.statusBanner?.classList.add("warn");
+    els.trafficPill?.classList.add("warn");
   } else if (state.housing.active) {
     light = "🟠";
     tone = "housing";
@@ -5016,6 +5352,9 @@ function renderHud() {
     } else if (tutorialIsActive() && state.tutorial.phase !== "freeplay") {
       const meta = tutorialStepMeta();
       els.mapTip.textContent = `Guided mode: ${meta.body}`;
+    } else if (state.election.campaignActive) {
+      const daysLeft = Math.max(0, state.election.nextElectionDay - state.day);
+      els.mapTip.textContent = `Campaign season: ${daysLeft} days to election. Expect debate briefs, swing days, and sharper media pressure.`;
     } else {
       els.mapTip.textContent = "Drag to pan. Scroll to zoom. Place districts, then tackle flashing MAJOR beacons and incidents.";
     }
@@ -5061,7 +5400,10 @@ function renderHud() {
     const label = hottest ? prettifyTag(hottest[0]) : "Systems";
     const manual = state.incidents.filter((i) => !i.resolved && !i.contained).length;
     const rapid = state.rapid.active ? 1 : 0;
-    els.dockStatus.textContent = `${label} pressure ${hotPct}% · Growth ${round(state.growth.score || 0)} · Radius ${round(cityRadius())} · Manual actions ${manual + rapid}`;
+    const campaignTag = state.election.campaignActive
+      ? ` · Election ${Math.max(0, state.election.nextElectionDay - state.day)}d`
+      : "";
+    els.dockStatus.textContent = `${label} pressure ${hotPct}% · Growth ${round(state.growth.score || 0)} · Radius ${round(cityRadius())} · Manual actions ${manual + rapid}${campaignTag}`;
   }
 
   const goal = currentGoal();
@@ -5137,6 +5479,7 @@ function renderHud() {
   renderInitiatives();
   renderTabAlerts();
   renderMonthlyModal();
+  renderElectionModal();
   renderGameOverModal();
   renderRapidCard();
   renderHousingCard();
@@ -5183,21 +5526,23 @@ function renderTabAlerts() {
   const weakKpis = ["health", "education", "safety", "climate", "integrity", "economy"]
     .filter((k) => state.kpi[k] < 50);
   const pulseNeed = weakKpis.length >= 2 || state.kpi.stability < 50 || state.people.some((p) => p.happiness < 35);
-  setTabAlert(els.tabPulseAlert, pulseNeed);
+  const pulseWarn = pulseNeed || (state.election.campaignActive && (state.election.nextElectionDay - state.day) <= 30);
+  setTabAlert(els.tabPulseAlert, pulseWarn);
   if (els.tabPulseAlert) {
-    if (pulseNeed) {
+    if (pulseWarn) {
       const reasons = [];
       if (weakKpis.length >= 2) reasons.push(`low KPIs: ${weakKpis.join(", ")}`);
       if (state.kpi.stability < 50) reasons.push(`stability ${round(state.kpi.stability)}`);
       const strainedGroup = state.people.filter((p) => p.happiness < 35).map((p) => p.label.split(" ")[0]).slice(0, 2);
       if (strainedGroup.length) reasons.push(`people stress: ${strainedGroup.join(", ")}`);
+      if (state.election.campaignActive && (state.election.nextElectionDay - state.day) <= 30) reasons.push("election final month");
       els.tabPulseAlert.title = `Pulse warning: ${reasons.join(" · ")}.`;
     } else {
       els.tabPulseAlert.title = "";
     }
   }
 
-  const peopleNeed = state.people.some((p) => p.happiness < 40);
+  const peopleNeed = state.people.some((p) => p.happiness < 40) || state.election.campaignActive;
   setTabAlert(els.tabPeopleAlert, peopleNeed);
 
   const goalUrgent = state.session.daysLeft <= 3 && state.session.progress < currentGoal().target;
@@ -5494,7 +5839,12 @@ function renderActionDock() {
   const manual = state.incidents.filter((i) => !i.resolved && !i.contained);
   const overloaded = state.buildings.filter((b) => b.placed && (b.state === "overloaded" || b.state === "strained"));
   const activeMajor = state.majorEvents.length;
+  const electionDays = state.election.nextElectionDay - state.day;
   const items = [];
+  if (state.election.campaignActive && electionDays > 0) {
+    const proj = electionProjection(false);
+    items.push(`<button class="action-chip hot" data-action-dock="election">🗳️ Election ${electionDays}d · ${round(proj.national)}%</button>`);
+  }
   if (state.rapid.active) {
     items.push(`<button class="action-chip hot" data-action-dock="rapid">🚨 INCIDENT ${state.rapid.active.incidentCode} (${Math.max(0, state.rapid.active.expiresDay - state.day)}d)</button>`);
   }
@@ -5788,6 +6138,36 @@ function renderMonthlyModal() {
         return `<li><strong>Day ${d.day}: ${d.title}</strong> (${d.choice})<br/>Impact: ${demRow}<br/>${trustTag} · ${driftTag}${verdictTag}${riskTag}<br/><em>${d.explain}</em></li>`;
       }).join("");
     }
+  }
+}
+
+function renderElectionModal() {
+  if (!els.electionModal) return;
+  const r = state.election.report;
+  const open = state.election.modalOpen && Boolean(r);
+  els.electionModal.hidden = !open;
+  if (!open) return;
+  setText(els.electionHeadline, r.headline || "Election Night");
+  setText(els.electionSubhead, r.subhead || "");
+  setText(els.electionLead, r.lead || "");
+  if (els.electionPollBars) {
+    els.electionPollBars.innerHTML = (r.groups || []).map((g) => {
+      const w = clamp(g.support || 0, 0, 100);
+      const trend = g.trend > 0 ? `+${round(g.trend)}` : `${round(g.trend || 0)}`;
+      return `<article class="election-row">
+        <div class="election-head">
+          <span>${g.label}</span>
+          <strong>${round(g.support)}%</strong>
+        </div>
+        <div class="election-track"><div class="election-fill" style="width:${w}%"></div></div>
+        <div class="election-meta">Mood trend ${trend}</div>
+      </article>`;
+    }).join("");
+  }
+  if (els.electionFacts) {
+    const lines = [...(r.facts || [])];
+    if (r.effectLine) lines.unshift(`Election effects: ${r.effectLine}`);
+    els.electionFacts.innerHTML = lines.map((f) => `<li>${f}</li>`).join("");
   }
 }
 
@@ -6109,6 +6489,10 @@ function bindInput() {
         focusCameraOnTile([z.x + (z.size - 1) / 2, z.y + (z.size - 1) / 2]);
       }
       focusControlPanel();
+    } else if (action === "election") {
+      setActiveSideTab("people");
+      const pane = document.querySelector('[data-pane="people"]');
+      if (pane) pane.scrollTop = 0;
     }
     renderUI();
   });
@@ -6127,6 +6511,15 @@ function bindInput() {
   els.monthlyModal?.addEventListener("click", (e) => {
     if (e.target !== els.monthlyModal) return;
     closeMonthlyModal();
+    renderUI();
+  });
+  els.electionCloseBtn?.addEventListener("click", () => {
+    closeElectionModal();
+    renderUI();
+  });
+  els.electionModal?.addEventListener("click", (e) => {
+    if (e.target !== els.electionModal) return;
+    closeElectionModal();
     renderUI();
   });
   els.gameOverRestartBtn?.addEventListener("click", () => {
@@ -6400,6 +6793,9 @@ function bindInput() {
     if (e.key === "Escape" && state.monthly.modalOpen) {
       closeMonthlyModal();
       renderUI();
+    } else if (e.key === "Escape" && state.election.modalOpen) {
+      closeElectionModal();
+      renderUI();
     }
   });
 }
@@ -6440,6 +6836,7 @@ async function bootstrap() {
   initFromBaseline(baseline);
   state.content.scenarioLibrary = scenarios;
   state.content.truthChecks = truthChecks;
+  if (!state.election.currentOpponent) state.election.currentOpponent = pickOppositionCandidate();
   try {
     await loadAssetPack();
     addTicker("Cozy art pack loaded.");
