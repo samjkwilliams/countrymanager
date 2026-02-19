@@ -256,6 +256,9 @@ const DEMOGRAPHIC_GUIDE = {
   business: "Responds to reliable infrastructure, economic momentum, and rule clarity.",
   elite: "Responds to growth confidence, low volatility, and institutional predictability.",
 };
+const DEMOGRAPHIC_SHORT = Object.fromEntries(
+  DEMOGRAPHICS.map((d) => [d.id, d.label.split(" ")[0]])
+);
 
 const PEOPLE_INITIATIVES = [
   {
@@ -822,6 +825,7 @@ const state = {
     upgradedOrDispatched: false,
     rapidResolved: false,
     rewarded: false,
+    initiativesPrompted: false,
   },
   tutorial: {
     enabled: true,
@@ -934,6 +938,8 @@ const state = {
     focusedMajorEventId: null,
     housingPlacement: null,
     industryPlacement: null,
+    initiativeGuideActive: false,
+    initiativeGuideUntilDay: 0,
     touch: {
       mode: null,
       tapStartX: 0,
@@ -1006,6 +1012,11 @@ const els = {
   tabMissionsAlert: document.getElementById("tabMissionsAlert"),
   peopleGrid: document.getElementById("peopleGrid"),
   initiativeGrid: document.getElementById("initiativeGrid"),
+  initiativesCard: document.getElementById("initiativesCard"),
+  initiativeHubCard: document.getElementById("initiativeHubCard"),
+  initiativeHubHint: document.getElementById("initiativeHubHint"),
+  initiativeQuickGrid: document.getElementById("initiativeQuickGrid"),
+  initiativeOpenBtn: document.getElementById("initiativeOpenBtn"),
   monthlyModal: document.getElementById("monthlyModal"),
   monthlyHeadline: document.getElementById("monthlyHeadline"),
   monthlySubhead: document.getElementById("monthlySubhead"),
@@ -1129,6 +1140,23 @@ function focusControlPanel() {
   if (pane) pane.scrollTop = 0;
   const card = document.querySelector(".selected-card");
   if (card) card.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function focusInitiativeHubCard() {
+  setActiveSideTab("control");
+  const pane = document.querySelector('[data-pane="control"]');
+  const card = els.initiativeHubCard || document.getElementById("initiativeHubCard");
+  if (pane && card) {
+    pane.scrollTo({ top: Math.max(0, card.offsetTop - 8), behavior: "smooth" });
+  }
+}
+function focusInitiativesPanel() {
+  setActiveSideTab("people");
+  const pane = document.querySelector('[data-pane="people"]');
+  const card = els.initiativesCard || document.getElementById("initiativesCard");
+  if (pane && card) {
+    pane.scrollTo({ top: Math.max(0, card.offsetTop - 8), behavior: "smooth" });
+  }
+  state.ui.initiativeGuideActive = false;
 }
 function setCardCollapsed(cardId, collapsed) {
   const card = document.getElementById(cardId);
@@ -1284,6 +1312,19 @@ function setTutorialPhase(phase, announce = true) {
     state.rapid.nextAtDay = Math.max(state.rapid.nextAtDay, state.day + 8);
     state.major.nextAtDay = Math.max(state.major.nextAtDay, state.day + 10);
     state.housing.nextAtDay = Math.max(state.housing.nextAtDay, state.day + 12);
+    if (!state.onboarding.initiativesPrompted) {
+      state.onboarding.initiativesPrompted = true;
+      state.ui.initiativeGuideActive = true;
+      state.ui.initiativeGuideUntilDay = state.day + 24;
+      focusInitiativeHubCard();
+      setCardCollapsed("initiativeHubCard", false);
+      addRailEvent(
+        "🧩 Initiative Console",
+        "Use AP + treasury to directly shift demographic mood. Open Control > Initiative Console, or People > Initiatives.",
+        true
+      );
+      addTicker("Initiatives unlocked: open Initiative Console to launch targeted social programs.");
+    }
     addTicker("Guided mode complete. Full simulation chaos is now unlocked.");
     addRailEvent("✅ Tutorial Complete", "All systems unlocked: random incidents, major events, and rapid briefs.", true);
   }
@@ -4114,6 +4155,9 @@ function maybeGrowCity(avgLevel) {
 function applySimTick() {
   state.day += 1;
   state.year = 2026 + Math.floor(state.day / DAYS_PER_YEAR);
+  if (state.ui.initiativeGuideActive && state.day >= state.ui.initiativeGuideUntilDay) {
+    state.ui.initiativeGuideActive = false;
+  }
   updateTutorialProgress();
   if (state.day % AP_REGEN_DAYS === 0) {
     state.resources.actionPoints = clamp(state.resources.actionPoints + 1, 0, state.resources.maxActionPoints);
@@ -5338,6 +5382,12 @@ function renderHud() {
     light = "🟠";
     tone = "warning";
     els.statusBanner.textContent = `Status: Warning trend (${worstDistrict.label}).`;
+  } else if (state.ui.initiativeGuideActive) {
+    els.statusBanner?.classList.add("warn");
+    els.trafficPill?.classList.add("warn");
+    light = "🟠";
+    tone = "initiatives";
+    els.statusBanner.textContent = "Status: Initiatives unlocked - open Initiative Console to directly stabilize demographics.";
   } else {
     els.statusBanner.textContent = `Status: Stable systems · Growth score ${round(state.growth.score || 0)}.`;
   }
@@ -5352,6 +5402,8 @@ function renderHud() {
     } else if (tutorialIsActive() && state.tutorial.phase !== "freeplay") {
       const meta = tutorialStepMeta();
       els.mapTip.textContent = `Guided mode: ${meta.body}`;
+    } else if (state.ui.initiativeGuideActive) {
+      els.mapTip.textContent = "Initiatives are now live: open Initiative Console in Control, or People > Initiatives, to launch direct demographic support.";
     } else if (state.election.campaignActive) {
       const daysLeft = Math.max(0, state.election.nextElectionDay - state.day);
       els.mapTip.textContent = `Campaign season: ${daysLeft} days to election. Expect debate briefs, swing days, and sharper media pressure.`;
@@ -5474,6 +5526,7 @@ function renderHud() {
   applySellAvailabilityState();
   renderIncidentInbox();
   renderPeoplePanel();
+  renderInitiativeHub();
   renderPulseMiniBoard();
   renderOpsRadar();
   renderInitiatives();
@@ -5542,8 +5595,20 @@ function renderTabAlerts() {
     }
   }
 
-  const peopleNeed = state.people.some((p) => p.happiness < 40) || state.election.campaignActive;
-  setTabAlert(els.tabPeopleAlert, peopleNeed);
+  const initiativeReady = PEOPLE_INITIATIVES.some((i) => (
+    state.resources.actionPoints >= i.costAP && state.budget.treasury >= i.costCash
+  ));
+  const initiativeStress = state.people.some((p) => p.happiness < 68 || p.trend < -0.12);
+  const peopleNeed =
+    state.people.some((p) => p.happiness < 40)
+    || state.election.campaignActive
+    || state.ui.initiativeGuideActive
+    || (initiativeReady && initiativeStress);
+  setTabAlert(
+    els.tabPeopleAlert,
+    peopleNeed,
+    state.ui.initiativeGuideActive || (initiativeReady && initiativeStress)
+  );
 
   const goalUrgent = state.session.daysLeft <= 3 && state.session.progress < currentGoal().target;
   const onboardingLeft = [
@@ -5560,7 +5625,8 @@ function renderTabAlerts() {
     || state.majorEvents.length > 0
     || Boolean(state.housing.active)
     || Boolean(state.ui.industryPlacement)
-    || (state.industry.metrics.utilization > 0 && state.industry.metrics.utilization < 55);
+    || (state.industry.metrics.utilization > 0 && state.industry.metrics.utilization < 55)
+    || state.ui.initiativeGuideActive;
   setTabAlert(els.tabControlAlert, controlNeed);
 }
 
@@ -5689,9 +5755,131 @@ function renderRadarInto(svgEl, heatListEl, maxRows = 6) {
   heatListEl.innerHTML = hotRows;
 }
 
+function initiativePreviewShift(ini) {
+  const probe = {
+    kpi: { ...state.kpi },
+    budget: { ...state.budget },
+  };
+  try {
+    return ini.apply(probe) || {};
+  } catch {
+    return {};
+  }
+}
+
+function initiativeInsights() {
+  const pressureById = {};
+  const pressureGroups = [];
+  for (const p of state.people) {
+    const pressure = Math.max(0, (72 - p.happiness) / 14) + (p.trend < 0 ? Math.min(2, Math.abs(p.trend) * 8) : 0);
+    pressureById[p.id] = pressure;
+    if (pressure > 0.22) pressureGroups.push({ ...p, pressure });
+  }
+  pressureGroups.sort((a, b) => b.pressure - a.pressure);
+
+  const rows = PEOPLE_INITIATIVES.map((ini) => {
+    const shifts = initiativePreviewShift(ini);
+    const canAP = state.resources.actionPoints >= ini.costAP;
+    const canCash = state.budget.treasury >= ini.costCash;
+    const needAP = Math.max(0, ini.costAP - state.resources.actionPoints);
+    const needCash = Math.max(0, ini.costCash - state.budget.treasury);
+    const needParts = [];
+    if (needAP > 0) needParts.push(`${needAP} AP`);
+    if (needCash > 0) needParts.push(formatMoneyMillions(needCash));
+    let score = 0;
+    for (const p of state.people) {
+      const baseWeight = 0.45 + (pressureById[p.id] || 0);
+      score += (shifts[p.id] || 0) * baseWeight;
+    }
+    if (ini.id === "corp_tax_holiday") score -= 2.4;
+    const topEffects = Object.entries(shifts)
+      .filter(([, v]) => Math.abs(v) > 0.1)
+      .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+      .slice(0, 3)
+      .map(([id, v]) => `${DEMOGRAPHIC_SHORT[id] || prettifyTag(id)} ${formatSignedNumber(v)}`);
+    return {
+      ...ini,
+      score,
+      shifts,
+      canLaunch: canAP && canCash,
+      needAP,
+      needCash,
+      needLabel: needParts.join(" + "),
+      effectLabel: topEffects.length ? `Likely impact: ${topEffects.join(" · ")}` : "Likely impact: broad mood stabilization.",
+    };
+  })
+    .sort((a, b) => b.score - a.score);
+
+  const affordable = rows.filter((r) => r.canLaunch);
+  const recommended = (affordable.length ? affordable : rows).slice(0, 3);
+  const nextUnlock = rows
+    .slice()
+    .sort((a, b) => (a.needAP * 16 + a.needCash) - (b.needAP * 16 + b.needCash))[0] || null;
+
+  return {
+    rows,
+    affordable,
+    recommended,
+    pressureGroups,
+    needsAttention: pressureGroups.length > 0,
+    nextUnlock,
+  };
+}
+
+function renderInitiativeHub() {
+  if (!els.initiativeHubHint || !els.initiativeQuickGrid || !els.initiativeHubCard) return;
+  const info = initiativeInsights();
+  const guideActive = Boolean(state.ui.initiativeGuideActive && state.sim.started);
+  els.initiativeHubCard.classList.toggle("tutorial-highlight", guideActive);
+
+  const pressureLine = info.pressureGroups
+    .slice(0, 2)
+    .map((p) => `${DEMOGRAPHIC_SHORT[p.id] || p.label} ${round(p.happiness)}%`)
+    .join(", ");
+  const whereLine = "Where: Control > Initiative Console (here) or People > Initiatives.";
+  const whenLine = info.needsAttention
+    ? `When: use now. Pressure in ${pressureLine}.`
+    : "When: use after major events, before election windows, or whenever a group trends down.";
+  const costLine = info.affordable.length > 0
+    ? `${info.affordable.length} initiative${info.affordable.length > 1 ? "s" : ""} launch-ready now.`
+    : info.nextUnlock
+      ? `Next unlock: ${info.nextUnlock.name} needs ${info.nextUnlock.needLabel}.`
+      : "No initiatives configured.";
+  const guidedLine = guideActive ? "Guided unlock: this system is now live." : "";
+  els.initiativeHubHint.textContent = `${guidedLine} ${whereLine} ${whenLine} ${costLine}`.replace(/\s+/g, " ").trim();
+
+  if (els.initiativeOpenBtn) {
+    const hot = guideActive || info.needsAttention || info.affordable.length > 0;
+    els.initiativeOpenBtn.classList.toggle("primary", hot);
+    els.initiativeOpenBtn.textContent = guideActive ? "Show Me Initiatives" : "Open Full List";
+  }
+
+  const rows = info.recommended.length ? info.recommended : info.rows.slice(0, 3);
+  if (!rows.length) {
+    els.initiativeQuickGrid.innerHTML = `<article class="people-row"><div class="people-note">No initiatives available in this build.</div></article>`;
+    return;
+  }
+  els.initiativeQuickGrid.innerHTML = rows.map((row, idx) => {
+    const topPick = idx === 0 ? "top-pick" : "";
+    return `<article class="initiative-quick-row ${row.canLaunch ? "ready" : ""}">
+      <div class="initiative-quick-head">
+        <div class="people-name ${topPick}">${idx === 0 ? "⭐ " : ""}${row.name}</div>
+        <div class="people-val">AP ${row.costAP} · ${formatMoneyMillions(row.costCash)}</div>
+      </div>
+      <div class="people-note">${row.desc}</div>
+      <div class="initiative-quick-meta">${row.effectLabel}</div>
+      <button class="btn initiative-btn ${row.canLaunch ? "primary" : ""}" data-initiative-id="${row.id}" ${row.canLaunch ? "" : "disabled"}>
+        ${row.canLaunch ? "Launch Now" : `Need ${row.needLabel}`}
+      </button>
+    </article>`;
+  }).join("");
+}
+
 function applyInitiative(id) {
   const ini = PEOPLE_INITIATIVES.find((x) => x.id === id);
   if (!ini) return;
+  state.onboarding.initiativesPrompted = true;
+  state.ui.initiativeGuideActive = false;
   if (!spendActionPoints(ini.costAP, `initiative: ${ini.name}`)) return;
   if (state.budget.treasury < ini.costCash) {
     state.resources.actionPoints = clamp(state.resources.actionPoints + ini.costAP, 0, state.resources.maxActionPoints);
@@ -5839,6 +6027,7 @@ function renderActionDock() {
   const manual = state.incidents.filter((i) => !i.resolved && !i.contained);
   const overloaded = state.buildings.filter((b) => b.placed && (b.state === "overloaded" || b.state === "strained"));
   const activeMajor = state.majorEvents.length;
+  const initiativeInfo = initiativeInsights();
   const electionDays = state.election.nextElectionDay - state.day;
   const items = [];
   if (state.election.campaignActive && electionDays > 0) {
@@ -5856,6 +6045,11 @@ function renderActionDock() {
   }
   if (state.housing.active) {
     items.push(`<button class="action-chip" data-action-dock="housing">🏘️ Housing (${Math.max(0, state.housing.active.expiresDay - state.day)}d)</button>`);
+  }
+  if (state.ui.initiativeGuideActive) {
+    items.push("<button class=\"action-chip hot\" data-action-dock=\"initiatives\">🧩 New: Initiatives</button>");
+  } else if (initiativeInfo.affordable.length > 0 && (initiativeInfo.needsAttention || state.election.campaignActive || activeMajor > 0)) {
+    items.push(`<button class="action-chip" data-action-dock="initiatives">🧩 Initiatives Ready ${initiativeInfo.affordable.length}</button>`);
   }
   if (overloaded.length > 0) {
     items.push(`<button class="action-chip" data-action-dock="building">🏛️ Services Need Support ${overloaded.length}</button>`);
@@ -6471,6 +6665,8 @@ function bindInput() {
       setActiveSideTab("control");
     } else if (action === "housing") {
       setActiveSideTab("control");
+    } else if (action === "initiatives") {
+      focusInitiativesPanel();
     } else if (action === "building") {
       const b = state.buildings
         .filter((x) => x.placed && (x.state === "overloaded" || x.state === "strained"))
@@ -6502,6 +6698,18 @@ function bindInput() {
     const id = target.getAttribute("data-initiative-id");
     if (!id) return;
     applyInitiative(id);
+    renderUI();
+  });
+  els.initiativeQuickGrid?.addEventListener("click", (e) => {
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+    const id = target.getAttribute("data-initiative-id");
+    if (!id) return;
+    applyInitiative(id);
+    renderUI();
+  });
+  els.initiativeOpenBtn?.addEventListener("click", () => {
+    focusInitiativesPanel();
     renderUI();
   });
   els.monthlyCloseBtn?.addEventListener("click", () => {

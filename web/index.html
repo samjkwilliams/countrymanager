@@ -111,6 +111,20 @@
                 </div>
               </section>
 
+              <section class="card collapsible-card" id="initiativeHubCard">
+                <div class="card-head">
+                  <h2>Initiative Console</h2>
+                  <button class="btn collapse-btn" data-target="initiativeHubCard">Minimize</button>
+                </div>
+                <div class="card-body">
+                  <p id="initiativeHubHint" class="muted">Use initiatives when demographics are trending down. You spend AP + treasury for direct support.</p>
+                  <div class="actions initiative-hub-actions">
+                    <button id="initiativeOpenBtn" class="btn">Open Full List</button>
+                  </div>
+                  <div id="initiativeQuickGrid" class="initiative-quick-grid"></div>
+                </div>
+              </section>
+
               <section class="card collapsible-card" id="industryCard">
                 <div class="card-head">
                   <h2>Production Economy</h2>
@@ -206,7 +220,7 @@
                 <p class="muted">How each demographic is reacting to your policy mix.</p>
                 <div id="peopleGrid" class="people-grid"></div>
               </section>
-              <section class="card">
+              <section class="card" id="initiativesCard">
                 <h3>Initiatives</h3>
                 <p class="muted">Spend AP and treasury to directly improve social outcomes.</p>
                 <div id="initiativeGrid" class="people-grid"></div>
