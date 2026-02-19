@@ -5,7 +5,6 @@ const TILE_H = 32;
 const MAP_W = 40;
 const MAP_H = 40;
 const ASSET_BASE = "./assets/cozy-pack";
-const POLICY_PACE = 0.25;
 const AP_REGEN_DAYS = 4;
 const RAPID_INTERVAL_DAYS = 24;
 const RAPID_WINDOW_DAYS = 28;
@@ -685,7 +684,7 @@ const TUTORIAL_STEPS = [
     id: "budget",
     short: "Tune one budget",
     title: "Step 1: Tune One Department Budget",
-    body: "Click a department on the map, move the budget slider, then press Apply Budget.",
+    body: "Click a department, set a budget target, then apply it and watch treasury trend impact.",
     tab: "control",
   },
   {
@@ -899,9 +898,14 @@ const els = {
   selectedBudget: document.getElementById("selectedBudget"),
   selectedStatus: document.getElementById("selectedStatus"),
   selectedCost: document.getElementById("selectedCost"),
+  budgetCurrent: document.getElementById("budgetCurrent"),
+  budgetTarget: document.getElementById("budgetTarget"),
+  budgetDelta: document.getElementById("budgetDelta"),
+  budgetImpact: document.getElementById("budgetImpact"),
   budgetSlider: document.getElementById("budgetSlider"),
   applyBudgetBtn: document.getElementById("applyBudgetBtn"),
   upgradeBtn: document.getElementById("upgradeBtn"),
+  sellBtn: document.getElementById("sellBtn"),
   rapidTitle: document.getElementById("rapidTitle"),
   rapidBody: document.getElementById("rapidBody"),
   rapidEvidence: document.getElementById("rapidEvidence"),
@@ -991,6 +995,18 @@ function round(v) { return Math.round(v * 100) / 100; }
 function rand(min, max) { return min + Math.random() * (max - min); }
 function tileDist(a, b) { return Math.hypot(a[0] - b[0], a[1] - b[1]); }
 function formatMoneyMillions(v) { return `$${Math.round(v)}m`; }
+function formatSignedMoneyMillions(v) {
+  const n = round(v);
+  if (Math.abs(n) < 0.01) return "~$0m";
+  const abs = Math.abs(n);
+  const mag = abs >= 10 ? String(Math.round(abs)) : abs.toFixed(2).replace(/\.?0+$/, "");
+  return `${n > 0 ? "+" : "-"}$${mag}m`;
+}
+function formatSignedNumber(v) {
+  const n = round(v);
+  if (Math.abs(n) < 0.01) return "0";
+  return `${n > 0 ? "+" : ""}${n}`;
+}
 function setText(el, value) { if (el) el.textContent = value; }
 function shorten(text, max = 96) {
   const s = String(text || "").trim();
@@ -1705,22 +1721,61 @@ function placeBuilding(buildingId, tile) {
   return true;
 }
 
+function departmentBudgetDraftValue(building) {
+  if (!building) return 60;
+  const draft = state.ui.budgetDraftByBuilding[building.id];
+  if (!Number.isFinite(draft)) return Math.round(building.budget);
+  return Math.round(clamp(draft, 20, 120));
+}
+
+function estimateBudgetTreasuryDeltaPerDay(building, targetBudget) {
+  if (!building) return 0;
+  const placed = state.buildings.filter((b) => b.placed);
+  const active = placed.length ? placed.length : state.buildings.length;
+  const delta = targetBudget - building.budget;
+  const expenditureShift = (delta / Math.max(1, active)) * 0.26;
+  return round(-expenditureShift * 0.25);
+}
+
+function departmentSellRefund(building) {
+  if (!building || building.level <= 1) return 0;
+  const paidForCurrentLevel = 12 + (building.level - 1) * 8;
+  return round(paidForCurrentLevel * 0.55);
+}
+
+function industrySellRefund(zone) {
+  if (!zone) return 0;
+  const project = projectById(zone.projectId);
+  const projectCost = project?.cost || 0;
+  const investedBase = Math.max(zone.paid || 0, round(projectCost * 0.55));
+  const upgradeInvestment = Math.max(0, (zone.level || 1) - 1) * round(projectCost * 0.28);
+  const invested = investedBase + upgradeInvestment;
+  const rate = zone.status === "building"
+    ? 0.62
+    : zone.status === "upgrading"
+      ? 0.52
+      : clamp(0.44 + Math.max(0, (zone.level || 1) - 1) * 0.04, 0.44, 0.62);
+  return round(invested * rate);
+}
+
 function applyDepartmentBudget() {
   const b = findBuilding(state.selectedBuildingId);
   if (!b) return;
   markOnboarding("selectedBuilding");
-  const draft = state.ui.budgetDraftByBuilding[b.id];
-  const target = Number.isFinite(draft) ? draft : Number(els.budgetSlider.value);
+  const target = departmentBudgetDraftValue(b);
   const delta = target - b.budget;
   if (Math.abs(delta) < 1) {
     addTicker("No budget change applied.");
     return;
   }
   if (!spendActionPoints(1, "budget adjustment")) return;
-  b.budget = round(clamp(b.budget + delta * POLICY_PACE, 20, 120));
+  const treasuryShift = estimateBudgetTreasuryDeltaPerDay(b, target);
+  b.budget = target;
+  state.ui.budgetDraftByBuilding[b.id] = b.budget;
   markOnboarding("budgetApplied");
   recordAction(b.id);
-  addTicker(`${b.name} budget nudged to ${b.budget} ($m/day).`);
+  addTicker(`${b.name} budget target set to ${round(b.budget)} (${formatSignedNumber(delta)}).`);
+  addDecisionToast(`${b.name} budget ${formatSignedNumber(delta)} · Treasury ${formatSignedMoneyMillions(treasuryShift)}/day`, delta < 0 ? "good" : "neutral");
   const moodBoost = delta > 0 ? 3 : -3;
   const dem = emptyDemImpact();
   if (b.id === "welfare" || b.id === "health") {
@@ -1758,7 +1813,7 @@ function applyDepartmentBudget() {
       publicDonor: b.id === "treasury" ? -0.5 : 0.3,
       truthSpin: 0.1,
     },
-    treasuryDeltaNow: 0,
+    treasuryDeltaNow: treasuryShift,
     kpiNow: { [b.kpi]: round((delta > 0 ? 0.4 : -0.4)) },
     confidence: "medium",
     explain: `${delta > 0 ? "Expanded" : "Tightened"} ${b.name} funding signal; demographic trust moved accordingly.`,
@@ -1767,6 +1822,7 @@ function applyDepartmentBudget() {
 }
 
 function applyBudgetAvailabilityState() {
+  if (els.applyBudgetBtn) els.applyBudgetBtn.textContent = "Apply Target Budget";
   if (state.selectedIndustryId) {
     els.applyBudgetBtn.disabled = true;
     els.applyBudgetBtn.title = "Budget slider applies to departments, not industry facilities.";
@@ -1778,8 +1834,7 @@ function applyBudgetAvailabilityState() {
     els.applyBudgetBtn.title = "Select a department first.";
     return;
   }
-  const draft = state.ui.budgetDraftByBuilding[b.id];
-  const target = Number.isFinite(draft) ? draft : Number(els.budgetSlider.value);
+  const target = departmentBudgetDraftValue(b);
   const delta = target - b.budget;
   if (Math.abs(delta) < 1) {
     els.applyBudgetBtn.disabled = true;
@@ -1792,7 +1847,9 @@ function applyBudgetAvailabilityState() {
     return;
   }
   els.applyBudgetBtn.disabled = false;
-  els.applyBudgetBtn.title = "Spend 1 Action Point to apply this budget change.";
+  const treasuryShift = estimateBudgetTreasuryDeltaPerDay(b, target);
+  els.applyBudgetBtn.textContent = `Apply Target (${formatSignedNumber(delta)})`;
+  els.applyBudgetBtn.title = `Spend 1 AP. Estimated treasury trend: ${formatSignedMoneyMillions(treasuryShift)}/day.`;
 }
 
 function applyUpgradeAvailabilityState() {
@@ -1854,6 +1911,46 @@ function applyUpgradeAvailabilityState() {
   els.upgradeBtn.title = `Spend 2 Action Points and ${formatMoneyMillions(cost)} to upgrade.`;
 }
 
+function applySellAvailabilityState() {
+  if (!els.sellBtn) return;
+  els.sellBtn.textContent = "Sell / Decommission";
+  if (state.resources.actionPoints < 1) {
+    els.sellBtn.disabled = true;
+    els.sellBtn.title = "Need 1 Action Point.";
+    return;
+  }
+
+  if (state.selectedIndustryId) {
+    const zone = findIndustryZone(state.selectedIndustryId);
+    if (!zone) {
+      els.sellBtn.disabled = true;
+      els.sellBtn.title = "Select an asset first.";
+      return;
+    }
+    const refund = industrySellRefund(zone);
+    els.sellBtn.disabled = false;
+    els.sellBtn.textContent = `Decommission (+${formatMoneyMillions(refund)})`;
+    els.sellBtn.title = "Removes this facility, refunds part of capital, and lowers output.";
+    return;
+  }
+
+  const b = findBuilding(state.selectedBuildingId);
+  if (!b) {
+    els.sellBtn.disabled = true;
+    els.sellBtn.title = "Select a department first.";
+    return;
+  }
+  if (b.level <= 1) {
+    els.sellBtn.disabled = true;
+    els.sellBtn.title = "Base level cannot be sold further.";
+    return;
+  }
+  const refund = departmentSellRefund(b);
+  els.sellBtn.disabled = false;
+  els.sellBtn.textContent = `Sell Level (+${formatMoneyMillions(refund)})`;
+  els.sellBtn.title = "Drops one level, refunds part of build cost, and weakens service output.";
+}
+
 function upgradeSelected() {
   if (state.selectedIndustryId) {
     upgradeSelectedIndustry();
@@ -1907,6 +2004,96 @@ function upgradeSelected() {
     state.kpi[b.kpi] = clamp(state.kpi[b.kpi] + 1.7 + b.level * 0.22, 0, 100);
   });
   updateTutorialProgress();
+}
+
+function sellSelectedAsset() {
+  if (state.selectedIndustryId) {
+    const zone = findIndustryZone(state.selectedIndustryId);
+    if (!zone) return;
+    if (!spendActionPoints(1, "facility decommission")) return;
+    const refund = industrySellRefund(zone);
+    const project = projectById(zone.projectId);
+    state.budget.treasury = round(state.budget.treasury + refund);
+    state.industry.zones = state.industry.zones.filter((z) => z.id !== zone.id);
+    state.buildQueue = state.buildQueue.filter((q) => q.id !== zone.id && !q.id.startsWith(`upg_${zone.id}_`));
+    state.selectedIndustryId = null;
+    initDecorProps();
+    normalizeTrafficLanes();
+    updateIndustryPerDay();
+    const demNow = zone.status === "active"
+      ? { poverty: -1, working: -2, middle: -1, business: -2, elite: -1 }
+      : { poverty: -0.3, working: -0.7, middle: -0.4, business: -0.7, elite: -0.3 };
+    applyDemographicShiftMap(demNow, 1);
+    addTicker(`Decommissioned ${zone.name}. Treasury recovered ${formatMoneyMillions(refund)}.`);
+    addDecisionToast(`Decommissioned ${zone.name} · ${formatSignedMoneyMillions(refund)}`, "neutral");
+    logDecisionImpact({
+      title: `${zone.name} Decommissioned`,
+      category: project?.domain || "economy",
+      choice: "Sell / Decommission",
+      demNow,
+      trustDelta: -0.25,
+      axisDrift: { careAusterity: -0.9, libertyControl: 0, publicDonor: -0.1, truthSpin: 0 },
+      treasuryDeltaNow: refund,
+      kpiNow: { economy: -0.5, stability: -0.3 },
+      confidence: "medium",
+      explain: "You recovered cash immediately, but local confidence and output dipped.",
+    });
+    return;
+  }
+
+  const b = findBuilding(state.selectedBuildingId);
+  if (!b) return;
+  if (b.level <= 1) {
+    addTicker(`${b.name} is already at base level. Nothing to sell.`);
+    return;
+  }
+  if (!spendActionPoints(1, "department sell-down")) return;
+  const refund = departmentSellRefund(b);
+  b.level = Math.max(1, b.level - 1);
+  b.budget = clamp(b.budget, 20, 110);
+  state.ui.budgetDraftByBuilding[b.id] = b.budget;
+  state.budget.treasury = round(state.budget.treasury + refund);
+  state.kpi[b.kpi] = clamp(state.kpi[b.kpi] - 1.1, 0, 100);
+  recordAction(b.id);
+  const demNow = emptyDemImpact();
+  if (b.id === "health" || b.id === "welfare") {
+    demNow.poverty -= 2;
+    demNow.working -= 1.4;
+  } else if (b.id === "education") {
+    demNow.working -= 1.3;
+    demNow.middle -= 1.1;
+  } else if (b.id === "transport") {
+    demNow.working -= 1.1;
+    demNow.business -= 1.3;
+  } else if (b.id === "security") {
+    demNow.middle -= 1.1;
+    demNow.business -= 0.9;
+  } else if (b.id === "climate") {
+    demNow.poverty -= 1.2;
+    demNow.working -= 0.8;
+    demNow.middle -= 0.7;
+  } else if (b.id === "integrity") {
+    demNow.middle -= 0.9;
+    demNow.business -= 0.5;
+  } else {
+    demNow.business -= 0.8;
+    demNow.elite -= 0.7;
+  }
+  applyDemographicShiftMap(demNow, 1);
+  addTicker(`Sold one ${b.name} level. Recovered ${formatMoneyMillions(refund)}.`);
+  addDecisionToast(`${b.name} sold down · ${formatSignedMoneyMillions(refund)}`, "neutral");
+  logDecisionImpact({
+    title: `${b.name} Sell-Down`,
+    category: b.id,
+    choice: "Sell one level",
+    demNow,
+    trustDelta: -0.2,
+    axisDrift: { careAusterity: -0.7, libertyControl: 0, publicDonor: -0.2, truthSpin: 0 },
+    treasuryDeltaNow: refund,
+    kpiNow: { [b.kpi]: -1.1 },
+    confidence: "high",
+    explain: "Short-term fiscal recovery traded against service strength.",
+  });
 }
 
 function triggerRapidDecision(options = {}) {
@@ -3275,7 +3462,7 @@ function refreshAdvisorBrief() {
     }
     const meta = BUILDING_STATE_META[b.state] || BUILDING_STATE_META.stable;
     const ask = b.budget < 55 || b.state === "overloaded" || b.state === "strained"
-      ? `Needs support: lift to ~${Math.max(58, b.budget + 6)} $m/day.`
+      ? `Needs support: lift budget index toward ~${Math.max(58, b.budget + 6)}.`
       : "Holding steady with current funding.";
     lines.push(`${meta.icon} ${b.name}: ${meta.label}. ${ask}`);
   }
@@ -4942,6 +5129,7 @@ function renderHud() {
 
   applyBudgetAvailabilityState();
   applyUpgradeAvailabilityState();
+  applySellAvailabilityState();
   renderIncidentInbox();
   renderPeoplePanel();
   renderPulseMiniBoard();
@@ -5335,6 +5523,12 @@ function renderActionDock() {
 }
 
 function renderSelection() {
+  const setBudgetReadout = (current = "-", target = "-", delta = "-", impact = "-") => {
+    setText(els.budgetCurrent, current);
+    setText(els.budgetTarget, target);
+    setText(els.budgetDelta, delta);
+    setText(els.budgetImpact, impact);
+  };
   const z = findIndustryZone(state.selectedIndustryId);
   if (z) {
     const p = projectById(z.projectId);
@@ -5343,12 +5537,14 @@ function renderSelection() {
     const stars = "⭐".repeat(Math.max(1, lvl));
     els.selectedName.textContent = `${z.name} Level ${lvl} ${stars}`;
     els.selectedDesc.textContent = p
-      ? `${p.desc} ${z.status === "active" ? `Current efficiency ${Math.round((z.efficiency || 0) * 100)}%.` : `Status: ${z.status}.`}`
+      ? `${p.desc} ${
+        z.status === "active"
+          ? `Current efficiency ${Math.round((z.efficiency || 0) * 100)}% · Net ${formatMoneyMillions(z.output || 0)}/day.`
+          : `Status: ${z.status}.`
+      }`
       : "Industry facility.";
     els.selectedLevel.textContent = `Level ${lvl}`;
-    els.selectedBudget.textContent = z.status === "active"
-      ? `${formatMoneyMillions(z.output || 0)}/day net`
-      : `Complete in ${Math.max(0, z.completeDay - state.day)}d`;
+    els.selectedBudget.textContent = "N/A";
     const statusText = z.status === "active"
       ? "Producing ✅"
       : z.status === "upgrading"
@@ -5358,6 +5554,8 @@ function renderSelection() {
     els.selectedCost.textContent = (lvl >= 5 || z.status !== "active") ? "-" : `${formatMoneyMillions(cost)} · ${days}d`;
     els.budgetSlider.disabled = true;
     els.budgetSlider.value = "60";
+    setBudgetReadout();
+    if (els.applyBudgetBtn) els.applyBudgetBtn.textContent = "Apply Target Budget";
     if (els.upgradeBtn) els.upgradeBtn.textContent = "Upgrade Facility";
     return;
   }
@@ -5370,6 +5568,8 @@ function renderSelection() {
     els.selectedStatus.textContent = "-";
     els.selectedCost.textContent = "-";
     els.budgetSlider.disabled = true;
+    setBudgetReadout();
+    if (els.applyBudgetBtn) els.applyBudgetBtn.textContent = "Apply Target Budget";
     if (els.upgradeBtn) els.upgradeBtn.textContent = "Upgrade Building";
     return;
   }
@@ -5377,22 +5577,28 @@ function renderSelection() {
   const cost = 12 + b.level * 8;
   els.budgetSlider.disabled = false;
   if (els.upgradeBtn) els.upgradeBtn.textContent = "Upgrade Building";
-  if (!Number.isFinite(state.ui.budgetDraftByBuilding[b.id])) {
-    state.ui.budgetDraftByBuilding[b.id] = b.budget;
-  }
-  const draft = state.ui.budgetDraftByBuilding[b.id];
+  if (!Number.isFinite(state.ui.budgetDraftByBuilding[b.id])) state.ui.budgetDraftByBuilding[b.id] = b.budget;
+  const draft = departmentBudgetDraftValue(b);
+  const delta = draft - b.budget;
+  const treasuryImpact = estimateBudgetTreasuryDeltaPerDay(b, draft);
   const stars = "⭐".repeat(Math.max(1, Math.min(5, Math.ceil(b.level / 2))));
   els.selectedName.textContent = `${b.name} Level ${b.level} ${stars}`;
   els.selectedDesc.textContent = b.desc;
   els.selectedLevel.textContent = `Level ${b.level}`;
   els.selectedBudget.textContent = Math.abs(draft - b.budget) >= 1
-    ? `${formatMoneyMillions(b.budget)} -> ${formatMoneyMillions(draft)}`
-    : `${formatMoneyMillions(b.budget)}`;
+    ? `${round(b.budget)} -> ${round(draft)}`
+    : `${round(b.budget)}`;
   const statusMeta = BUILDING_STATE_META[b.state] || BUILDING_STATE_META.stable;
   const countdown = b.state === "overloaded" ? "· 5 days to recover" : b.state === "strained" ? "· 10 days to recover" : "";
   els.selectedStatus.textContent = `${statusMeta.label} ${countdown}`.trim();
   els.selectedCost.textContent = formatMoneyMillions(cost);
   els.budgetSlider.value = String(draft);
+  setBudgetReadout(
+    String(round(b.budget)),
+    String(round(draft)),
+    formatSignedNumber(delta),
+    `${formatSignedMoneyMillions(treasuryImpact)}/day`
+  );
 }
 
 function renderUI() {
@@ -5936,10 +6142,15 @@ function bindInput() {
     upgradeSelected();
     renderUI();
   });
+  els.sellBtn?.addEventListener("click", () => {
+    sellSelectedAsset();
+    renderUI();
+  });
   els.budgetSlider.addEventListener("input", () => {
     const b = findBuilding(state.selectedBuildingId);
     if (b) state.ui.budgetDraftByBuilding[b.id] = Number(els.budgetSlider.value);
     applyBudgetAvailabilityState();
+    applySellAvailabilityState();
     renderSelection();
   });
 

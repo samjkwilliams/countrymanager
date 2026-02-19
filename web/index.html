@@ -129,17 +129,24 @@
                 <p id="selectedDesc" class="muted">Pick a building in the city to inspect funding and upgrades.</p>
                 <div class="mini-grid">
                   <div><span>Level</span><strong id="selectedLevel">-</strong></div>
-                  <div><span>Budget ($m/day)</span><strong id="selectedBudget">-</strong></div>
+                  <div><span>Budget (Index)</span><strong id="selectedBudget">-</strong></div>
                   <div><span>Status</span><strong id="selectedStatus">-</strong></div>
                   <div><span>Upgrade Cost ($m)</span><strong id="selectedCost">-</strong></div>
                 </div>
                 <div class="slider-wrap">
-                  <label for="budgetSlider">Department Budget Priority (slow change)</label>
+                  <label for="budgetSlider">Department Budget Target</label>
                   <input id="budgetSlider" type="range" min="20" max="120" step="1" value="60" />
+                  <div class="budget-readout">
+                    <div><span>Current</span><strong id="budgetCurrent">-</strong></div>
+                    <div><span>Target</span><strong id="budgetTarget">-</strong></div>
+                    <div><span>Delta</span><strong id="budgetDelta">-</strong></div>
+                    <div><span>Est. Treasury/day</span><strong id="budgetImpact">-</strong></div>
+                  </div>
                 </div>
                 <div class="actions">
-                  <button id="applyBudgetBtn" class="btn">Apply Budget</button>
+                  <button id="applyBudgetBtn" class="btn">Apply Target Budget</button>
                   <button id="upgradeBtn" class="btn primary">Upgrade Building</button>
+                  <button id="sellBtn" class="btn danger">Sell / Decommission</button>
                 </div>
               </section>
             </section>
