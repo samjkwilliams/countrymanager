@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none">
+    <circle cx="64" cy="64" r="44" fill="none" stroke="#ff9f7a88" stroke-width="8" stroke-dasharray="10 7"/>
+    <polygon points="64,30 98,86 30,86" fill="#ff875f"/><text x="64" y="78" font-size="28" text-anchor="middle" fill="#fff" font-family="Verdana">!</text>
+    </svg>

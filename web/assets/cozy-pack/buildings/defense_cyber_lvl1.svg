@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <linearGradient id="basePlatecyber1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6b9bb4"/>
+      <stop offset="100%" stop-color="#86bdd5"/>
+    </linearGradient>
+    <linearGradient id="wallLcyber1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#9ab8ca"/>
+      <stop offset="100%" stop-color="#b9c6d2"/>
+    </linearGradient>
+    <linearGradient id="wallRcyber1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#cad5e1"/>
+      <stop offset="100%" stop-color="#9ab8ca"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="64" cy="116" rx="34" ry="9" fill="#143246" opacity="0.24"/>
+  <polygon points="64,34 112,62 64,90 16,62" fill="url(#basePlatecyber1)" stroke="#597487" stroke-width="2"/>
+  
+  <rect x="43" y="72" width="42" height="22" rx="4" fill="#79d8ff22" stroke="#7fcfff" stroke-width="1.2"/><path d="M47 78 H81 M47 84 H81 M47 90 H81 M53 74 V92 M62 74 V92 M71 74 V92" stroke="#9be0ff88" stroke-width="1"/>
+  
+  
+  <polygon points="64,44 87,64.66666666666667 64,81 41,64.66666666666667" fill="#6f94ac" stroke="#42535f" stroke-width="2"/>
+  <polygon points="41,64.66666666666667 64,81 64,101 41,84.66666666666667" fill="url(#wallLcyber1)" stroke="#42535f" stroke-width="2"/>
+  <polygon points="87,64.66666666666667 64,81 64,101 87,84.66666666666667" fill="url(#wallRcyber1)" stroke="#42535f" stroke-width="2"/>
+  <rect x="59" y="57" width="10" height="13" rx="2" fill="#8de8ff" stroke="#3b4a55" stroke-width="1.2"/>
+  <circle cx="64" cy="55" r="3" fill="#ffe6a8" stroke="#475865" stroke-width="1.1"/>
+  <rect x="57" y="90" width="14" height="8" rx="2" fill="#dbe6f2" stroke="#5a6a78" stroke-width="1.1"/>
+  <text x="64" y="96" font-size="7" text-anchor="middle" fill="#3c4c58" font-family="Verdana" font-weight="700">CY</text>
+  </svg>

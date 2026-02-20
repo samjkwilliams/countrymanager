@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <linearGradient id="basePlategarrison5" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8f8c7a"/>
+      <stop offset="100%" stop-color="#b1a98a"/>
+    </linearGradient>
+    <linearGradient id="wallLgarrison5" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#cec8b1"/>
+      <stop offset="100%" stop-color="#b9c6d2"/>
+    </linearGradient>
+    <linearGradient id="wallRgarrison5" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#cad5e1"/>
+      <stop offset="100%" stop-color="#cec8b1"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="64" cy="116" rx="34" ry="9" fill="#143246" opacity="0.24"/>
+  <polygon points="64,34 112,62 64,90 16,62" fill="url(#basePlategarrison5)" stroke="#597487" stroke-width="2"/>
+  
+  
+  <polygon points="38,88 64,74 90,88 64,102" fill="#bfa77c" stroke="#7b6a49" stroke-width="1.4"/><rect x="58" y="79" width="12" height="7" rx="2" fill="#7a8a96"/>
+  <ellipse cx="64" cy="84" rx="26" ry="11" fill="#8fe7ff33"/>
+  <polygon points="64,44 99,70 64,89 29,70" fill="#a79c7c" stroke="#42535f" stroke-width="2"/>
+  <polygon points="29,70 64,89 64,125 29,106" fill="url(#wallLgarrison5)" stroke="#42535f" stroke-width="2"/>
+  <polygon points="99,70 64,89 64,125 99,106" fill="url(#wallRgarrison5)" stroke="#42535f" stroke-width="2"/>
+  <rect x="55" y="53" width="18" height="25" rx="2" fill="#d5c08a" stroke="#3b4a55" stroke-width="1.2"/>
+  <circle cx="64" cy="51" r="5" fill="#ffe6a8" stroke="#475865" stroke-width="1.1"/>
+  <rect x="53" y="98" width="22" height="8" rx="2" fill="#dbe6f2" stroke="#5a6a78" stroke-width="1.1"/>
+  <text x="64" y="104" font-size="7" text-anchor="middle" fill="#3c4c58" font-family="Verdana" font-weight="700">GS</text>
+  </svg>
