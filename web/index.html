@@ -21,6 +21,7 @@
           <div class="pill"><span>Day</span><strong id="dayLabel">0</strong></div>
           <div class="pill"><span>Stability</span><strong id="stabilityLabel">0%</strong></div>
           <div class="pill"><span>Treasury ($m)</span><strong id="treasuryLabel">$0m</strong></div>
+          <div class="pill"><span>Daily Net</span><strong id="dailyNetLabel">$0m</strong></div>
           <div class="pill" title="Action Points are used for upgrades, budget changes, and emergency interventions. They regenerate every 4 days and via streaks/goals."><span>Action Pts</span><strong id="actionPoints">0</strong></div>
           <div class="pill"><span>Streak</span><strong id="streakLabel">0</strong></div>
           <div class="pill"><span>Civilians</span><strong id="civilianCount">0</strong></div>
@@ -86,6 +87,23 @@
               <button id="housingBtnDefer" class="btn">Defer</button>
             </div>
           </aside>
+          <aside id="quickBuildToolbox" class="quick-build-toolbox card">
+            <div class="quick-build-head">
+              <strong>Build Toolbox</strong>
+              <button id="quickBuildToggleBtn" class="btn">Minimize</button>
+            </div>
+            <div id="quickBuildBody" class="quick-build-body">
+              <section class="quick-build-section">
+                <p class="eyebrow">Industry</p>
+                <div id="quickIndustryGrid" class="quick-build-grid"></div>
+              </section>
+              <section class="quick-build-section">
+                <p class="eyebrow">Defense</p>
+                <div id="quickDefenseGrid" class="quick-build-grid"></div>
+              </section>
+              <div id="quickBuildTooltip" class="quick-build-tooltip">Hover an icon to inspect footprint, costs, and dependencies.</div>
+            </div>
+          </aside>
           <div id="mapTip" class="map-tip">Drag to pan. Scroll to zoom. Place departments on highlighted tiles, then tackle flashing MAJOR beacons and incidents.</div>
         </section>
 
@@ -135,6 +153,17 @@
                   <div id="industryGuide" class="industry-guide" hidden></div>
                   <div id="foundationGrid" class="foundation-grid"></div>
                   <div id="industryProjects" class="industry-grid"></div>
+                </div>
+              </section>
+
+              <section class="card collapsible-card" id="defenseCard">
+                <div class="card-head">
+                  <h2>Defense Command</h2>
+                  <button class="btn collapse-btn" data-target="defenseCard">Minimize</button>
+                </div>
+                <div class="card-body">
+                  <p id="defenseSummary" class="muted">Build defense sites to reduce cyber, airspace, and sabotage risk.</p>
+                  <div id="defenseProjects" class="industry-grid"></div>
                 </div>
               </section>
 
@@ -321,6 +350,6 @@
       </article>
     </section>
 
-    <script type="module" src="app.js"></script>
+    <script type="module" src="app.js?v=20260220c"></script>
   </body>
 </html>
