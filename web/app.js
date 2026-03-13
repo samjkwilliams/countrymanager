@@ -2111,12 +2111,42 @@ function computePlacementRecommendations(buildingId) {
   return options.slice(0, 3);
 }
 
+function resolveDepartmentPlacementTile(buildingId, tile) {
+  if (!buildingId || !Array.isArray(tile)) return null;
+  const [x, y] = tile;
+  if (isTileBuildable(x, y)) return [x, y];
+
+  const recommendations = computePlacementRecommendations(buildingId);
+  if (recommendations.length) {
+    const nearestRec = recommendations
+      .map((rec) => ({ ...rec, dist: tileDist(tile, rec.tile) }))
+      .sort((a, b) => a.dist - b.dist)[0];
+    if (nearestRec?.tile && nearestRec.dist <= 7) return nearestRec.tile;
+  }
+
+  let best = null;
+  for (let dx = -3; dx <= 3; dx += 1) {
+    for (let dy = -3; dy <= 3; dy += 1) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (!isTileBuildable(nx, ny)) continue;
+      const evaln = placementEvaluation(buildingId, [nx, ny]);
+      const dist = tileDist(tile, [nx, ny]);
+      const score = evaln.score - dist * 0.35;
+      if (!best || score > best.score) best = { tile: [nx, ny], score };
+    }
+  }
+  return best?.tile || null;
+}
+
 function placeBuilding(buildingId, tile) {
   const b = findBuilding(buildingId);
   if (!b) return false;
-  const [x, y] = tile;
+  const resolvedTile = resolveDepartmentPlacementTile(buildingId, tile);
+  if (!resolvedTile) return false;
+  const [x, y] = resolvedTile;
   if (!isTileBuildable(x, y)) return false;
-  const evaln = placementEvaluation(buildingId, tile);
+  const evaln = placementEvaluation(buildingId, resolvedTile);
   b.tile = [x, y];
   b.placed = true;
   b.state = "stable";
