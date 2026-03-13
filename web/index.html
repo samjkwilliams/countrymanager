@@ -4,30 +4,59 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Country Manager - Cozy Civic</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=20260221i" />
   </head>
   <body>
     <main class="shell">
       <header class="hud">
-        <div>
-          <p class="eyebrow">Cozy Civic Mode</p>
-          <h1>Country Manager</h1>
+        <div class="hud-brand">
+          <h1 class="game-title">
+            <img class="game-logo" src="assets/ui/statecraft-rise-to-power.png?v=20260221i" alt="Statecraft: Rise to Power" />
+          </h1>
         </div>
         <div class="hud-metrics">
-          <div class="pill traffic-pill" id="trafficPill" title="City health status">
-            <span>Status</span><strong id="trafficLight">🟢</strong>
+          <div class="hud-cluster hud-cluster-time">
+            <div class="pill traffic-pill" id="trafficPill" title="City health status">
+              <span>Status</span><strong id="trafficLight">🟢</strong>
+            </div>
+            <div class="pill"><span>Day</span><strong id="dayLabel">0</strong></div>
+            <button id="focusBtn" class="btn">Focus: Off</button>
+            <button id="pauseBtn" class="btn">Pause</button>
+            <button id="refreshBtn" class="btn btn-icon" title="Hard refresh UI">↻</button>
           </div>
-          <div class="pill"><span>Tier</span><strong id="tierLabel">City</strong></div>
-          <div class="pill"><span>Day</span><strong id="dayLabel">0</strong></div>
-          <div class="pill"><span>Stability</span><strong id="stabilityLabel">0%</strong></div>
-          <div class="pill"><span>Treasury ($m)</span><strong id="treasuryLabel">$0m</strong></div>
-          <div class="pill"><span>Daily Net</span><strong id="dailyNetLabel">$0m</strong></div>
-          <div class="pill" title="Action Points are used for upgrades, budget changes, and emergency interventions. They regenerate every 4 days and via streaks/goals."><span>Action Pts</span><strong id="actionPoints">0</strong></div>
-          <div class="pill"><span>Streak</span><strong id="streakLabel">0</strong></div>
-          <div class="pill"><span>Civilians</span><strong id="civilianCount">0</strong></div>
-          <div class="pill"><span>Incidents</span><strong id="incidentCount">0</strong></div>
-          <button id="focusBtn" class="btn">Focus: Off</button>
-          <button id="pauseBtn" class="btn">Pause</button>
+          <div class="hud-divider" aria-hidden="true"></div>
+          <div class="hud-cluster hud-cluster-economy">
+            <div class="pill"><span>Treasury ($m)</span><strong id="treasuryLabel">$0m</strong></div>
+            <div class="pill"><span>Daily Net</span><strong id="dailyNetLabel">$0m</strong></div>
+          </div>
+          <div class="hud-divider" aria-hidden="true"></div>
+          <div class="hud-cluster hud-cluster-state">
+            <div class="pill" id="stabilityPill"><span>Stability</span><strong id="stabilityLabel">0</strong><em id="stabilityTrend" class="pill-trend">→</em></div>
+            <div class="pill"><span>Civilians</span><strong id="civilianCount">0</strong></div>
+            <div class="pill"><span>Incidents</span><strong id="incidentCount">0</strong></div>
+            <div class="pill" title="Action Points are used for upgrades, budget changes, and emergency interventions. They regenerate every 4 days and via streaks/goals."><span>Action Pts</span><strong id="actionPoints">0</strong></div>
+          </div>
+          <div class="hud-meta" hidden>
+            <div class="pill pill-aux"><span>Tier</span><strong id="tierLabel">City</strong></div>
+            <div class="pill pill-aux"><span>Streak</span><strong id="streakLabel">0</strong></div>
+          </div>
+        </div>
+        <div class="hud-audio">
+          <button id="audioSettingsBtn" class="btn btn-icon" title="Audio settings" aria-label="Audio settings">⚙</button>
+          <div id="audioPanel" class="audio-panel card" hidden>
+            <div class="audio-panel-head">
+              <strong>Audio</strong>
+              <button id="audioPanelCloseBtn" class="btn btn-icon" title="Close audio">✕</button>
+            </div>
+            <label class="audio-row" for="bgmVolumeSlider">
+              <span>Music</span>
+              <input id="bgmVolumeSlider" type="range" min="0" max="100" step="1" value="34" />
+            </label>
+            <label class="audio-row" for="sfxVolumeSlider">
+              <span>SFX</span>
+              <input id="sfxVolumeSlider" type="range" min="0" max="100" step="1" value="72" />
+            </label>
+          </div>
         </div>
       </header>
       <div id="apFeedback" class="ap-feedback" aria-live="polite"></div>
@@ -44,7 +73,7 @@
             <h3 id="setupTitle">Build Your Government</h3>
             <p id="setupBody" class="muted">Place all core departments before simulation time begins. No incidents or budget drift occur until launch.</p>
             <div class="actions">
-              <button id="startPlacementBtn" class="btn">Open Build Queue</button>
+              <button id="startPlacementBtn" class="btn">Open Build Toolbox</button>
               <button id="launchGovBtn" class="btn primary" disabled>Launch Government</button>
             </div>
           </aside>
@@ -61,12 +90,16 @@
           <aside id="majorEventCard" class="major-event-card" hidden>
             <p class="eyebrow">Major Event</p>
             <h3 id="majorEventTitle">No major event</h3>
-            <p id="majorEventBody" class="muted"></p>
-            <p id="majorEventHint" class="muted"></p>
+            <p id="majorEventSnapshot" class="brief-snapshot">No immediate impact.</p>
             <div class="mini-grid">
               <div><span>Window</span><strong id="majorEventTimer">-</strong></div>
               <div><span>Impact</span><strong id="majorEventImpact">-</strong></div>
             </div>
+            <details class="card-details">
+              <summary>Details</summary>
+              <p id="majorEventBody" class="muted"></p>
+              <p id="majorEventHint" class="muted"></p>
+            </details>
             <div class="actions">
               <button id="majorEventRespondBtn" class="btn primary">Fund Response</button>
               <button id="majorEventDismissBtn" class="btn">Defer</button>
@@ -93,16 +126,20 @@
               <button id="quickBuildToggleBtn" class="btn">Minimize</button>
             </div>
             <div id="quickBuildBody" class="quick-build-body">
-              <section class="quick-build-section">
-                <p class="eyebrow">Industry</p>
+              <section id="quickPrimarySection" class="quick-build-section">
+                <p id="quickPrimaryTitle" class="eyebrow">Industry</p>
                 <div id="quickIndustryGrid" class="quick-build-grid"></div>
               </section>
-              <section class="quick-build-section">
-                <p class="eyebrow">Defense</p>
+              <section id="quickSecondarySection" class="quick-build-section">
+                <p id="quickSecondaryTitle" class="eyebrow">Defense</p>
                 <div id="quickDefenseGrid" class="quick-build-grid"></div>
               </section>
               <div id="quickBuildTooltip" class="quick-build-tooltip">Hover an icon to inspect footprint, costs, and dependencies.</div>
             </div>
+          </aside>
+          <aside id="nowStrip" class="now-strip" hidden>
+            <strong id="nowStripText">No urgent actions.</strong>
+            <button id="nowStripGo" class="btn primary">Go</button>
           </aside>
           <div id="mapTip" class="map-tip">Drag to pan. Scroll to zoom. Place departments on highlighted tiles, then tackle flashing MAJOR beacons and incidents.</div>
         </section>
@@ -118,17 +155,6 @@
 
           <div class="tab-panes">
             <section class="tab-pane is-active" data-pane="control">
-              <section class="card collapsible-card" id="buildQueueCard">
-                <div class="card-head">
-                  <h2>Build Queue</h2>
-                  <button class="btn collapse-btn" data-target="buildQueueCard">Minimize</button>
-                </div>
-                <div class="card-body">
-                  <p class="muted">Pick a department then click a map tile to place it.</p>
-                  <div id="buildQueue" class="event-rail"></div>
-                </div>
-              </section>
-
               <section class="card collapsible-card" id="initiativeHubCard">
                 <div class="card-head">
                   <h2>Initiative Console</h2>
@@ -198,8 +224,13 @@
               <section class="card rapid-card">
                 <h2>INCIDENT BRIEF</h2>
                 <p id="rapidTitle">No urgent brief right now.</p>
-                <p id="rapidBody" class="muted">Critical briefs appear here with short timers.</p>
-                <p id="rapidEvidence" class="muted"></p>
+                <p id="rapidWhat" class="brief-snapshot">Critical briefs appear here with short timers.</p>
+                <p id="rapidWho" class="muted">Impact focus: -</p>
+                <details class="card-details">
+                  <summary>Details</summary>
+                  <p id="rapidBody" class="muted"></p>
+                  <p id="rapidEvidence" class="muted"></p>
+                </details>
                 <div class="mini-grid">
                   <div><span>Timer</span><strong id="rapidTimer">-</strong></div>
                   <div><span>Momentum</span><strong id="rapidMomentum">0</strong></div>
@@ -350,6 +381,6 @@
       </article>
     </section>
 
-    <script type="module" src="app.js?v=20260220c"></script>
+    <script type="module" src="app.js?v=20260221o"></script>
   </body>
 </html>

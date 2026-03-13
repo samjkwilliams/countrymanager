@@ -16,6 +16,34 @@ const CAMPAIGN_LEAD_DAYS = 90;
 const ELECTION_DEBATE_MARKS = [60, 30, 10];
 const ELECTION_FINAL_SPRINT_DAYS = 7;
 const CITY_CORE_TILE = [12, 12];
+const AUDIO_BASE = "./assets/audio";
+const DEPARTMENT_ART_BASE = "./assets/departments";
+const AUDIO_LIBRARY = {
+  music: {
+    bgm: `${AUDIO_BASE}/music/bgm_deep_waters.wav`,
+  },
+  sfx: {
+    uiSelect: [`${AUDIO_BASE}/sfx/ui_select.wav`],
+    uiConfirm: [`${AUDIO_BASE}/sfx/ui_confirm.wav`],
+    uiDenied: [`${AUDIO_BASE}/sfx/ui_denied.wav`],
+    uiPositive: [`${AUDIO_BASE}/sfx/ui_positive.wav`],
+    uiNegative: [`${AUDIO_BASE}/sfx/ui_negative.wav`],
+    econMoney: [`${AUDIO_BASE}/sfx/econ_money.wav`],
+    econTax: [`${AUDIO_BASE}/sfx/econ_tax.wav`],
+    econUp: [`${AUDIO_BASE}/sfx/econ_turn_up.wav`],
+    econDown: [`${AUDIO_BASE}/sfx/econ_turn_down.wav`],
+    placeBasic: [`${AUDIO_BASE}/sfx/build_place_basic.wav`],
+    buildLow: [`${AUDIO_BASE}/sfx/build_complete_low.wav`],
+    buildMid: [`${AUDIO_BASE}/sfx/build_complete_mid.wav`],
+    buildHigh: [`${AUDIO_BASE}/sfx/build_complete_high.wav`],
+    upgrade: [`${AUDIO_BASE}/sfx/build_upgrade.wav`],
+    sell: [`${AUDIO_BASE}/sfx/build_sell.wav`],
+    warnMajor: [`${AUDIO_BASE}/sfx/warn_major.wav`],
+    warnDisaster: [`${AUDIO_BASE}/sfx/warn_disaster.wav`],
+    ambBirds: [`${AUDIO_BASE}/sfx/amb_birds.wav`],
+    ambTraffic: [`${AUDIO_BASE}/sfx/amb_traffic_beep.wav`],
+  },
+};
 
 const ELECTION_OPPOSITION = [
   {
@@ -795,7 +823,7 @@ const TUTORIAL_STEPS = [
     id: "industry",
     short: "Place first industry zone",
     title: "Step 3: Build Productive Capacity",
-    body: "Open Production Economy, click any project icon to arm it, then click a green map area to place your first zone.",
+    body: "Use the floating Build Toolbox on the map. Click any Industry icon to arm it, then click a green map area to place your first zone.",
     tab: "control",
   },
   {
@@ -976,6 +1004,15 @@ const state = {
     haze: 0,
   },
   camera: { x: 0, y: -80, zoom: 1, dragging: false, lastX: 0, lastY: 0, vx: 0, vy: 0, targetX: null, targetY: null, viewW: 1280, viewH: 760 },
+  audio: {
+    enabled: true,
+    unlocked: false,
+    bgmStarted: false,
+    bgmVolume: 0.34,
+    sfxVolume: 0.72,
+    bgm: null,
+    lastPlayed: {},
+  },
   ui: {
     focusMode: false,
     hoveredBuildingId: null,
@@ -993,8 +1030,13 @@ const state = {
     defensePlacement: null,
     quickBuildCollapsed: false,
     quickBuildHover: null,
+    toolboxSpotlightUntilMs: 0,
+    foundingFirstPickDone: false,
+    mapRevealUntilMs: 0,
+    lastSeenIncidentAlertId: null,
     initiativeGuideActive: false,
     initiativeGuideUntilDay: 0,
+    audioPanelOpen: false,
     touch: {
       mode: null,
       tapStartX: 0,
@@ -1012,9 +1054,12 @@ const canvas = document.getElementById("isoCanvas");
 const ctx = canvas.getContext("2d");
 
 const els = {
+  mapPanel: document.querySelector(".map-panel"),
   tierLabel: document.getElementById("tierLabel"),
   dayLabel: document.getElementById("dayLabel"),
   stabilityLabel: document.getElementById("stabilityLabel"),
+  stabilityPill: document.getElementById("stabilityPill"),
+  stabilityTrend: document.getElementById("stabilityTrend"),
   treasuryLabel: document.getElementById("treasuryLabel"),
   dailyNetLabel: document.getElementById("dailyNetLabel"),
   actionPoints: document.getElementById("actionPoints"),
@@ -1023,6 +1068,12 @@ const els = {
   incidentCount: document.getElementById("incidentCount"),
   focusBtn: document.getElementById("focusBtn"),
   pauseBtn: document.getElementById("pauseBtn"),
+  refreshBtn: document.getElementById("refreshBtn"),
+  audioSettingsBtn: document.getElementById("audioSettingsBtn"),
+  audioPanel: document.getElementById("audioPanel"),
+  audioPanelCloseBtn: document.getElementById("audioPanelCloseBtn"),
+  bgmVolumeSlider: document.getElementById("bgmVolumeSlider"),
+  sfxVolumeSlider: document.getElementById("sfxVolumeSlider"),
   trafficPill: document.getElementById("trafficPill"),
   trafficLight: document.getElementById("trafficLight"),
   statusBanner: document.getElementById("statusBanner"),
@@ -1042,6 +1093,8 @@ const els = {
   upgradeBtn: document.getElementById("upgradeBtn"),
   sellBtn: document.getElementById("sellBtn"),
   rapidTitle: document.getElementById("rapidTitle"),
+  rapidWhat: document.getElementById("rapidWhat"),
+  rapidWho: document.getElementById("rapidWho"),
   rapidBody: document.getElementById("rapidBody"),
   rapidEvidence: document.getElementById("rapidEvidence"),
   rapidTimer: document.getElementById("rapidTimer"),
@@ -1103,6 +1156,7 @@ const els = {
   decisionFlash: document.getElementById("decisionFlash"),
   majorEventCard: document.getElementById("majorEventCard"),
   majorEventTitle: document.getElementById("majorEventTitle"),
+  majorEventSnapshot: document.getElementById("majorEventSnapshot"),
   majorEventBody: document.getElementById("majorEventBody"),
   majorEventHint: document.getElementById("majorEventHint"),
   majorEventTimer: document.getElementById("majorEventTimer"),
@@ -1121,6 +1175,10 @@ const els = {
   quickBuildToolbox: document.getElementById("quickBuildToolbox"),
   quickBuildToggleBtn: document.getElementById("quickBuildToggleBtn"),
   quickBuildBody: document.getElementById("quickBuildBody"),
+  quickPrimarySection: document.getElementById("quickPrimarySection"),
+  quickSecondarySection: document.getElementById("quickSecondarySection"),
+  quickPrimaryTitle: document.getElementById("quickPrimaryTitle"),
+  quickSecondaryTitle: document.getElementById("quickSecondaryTitle"),
   quickIndustryGrid: document.getElementById("quickIndustryGrid"),
   quickDefenseGrid: document.getElementById("quickDefenseGrid"),
   quickBuildTooltip: document.getElementById("quickBuildTooltip"),
@@ -1143,19 +1201,46 @@ const els = {
   defenseSummary: document.getElementById("defenseSummary"),
   defenseProjects: document.getElementById("defenseProjects"),
   actionDock: document.getElementById("actionDock"),
+  nowStrip: document.getElementById("nowStrip"),
+  nowStripText: document.getElementById("nowStripText"),
+  nowStripGo: document.getElementById("nowStripGo"),
 };
 
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 function round(v) { return Math.round(v * 100) / 100; }
 function rand(min, max) { return min + Math.random() * (max - min); }
 function tileDist(a, b) { return Math.hypot(a[0] - b[0], a[1] - b[1]); }
-function formatMoneyMillions(v) { return `$${Math.round(v)}m`; }
+function formatMoneyMillions(v) {
+  const abs = Math.abs(v);
+  if (abs >= 1_000_000) {
+    const t = abs / 1_000_000;
+    const mag = t >= 10 ? Math.round(t) : round(t);
+    return `$${mag}t`;
+  }
+  if (abs >= 1_000) {
+    const b = abs / 1_000;
+    const mag = b >= 10 ? Math.round(b) : round(b);
+    return `$${mag}b`;
+  }
+  return `$${Math.round(abs)}m`;
+}
 function formatSignedMoneyMillions(v) {
   const n = round(v);
   if (Math.abs(n) < 0.01) return "~$0m";
+  const sign = n > 0 ? "+" : "-";
   const abs = Math.abs(n);
+  if (abs >= 1_000_000) {
+    const t = abs / 1_000_000;
+    const mag = t >= 10 ? Math.round(t) : round(t);
+    return `${sign}$${mag}t`;
+  }
+  if (abs >= 1_000) {
+    const b = abs / 1_000;
+    const mag = b >= 10 ? Math.round(b) : round(b);
+    return `${sign}$${mag}b`;
+  }
   const mag = abs >= 10 ? String(Math.round(abs)) : abs.toFixed(2).replace(/\.?0+$/, "");
-  return `${n > 0 ? "+" : "-"}$${mag}m`;
+  return `${sign}$${mag}m`;
 }
 function formatSignedNumber(v) {
   const n = round(v);
@@ -1190,6 +1275,97 @@ function setTabAlert(el, active = false, critical = false) {
   el.hidden = !active;
   el.classList.toggle("critical", critical);
 }
+function pickAudioClip(key) {
+  const clips = AUDIO_LIBRARY.sfx[key];
+  if (!clips || clips.length === 0) return null;
+  return clips[Math.floor(Math.random() * clips.length)];
+}
+function unlockAudio() {
+  if (!state.audio.enabled) return;
+  state.audio.unlocked = true;
+  if (!state.audio.bgm) {
+    const bgm = new Audio(AUDIO_LIBRARY.music.bgm);
+    bgm.loop = true;
+    bgm.preload = "auto";
+    bgm.volume = state.audio.bgmVolume;
+    state.audio.bgm = bgm;
+  }
+  ensureBgm(true);
+}
+function ensureBgm(forceAttempt = false) {
+  if (!state.audio.enabled) return;
+  if (!state.audio.unlocked && !forceAttempt) return;
+  if (!state.audio.bgm) {
+    const bgm = new Audio(AUDIO_LIBRARY.music.bgm);
+    bgm.loop = true;
+    bgm.preload = "auto";
+    bgm.volume = state.audio.bgmVolume;
+    state.audio.bgm = bgm;
+  }
+  if (!state.audio.bgmStarted || state.audio.bgm.paused) {
+    state.audio.bgm.volume = state.audio.bgmVolume;
+    state.audio.bgm.play().then(() => {
+      state.audio.bgmStarted = true;
+    }).catch(() => {});
+  }
+}
+function playSfx(key, opts = {}) {
+  if (!state.audio.enabled || !state.audio.unlocked) return;
+  const clip = pickAudioClip(key);
+  if (!clip) return;
+  const throttleMs = opts.throttleMs ?? 120;
+  const now = Date.now();
+  const last = state.audio.lastPlayed[key] || 0;
+  if (now - last < throttleMs) return;
+  state.audio.lastPlayed[key] = now;
+  const a = new Audio(clip);
+  a.preload = "auto";
+  a.volume = clamp((opts.volumeMul ?? 1) * state.audio.sfxVolume, 0, 1);
+  a.play().catch(() => {});
+}
+function incidentSupportsDirectPlayerAction(inc) {
+  if (!inc) return false;
+  if (inc.tutorialManual) return true;
+  const autoOnlyTypes = new Set(["cyber_grid_attack", "airspace_incursion", "infra_sabotage"]);
+  return !autoOnlyTypes.has(inc.type?.id);
+}
+function manualActionIncidents() {
+  return state.incidents.filter(
+    (i) => i.requiresPlayerAction
+      && incidentSupportsDirectPlayerAction(i)
+      && !i.resolved
+      && !i.contained
+      && !i.assignedResponderId
+  );
+}
+function actionableManualIncidents() {
+  return manualActionIncidents().filter((i) => canPlayerActOnIncidentNow(i));
+}
+function hasActionableRapidBrief() {
+  const rapid = state.rapid.active;
+  if (!rapid || rapid.expiresDay <= state.day) return false;
+  if (Array.isArray(rapid.options)) return rapid.options.length > 0;
+  return Boolean(rapid.optionA || rapid.optionB || rapid.optionC);
+}
+function currentActionableIncidentAlertId() {
+  if (!hasActionableRapidBrief()) return null;
+  const rapid = state.rapid.active;
+  const id = rapid?.incidentCode || rapid?.id || `rapid-${state.day}`;
+  return `rapid:${id}`;
+}
+function canPlayerActOnIncidentNow(inc) {
+  if (!inc || !inc.requiresPlayerAction || !incidentSupportsDirectPlayerAction(inc) || inc.resolved || inc.contained || inc.assignedResponderId) return false;
+  if (state.resources.actionPoints < 1) return false;
+  const cost = 6 + (inc.severity || 1) * 2;
+  return state.budget.treasury >= cost;
+}
+function clearNowStrip() {
+  if (els.nowStrip) els.nowStrip.hidden = true;
+  if (els.nowStripGo) els.nowStripGo.disabled = true;
+  if (!state.ui.nowStripTracker) state.ui.nowStripTracker = { candidateId: null, sinceMs: 0 };
+  state.ui.nowStripTracker.candidateId = null;
+  state.ui.nowStripTracker.sinceMs = 0;
+}
 function setActiveSideTab(tab) {
   document.querySelectorAll(".side-tab").forEach((btn) => {
     btn.classList.toggle("is-active", btn.getAttribute("data-tab") === tab);
@@ -1197,6 +1373,11 @@ function setActiveSideTab(tab) {
   document.querySelectorAll(".tab-pane").forEach((pane) => {
     pane.classList.toggle("is-active", pane.getAttribute("data-pane") === tab);
   });
+  if (tab === "incidents") {
+    const alertId = currentActionableIncidentAlertId();
+    if (alertId) state.ui.lastSeenIncidentAlertId = alertId;
+    setTabAlert(els.tabIncidentsAlert, false, false);
+  }
 }
 function focusControlPanel() {
   setActiveSideTab("control");
@@ -1234,6 +1415,14 @@ function buildingTile(b) {
 }
 function cityRadius() {
   return state.growth?.radius || 10;
+}
+function onboardingEaseFactor() {
+  // 0 = easiest onboarding window, 1 = full simulation pressure.
+  if (!state.sim.started) return 0;
+  const phase = clamp(state.day / 180, 0, 1);
+  return tutorialIsActive() && state.tutorial.phase !== "freeplay"
+    ? Math.min(phase, 0.45)
+    : phase;
 }
 function activeRoadLines() {
   const r = cityRadius();
@@ -1357,12 +1546,17 @@ function tutorialStepMeta(phase = state.tutorial.phase) {
   return TUTORIAL_STEPS.find((s) => s.id === phase) || TUTORIAL_STEPS[0];
 }
 
+function triggerToolboxSpotlight(ms = 2800) {
+  state.ui.toolboxSpotlightUntilMs = Date.now() + ms;
+}
+
 function setTutorialPhase(phase, announce = true) {
   if (!tutorialIsActive()) return;
   if (!Object.hasOwn(TUTORIAL_STEP_INDEX, phase)) return;
   if (state.tutorial.phase === phase) return;
   state.tutorial.phase = phase;
   state.tutorial.enteredDay = state.day;
+  state.ui.toolboxSpotlightUntilMs = 0;
 
   const meta = tutorialStepMeta(phase);
   if (announce) {
@@ -1371,7 +1565,7 @@ function setTutorialPhase(phase, announce = true) {
   }
 
   if (meta.tab) setActiveSideTab(meta.tab);
-  if (phase === "industry") tutorialFocusCurrentStep();
+  if (phase === "industry") state.ui.quickBuildCollapsed = true;
   if (phase === "freeplay") {
     for (const inc of state.incidents) {
       if (inc.tutorialManual) inc.tutorialManual = false;
@@ -1419,6 +1613,8 @@ function tutorialFocusCurrentStep() {
   }
   if (phase === "industry") {
     setActiveSideTab("control");
+    state.ui.quickBuildCollapsed = false;
+    triggerToolboxSpotlight(4200);
     setCardCollapsed("industryCard", false);
     const pane = document.querySelector('[data-pane="control"]');
     const card = document.getElementById("industryCard");
@@ -1601,6 +1797,7 @@ function spendActionPoints(cost, reason) {
   if (state.gameOver.active) return false;
   if (state.resources.actionPoints < cost) {
     addTicker(`Need ${cost} action points for ${reason}.`);
+    playSfx("uiDenied");
     return false;
   }
   state.resources.actionPoints -= cost;
@@ -1720,6 +1917,23 @@ function loadSvgImage(src) {
   });
 }
 
+function departmentArtSrc(id, lvl = 1) {
+  if (lvl === 1) return `${DEPARTMENT_ART_BASE}/${id}_lvl1.png`;
+  return `./assets/cozy-pack/buildings/${id}_lvl${lvl}.svg`;
+}
+
+async function loadDepartmentPngOverrides() {
+  const tasks = BUILDING_DEFS.map(async (def) => {
+    try {
+      const img = await loadSvgImage(departmentArtSrc(def.id, 1));
+      state.assets.buildings[`${def.id}_lvl1`] = img;
+    } catch {
+      // Keep existing svg fallback if png is missing.
+    }
+  });
+  await Promise.all(tasks);
+}
+
 async function loadAssetPack() {
   const manifestRes = await fetch(`${ASSET_BASE}/manifest.json`);
   if (!manifestRes.ok) throw new Error("asset manifest fetch failed");
@@ -1795,15 +2009,19 @@ function maybePromoteTier() {
 }
 
 function recalcBuildingStates() {
+  const ease = onboardingEaseFactor();
+  const overloadedCutoff = 50 + ease * 8; // 50 early -> 58 late
+  const strainedCutoff = 60 + ease * 8; // 60 early -> 68 late
+  const thrivingCutoff = 82 - ease * 4; // 82 early -> 78 late
   for (const b of state.buildings) {
     if (!b.placed) {
       b.state = "unbuilt";
       continue;
     }
     const signal = state.kpi[b.kpi] + (b.level - 1) * 1.8 + (b.budget - 60) * 0.12;
-    if (signal < 58) b.state = "overloaded";
-    else if (signal < 68) b.state = "strained";
-    else if (signal > 78) b.state = "thriving";
+    if (signal < overloadedCutoff) b.state = "overloaded";
+    else if (signal < strainedCutoff) b.state = "strained";
+    else if (signal > thrivingCutoff) b.state = "thriving";
     else b.state = "stable";
   }
 }
@@ -1827,6 +2045,8 @@ function beginSimulation() {
   tutorialFocusCurrentStep();
   addTicker("Government launched. Time is now running and system pressures are live.");
   addRailEvent("▶ Simulation Live", "Founding complete. Incidents, trends, and consequences are now active.", true);
+  playSfx("uiConfirm");
+  ensureBgm();
   return true;
 }
 
@@ -1904,11 +2124,14 @@ function placeBuilding(buildingId, tile) {
   state.kpi[b.kpi] = clamp(state.kpi[b.kpi] + evaln.score * 0.45, 0, 100);
   addTicker(`Placed ${b.name} at tile ${x},${y} (${evaln.label} site).`);
   addRailEvent("🧱 Department Placed", `${b.name} opened at tile ${x},${y}. Site quality: ${evaln.label}.`, false);
+  playSfx("placeBasic", { throttleMs: 80 });
   state.ui.placementBuildingId = state.buildings.find((d) => !d.placed)?.id || null;
   state.ui.placementRecommendations = computePlacementRecommendations(state.ui.placementBuildingId);
   if (allBuildingsPlaced()) {
+    state.ui.quickBuildCollapsed = true;
     addRailEvent("🏙️ Founding Complete", "All core departments placed. Press Launch Government to begin time.", true);
     addTicker("All departments placed. Launch Government when ready.");
+    playSfx("uiPositive");
   }
   return true;
 }
@@ -1957,6 +2180,7 @@ function applyDepartmentBudget() {
     const delta = target - (base.budget || 70);
     if (Math.abs(delta) < 1) {
       addTicker("No defense budget change applied.");
+      playSfx("uiDenied");
       return;
     }
     if (!spendActionPoints(1, "defense budget adjustment")) return;
@@ -1964,6 +2188,7 @@ function applyDepartmentBudget() {
     const treasuryShift = round(-delta * 0.08);
     addTicker(`${base.name} budget target set to ${target} (${formatSignedNumber(delta)}).`);
     addDecisionToast(`${base.name} budget ${formatSignedNumber(delta)} · Treasury ${formatSignedMoneyMillions(treasuryShift)}/day`, delta < 0 ? "good" : "neutral");
+    playSfx(delta > 0 ? "econTax" : "econUp");
     logDecisionImpact({
       title: `${base.name} Budget Adjustment`,
       category: "security",
@@ -1991,6 +2216,7 @@ function applyDepartmentBudget() {
   const delta = target - b.budget;
   if (Math.abs(delta) < 1) {
     addTicker("No budget change applied.");
+    playSfx("uiDenied");
     return;
   }
   if (!spendActionPoints(1, "budget adjustment")) return;
@@ -2001,6 +2227,7 @@ function applyDepartmentBudget() {
   recordAction(b.id);
   addTicker(`${b.name} budget target set to ${round(b.budget)} (${formatSignedNumber(delta)}).`);
   addDecisionToast(`${b.name} budget ${formatSignedNumber(delta)} · Treasury ${formatSignedMoneyMillions(treasuryShift)}/day`, delta < 0 ? "good" : "neutral");
+  playSfx(delta > 0 ? "econTax" : "econUp");
   const moodBoost = delta > 0 ? 3 : -3;
   const dem = emptyDemImpact();
   if (b.id === "welfare" || b.id === "health") {
@@ -2262,6 +2489,7 @@ function upgradeSelected() {
   if (!b) return;
   if (b.level >= 10) {
     addTicker(`${b.name} is already at max level.`);
+    playSfx("uiDenied");
     return;
   }
   const cost = 12 + b.level * 8;
@@ -2269,6 +2497,7 @@ function upgradeSelected() {
   if (state.budget.treasury < cost) {
     addTicker(`Not enough treasury for upgrade (${formatMoneyMillions(cost)} required).`);
     state.resources.actionPoints = clamp(state.resources.actionPoints + 2, 0, state.resources.maxActionPoints);
+    playSfx("uiDenied");
     return;
   }
   state.budget.treasury -= cost;
@@ -2283,6 +2512,7 @@ function upgradeSelected() {
   recordAction(b.id);
   addTicker(`${b.name} upgraded to level ${b.level}.`);
   addRailEvent("Upgrade Complete", `${b.name} construction started.`, false);
+  playSfx("upgrade");
   logDecisionImpact({
     title: `${b.name} Upgrade`,
     category: b.id,
@@ -2336,6 +2566,8 @@ function sellSelectedAsset() {
       confidence: "medium",
       explain: "Short-run fiscal relief traded against deterrence and readiness.",
     });
+    playSfx("sell");
+    playSfx("econMoney", { volumeMul: 0.75, throttleMs: 100 });
     return;
   }
   if (state.selectedIndustryId) {
@@ -2369,13 +2601,19 @@ function sellSelectedAsset() {
       confidence: "medium",
       explain: "You recovered cash immediately, but local confidence and output dipped.",
     });
+    playSfx("sell");
+    playSfx("econMoney", { volumeMul: 0.75, throttleMs: 100 });
     return;
   }
 
   const b = findBuilding(state.selectedBuildingId);
-  if (!b) return;
+  if (!b) {
+    playSfx("uiDenied");
+    return;
+  }
   if (b.level <= 1) {
     addTicker(`${b.name} is already at base level. Nothing to sell.`);
+    playSfx("uiDenied");
     return;
   }
   if (!spendActionPoints(1, "department sell-down")) return;
@@ -2425,6 +2663,8 @@ function sellSelectedAsset() {
     confidence: "high",
     explain: "Short-term fiscal recovery traded against service strength.",
   });
+  playSfx("sell");
+  playSfx("econMoney", { volumeMul: 0.75, throttleMs: 100 });
 }
 
 function triggerRapidDecision(options = {}) {
@@ -2462,6 +2702,7 @@ function triggerRapidDecision(options = {}) {
       setActiveSideTab("incidents");
       focusCameraOnTile(state.rapid.active.mapMarkerTile);
     }
+    playSfx("warnMajor", { volumeMul: 0.85, throttleMs: 600 });
     return;
   }
   const pick = RAPID_DECISIONS[Math.floor(Math.random() * RAPID_DECISIONS.length)];
@@ -2486,6 +2727,7 @@ function triggerRapidDecision(options = {}) {
     setActiveSideTab("incidents");
     focusCameraOnTile(state.rapid.active.mapMarkerTile);
   }
+  playSfx("warnMajor", { volumeMul: 0.85, throttleMs: 600 });
 }
 
 function resolveRapid(choice, timedOut = false) {
@@ -2536,6 +2778,11 @@ function resolveRapid(choice, timedOut = false) {
             ? `YOU GOT PLAYED · ${shorten(picked.outcome_blurb || "Narrative trap landed.", 62)}`
             : `FAIR HOLD · ${shorten(picked.outcome_blurb || "Data was mixed; neutral call.", 62)}`;
       addDecisionToast(verdictMsg, verdictKind);
+      if (!timedOut) {
+        if (verdictLabel === "RIGHT") playSfx("uiPositive");
+        else if (verdictLabel === "WRONG") playSfx("uiNegative");
+        else playSfx("uiConfirm");
+      }
     }
     logDecisionImpact({
       title: active.title,
@@ -2607,6 +2854,8 @@ function resolveRapid(choice, timedOut = false) {
       explain: supportive ? "You absorbed short-term cost for resilience." : "You protected short-run spend but raised deferred risk.",
     });
   }
+  if (timedOut) playSfx("uiNegative");
+  else if (active.mode !== "scenario") playSfx("uiConfirm");
   state.rapid.active = null;
   updateTutorialProgress();
 }
@@ -2759,6 +3008,25 @@ function projectById(id) {
   return INDUSTRY_PROJECT_DEFS.find((p) => p.id === id);
 }
 
+function chooseDepartmentPlacement(id, source = "toolbox") {
+  const b = findBuilding(id);
+  if (!b || b.placed) return false;
+  state.ui.housingPlacement = null;
+  state.ui.industryPlacement = null;
+  state.ui.defensePlacement = null;
+  state.selectedIndustryId = null;
+  state.selectedDefenseId = null;
+  state.ui.placementBuildingId = id;
+  state.ui.placementRecommendations = computePlacementRecommendations(id);
+  if (!state.ui.foundingFirstPickDone) {
+    state.ui.foundingFirstPickDone = true;
+    state.ui.toolboxSpotlightUntilMs = 0;
+    state.ui.mapRevealUntilMs = Date.now() + 1400;
+  }
+  addTicker(`${source === "setup" ? "Founding" : "Placement"} armed: ${b.name}. Click a map tile.`);
+  return true;
+}
+
 function defenseBaseById(id) {
   return state.defense.bases.find((b) => b.id === id);
 }
@@ -2807,7 +3075,10 @@ function canPlaceIndustryZone(tile, size) {
 
 function chooseIndustryProject(id) {
   const p = projectById(id);
-  if (!p) return;
+  if (!p) {
+    playSfx("uiDenied");
+    return;
+  }
   state.industry.selectedProjectId = id;
   state.ui.placementBuildingId = null;
   state.ui.housingPlacement = null;
@@ -2818,6 +3089,7 @@ function chooseIndustryProject(id) {
   if (!industryTierAllowed(p)) {
     addTicker(`${p.name} is locked until ${TIER_CONFIG[p.tier].name} tier.`);
     state.ui.industryPlacement = null;
+    playSfx("uiDenied");
     return;
   }
   state.ui.industryPlacement = { projectId: id, size: p.size };
@@ -2829,6 +3101,7 @@ function chooseIndustryProject(id) {
   } else {
     addTicker(`Industry placement armed: ${p.name} (${p.size}x${p.size}).`);
   }
+  playSfx("uiSelect");
 }
 
 function placeIndustryZone(tile) {
@@ -2842,6 +3115,7 @@ function placeIndustryZone(tile) {
   const deposit = round(project.cost * 0.55);
   if (state.budget.treasury < deposit) {
     addTicker(`Need ${formatMoneyMillions(deposit)} treasury deposit to place ${project.name}.`);
+    playSfx("uiDenied");
     return false;
   }
   state.budget.treasury -= deposit;
@@ -2868,6 +3142,10 @@ function placeIndustryZone(tile) {
   normalizeTrafficLanes();
   addRailEvent("🏭 Ground Broken", `${project.name} started (${project.size}x${project.size})`, true);
   addTicker(`${project.name} construction started. Completion in ${project.buildDays} days.`);
+  playSfx("placeBasic", { throttleMs: 80 });
+  if (project.size >= 4) playSfx("buildHigh", { volumeMul: 0.72, throttleMs: 80 });
+  else if (project.size >= 3) playSfx("buildMid", { volumeMul: 0.72, throttleMs: 80 });
+  else playSfx("buildLow", { volumeMul: 0.72, throttleMs: 80 });
   updateTutorialProgress();
   return true;
 }
@@ -2972,6 +3250,9 @@ function updateIndustryPerDay() {
         if (queueItem) queueItem.completeDay = state.day;
         addTicker(`${project.name} is now online.`);
         addRailEvent("✅ Project Online", `${project.name} completed and entered production.`, true);
+        if (project.size >= 4) playSfx("buildHigh", { volumeMul: 0.86, throttleMs: 120 });
+        else if (project.size >= 3) playSfx("buildMid", { volumeMul: 0.84, throttleMs: 120 });
+        else playSfx("buildLow", { volumeMul: 0.82, throttleMs: 120 });
       } else {
         zone.completeDay += 3;
         if (queueItem) queueItem.completeDay = zone.completeDay;
@@ -2986,6 +3267,7 @@ function updateIndustryPerDay() {
       if (upgradeQueueItem) upgradeQueueItem.completeDay = state.day;
       addTicker(`${project.name} upgrade completed (L${zone.level}).`);
       addRailEvent("✅ Upgrade Online", `${project.name} is now level ${zone.level}.`, false);
+      playSfx("upgrade");
     }
     if (zone.status !== "active") continue;
     activeCount += 1;
@@ -3028,7 +3310,10 @@ function canPlaceDefenseZone(tile, size, ignoreBaseId = null) {
 
 function chooseDefenseBaseType(id) {
   const def = defenseTypeById(id);
-  if (!def) return;
+  if (!def) {
+    playSfx("uiDenied");
+    return;
+  }
   state.defense.selectedBaseTypeId = id;
   state.ui.placementBuildingId = null;
   state.ui.housingPlacement = null;
@@ -3039,6 +3324,7 @@ function chooseDefenseBaseType(id) {
   if (!defenseTierAllowed(def)) {
     addTicker(`${def.name} unlocks at ${TIER_CONFIG[def.tier].name} tier.`);
     state.ui.defensePlacement = null;
+    playSfx("uiDenied");
     return;
   }
   state.ui.defensePlacement = { baseTypeId: id, size: def.size };
@@ -3050,6 +3336,7 @@ function chooseDefenseBaseType(id) {
   } else {
     addTicker(`Defense placement armed: ${def.name} (${def.size}x${def.size}).`);
   }
+  playSfx("uiSelect");
 }
 
 function placeDefenseZone(tile) {
@@ -3062,6 +3349,7 @@ function placeDefenseZone(tile) {
   const deposit = round(def.cost * 0.55);
   if (state.budget.treasury < deposit) {
     addTicker(`Need ${formatMoneyMillions(deposit)} treasury deposit to place ${def.name}.`);
+    playSfx("uiDenied");
     return false;
   }
   state.budget.treasury -= deposit;
@@ -3092,6 +3380,10 @@ function placeDefenseZone(tile) {
   state.selectedDefenseId = base.id;
   addRailEvent("🛡️ Defense Ground Broken", `${def.name} started (${def.size}x${def.size}).`, true);
   addTicker(`${def.name} construction started. Completion in ${def.buildDays} days.`);
+  playSfx("placeBasic", { throttleMs: 80 });
+  if (def.size >= 4) playSfx("buildHigh", { volumeMul: 0.72, throttleMs: 80 });
+  else if (def.size >= 3) playSfx("buildMid", { volumeMul: 0.72, throttleMs: 80 });
+  else playSfx("buildLow", { volumeMul: 0.72, throttleMs: 80 });
   initDecorProps();
   normalizeTrafficLanes();
   return true;
@@ -3216,6 +3508,9 @@ function updateDefensePerDay() {
         base.paid = def.cost;
         if (queueItem) queueItem.completeDay = state.day;
         addTicker(`${base.name} is now operational.`);
+        if (base.size >= 4) playSfx("buildHigh", { volumeMul: 0.86, throttleMs: 120 });
+        else if (base.size >= 3) playSfx("buildMid", { volumeMul: 0.84, throttleMs: 120 });
+        else playSfx("buildLow", { volumeMul: 0.82, throttleMs: 120 });
       } else {
         base.completeDay += 3;
         if (queueItem) queueItem.completeDay = base.completeDay;
@@ -3228,6 +3523,7 @@ function updateDefensePerDay() {
       base.status = "active";
       if (upgradeQueueItem) upgradeQueueItem.completeDay = state.day;
       addTicker(`${base.name} upgrade completed (L${base.level}).`);
+      playSfx("upgrade");
     }
     if (base.status === "expanding" && state.day >= base.completeDay) {
       base.size = Math.max(base.size || 1, base.targetSize || (base.size || 1));
@@ -3240,6 +3536,7 @@ function updateDefensePerDay() {
       base.status = "active";
       if (expandQueueItem) expandQueueItem.completeDay = state.day;
       addTicker(`${base.name} footprint expanded to ${base.size}x${base.size}.`);
+      playSfx("buildMid", { volumeMul: 0.84, throttleMs: 120 });
       initDecorProps();
       normalizeTrafficLanes();
     }
@@ -3335,6 +3632,7 @@ function placeHousingZone(tile) {
   const cost = m.costBySize[m.size] || (m.size * m.size * 2);
   if (state.budget.treasury < cost) {
     addTicker(`Need ${formatMoneyMillions(cost)} treasury to place ${m.size}x${m.size} housing.`);
+    playSfx("uiDenied");
     return false;
   }
   state.budget.treasury -= cost;
@@ -3363,6 +3661,10 @@ function placeHousingZone(tile) {
   });
   addRailEvent("🏗️ Housing Built", `${m.size}x${m.size} zone placed for ${formatMoneyMillions(cost)}.`, true);
   addTicker(`Housing zone placed (${m.size}x${m.size}).`);
+  playSfx("placeBasic", { throttleMs: 80 });
+  if (m.size >= 4) playSfx("buildHigh", { volumeMul: 0.72, throttleMs: 80 });
+  else if (m.size >= 3) playSfx("buildMid", { volumeMul: 0.72, throttleMs: 80 });
+  else playSfx("buildLow", { volumeMul: 0.72, throttleMs: 80 });
   state.housing.active = null;
   state.ui.housingPlacement = null;
   initDecorProps();
@@ -3419,6 +3721,7 @@ function spawnMajorEvent() {
   state.monthly.stats.majorSpawned += 1;
   addTicker(`MAJOR INCIDENT: ${tpl.title}. Demographic pressure rising now.`);
   addRailEvent("🚨 Major Event", `${tpl.title} · ${majorImpactLabel(ev)}`, true);
+  playSfx("warnMajor", { volumeMul: 0.92, throttleMs: 600 });
 }
 
 function maybeSpawnMajorEvent() {
@@ -3426,7 +3729,7 @@ function maybeSpawnMajorEvent() {
   if (state.day < state.major.nextAtDay) return;
   const stress = clamp((100 - state.kpi.stability) / 100, 0, 1);
   const moodRisk = clamp((55 - state.people.reduce((a, p) => a + p.happiness, 0) / state.people.length) / 55, 0, 1);
-  const chance = 0.55 + stress * 0.2 + moodRisk * 0.15;
+  const chance = 0.22 + stress * 0.2 + moodRisk * 0.12;
   if (Math.random() > chance) {
     state.major.nextAtDay = state.day + Math.max(8, MAJOR_EVENT_INTERVAL_DAYS - 4);
     return;
@@ -3444,6 +3747,7 @@ function resolveMajorEvent(eventId) {
   if (state.budget.treasury < costCash) {
     state.resources.actionPoints = clamp(state.resources.actionPoints + costAP, 0, state.resources.maxActionPoints);
     addTicker(`Need ${formatMoneyMillions(costCash)} treasury to resolve: ${ev.title}.`);
+    playSfx("uiDenied");
     return;
   }
   state.budget.treasury -= costCash;
@@ -3474,6 +3778,8 @@ function resolveMajorEvent(eventId) {
   });
   state.majorEvents = state.majorEvents.filter((x) => x.id !== ev.id);
   if (state.ui.focusedMajorEventId === ev.id) state.ui.focusedMajorEventId = null;
+  playSfx("uiConfirm");
+  playSfx("econDown", { volumeMul: 0.72, throttleMs: 120 });
 }
 
 function deferMajorEventCard(eventId) {
@@ -3482,17 +3788,23 @@ function deferMajorEventCard(eventId) {
   ev.snoozeUntilDay = state.day + 3;
   if (state.ui.focusedMajorEventId === ev.id) state.ui.focusedMajorEventId = null;
   addTicker(`Deferred briefing: ${ev.title}. Pressure is still active.`);
+  playSfx("uiSelect");
 }
 
 function updateMajorEventsPerDay() {
   const keep = [];
   for (const ev of state.majorEvents) {
-    applyDemographicShiftMap(ev.perDayDem);
-    applyKpiShiftMap(ev.perDayKpi);
+    const anchorId = majorEventAnchorBuildingId(ev.domain);
+    const anchor = findBuilding(anchorId);
+    const mitigation = anchor
+      ? clamp(1 - Math.max(0, anchor.budget - 60) * 0.004 - Math.max(0, anchor.level - 1) * 0.035, 0.52, 1)
+      : 1;
+    applyDemographicShiftMap(ev.perDayDem, mitigation);
+    applyKpiShiftMap(ev.perDayKpi, mitigation);
     const daysLeft = ev.expiresDay - state.day;
     if (daysLeft <= 0) {
-      applyDemographicShiftMap(ev.perDayDem, 2.4);
-      applyKpiShiftMap(ev.perDayKpi, 1.8);
+      applyDemographicShiftMap(ev.perDayDem, 2.1);
+      applyKpiShiftMap(ev.perDayKpi, 1.65);
       state.monthly.stats.majorMissed += 1;
       breakStreak(`major event missed: ${ev.title}`);
       addTicker(`Major event missed: ${ev.title}. Public confidence dropped.`);
@@ -3553,11 +3865,24 @@ function spawnIncident(forceTypeId = null, options = {}) {
     }
   }
 
+  const severity = Number.isFinite(opts.severity) ? clamp(Math.round(opts.severity), 1, 4) : 1 + Math.floor(Math.random() * 3);
+  const highImpactType = new Set(["corruption"]);
+  const autoOnlyType = new Set(["cyber_grid_attack", "airspace_incursion", "infra_sabotage"]);
+  const inferredManual =
+    !autoOnlyType.has(type.id) && (
+      severity >= 3
+    || highImpactType.has(type.id)
+    || (severity === 2 && Math.random() < 0.3)
+    );
+  const requiresPlayerAction = Boolean(
+    opts.requiresPlayerAction ?? opts.tutorialManual ?? inferredManual
+  );
+
   const incident = {
     id: `inc_${Date.now()}_${Math.floor(Math.random() * 9999)}`,
     type,
     tile: [targetTile[0] + rand(-1.5, 1.5), targetTile[1] + rand(-1.5, 1.5)],
-    severity: Number.isFinite(opts.severity) ? clamp(Math.round(opts.severity), 1, 4) : 1 + Math.floor(Math.random() * 3),
+    severity,
     daysOpen: 0,
     contained: false,
     resolved: false,
@@ -3566,6 +3891,7 @@ function spawnIncident(forceTypeId = null, options = {}) {
     districtId: districtForTile(buildingTile(targetBuilding)),
     streakBroken: false,
     tutorialManual: Boolean(opts.tutorialManual),
+    requiresPlayerAction,
   };
 
   state.incidents.push(incident);
@@ -3579,6 +3905,30 @@ function spawnIncident(forceTypeId = null, options = {}) {
 }
 
 function updateIncidentsPerDay() {
+  const ease = onboardingEaseFactor();
+  const penaltyMult = 0.64 + ease * 0.22; // softer penalties overall
+  const stabilityPenaltyMult = 0.54 + ease * 0.3; // softer stability bleed
+  const escalationCadence = ease < 0.6 ? 6 : 5; // slower severity ramp
+  const responseByType = {
+    crime: "security",
+    medical: "health",
+    fire: "transport",
+    flood: "climate",
+    corruption: "integrity",
+    cyber_grid_attack: "integrity",
+    airspace_incursion: "security",
+    infra_sabotage: "transport",
+  };
+  const autoOnlyTypes = new Set(["cyber_grid_attack", "airspace_incursion", "infra_sabotage"]);
+  const kpiDrain = {
+    health: 0,
+    education: 0,
+    safety: 0,
+    climate: 0,
+    integrity: 0,
+    economy: 0,
+  };
+  let stabilityDrain = 0;
   for (const d of state.districts) d.stress = Math.max(0, d.stress - 0.25);
 
   for (const inc of state.incidents) {
@@ -3588,18 +3938,29 @@ function updateIncidentsPerDay() {
     if (district) district.stress += inc.contained ? 0.4 : 1.1 * inc.severity;
 
     if (!inc.contained) {
-      const penalty = inc.type.perDayPenalty * inc.severity;
-      state.kpi[inc.type.kpi] -= penalty;
-      state.kpi.stability -= penalty * 0.35;
-      if (inc.daysOpen % 3 === 0 && inc.severity < 4) inc.severity += 1;
+      const responder = findBuilding(responseByType[inc.type?.id]);
+      const mitigation = responder
+        ? clamp(1 - Math.max(0, responder.budget - 60) * 0.005 - Math.max(0, responder.level - 1) * 0.04, 0.45, 1)
+        : 1;
+      const autoOnlyMult = autoOnlyTypes.has(inc.type?.id) ? 0.72 : 1;
+      const penalty = inc.type.perDayPenalty * inc.severity * penaltyMult * mitigation * autoOnlyMult;
+      kpiDrain[inc.type.kpi] = (kpiDrain[inc.type.kpi] || 0) + penalty;
+      stabilityDrain += penalty * 0.35 * stabilityPenaltyMult;
+      const maxSeverity = inc.requiresPlayerAction ? 3 : 4;
+      if (inc.daysOpen % escalationCadence === 0 && inc.severity < maxSeverity) inc.severity += 1;
       if (inc.daysOpen >= 4 && !inc.streakBroken) {
         breakStreak(`${inc.type.title} spiraled`);
         inc.streakBroken = true;
       }
     } else {
-      state.kpi.stability -= 0.08 * inc.severity;
+      stabilityDrain += 0.08 * inc.severity * stabilityPenaltyMult;
     }
   }
+  for (const key of Object.keys(kpiDrain)) {
+    const perDayCap = 1.1;
+    state.kpi[key] -= Math.min(perDayCap, kpiDrain[key] || 0);
+  }
+  state.kpi.stability -= Math.min(0.95, stabilityDrain);
 }
 
 function maybeSpawnIncident() {
@@ -3628,7 +3989,7 @@ function maybeSpawnIncident() {
   });
   const pressure = clamp((100 - state.kpi.stability) / 100, 0, 1);
   const defenseRisk = clamp((65 - (state.defense.metrics.readiness || 0)) / 100, 0, 0.12);
-  const chance = 0.08 + pressure * 0.16 + defenseRisk + Math.min(0.08, state.incidents.length * 0.01);
+  const chance = 0.045 + pressure * 0.1 + defenseRisk + Math.min(0.045, state.incidents.length * 0.004);
   if (Math.random() >= chance) return;
   const total = weighted.reduce((a, x) => a + x.w, 0);
   let roll = Math.random() * total;
@@ -3640,6 +4001,16 @@ function maybeSpawnIncident() {
     }
   }
   spawnIncident(weighted[0]?.id);
+}
+
+function ensureOnboardingIncident() {
+  if (!state.sim.started) return;
+  if (tutorialIsActive()) return;
+  if (state.day < 10) return;
+  if (state.monthly.stats.incidentsSpawned > 0) return;
+  if (state.incidents.some((i) => !i.resolved && !i.contained)) return;
+  spawnIncident("medical", { severity: 2, requiresPlayerAction: true, codePrefix: "START" });
+  addTicker("Starter incident triggered so you can practice response flow.");
 }
 
 function updateIncidentResolution(dt) {
@@ -3979,7 +4350,9 @@ function getResidentialAnchors() {
 }
 
 function nearestUnassignedIncidentFor(kind) {
-  const relevant = state.incidents.filter((i) => !i.resolved && !i.contained && !i.assignedResponderId && !i.tutorialManual);
+  const relevant = state.incidents.filter(
+    (i) => !i.resolved && !i.contained && !i.assignedResponderId && !i.requiresPlayerAction
+  );
   if (relevant.length === 0) return null;
   const scored = relevant.map((i) => ({ i, score: i.type.responder === kind ? 0 : 1 }));
   scored.sort((a, b) => a.score - b.score);
@@ -4458,16 +4831,23 @@ function updateOpsHeat() {
     integrity: "integrity",
     economy: "transport",
   };
+  const treasury = findBuilding("treasury");
   for (const key of domains) {
-    const base = clamp((58 - state.kpi[key]) / 18, -0.3, 1);
+    const base = clamp((54 - state.kpi[key]) / 24, -0.3, 1);
     const incidentPressure = state.incidents.filter((i) => !i.resolved && i.type.kpi === key).length * 0.08;
     const majorPressure = state.majorEvents.filter((e) => (e.domain || "").includes(key === "safety" ? "security" : key)).length * 0.12;
     const b = findBuilding(mapKeyToBuilding[key]);
-    const investRelief = b ? clamp((Math.max(0, b.budget - 60) * 0.006) + Math.max(0, b.level - 1) * 0.03, 0, 0.36) : 0;
-    const climateExtraRelief = key === "climate" ? clamp((Math.max(0, (findBuilding("climate")?.budget || 60) - 60) * 0.004), 0, 0.14) : 0;
-    const target = clamp(0.22 + Math.max(0, base) + incidentPressure + majorPressure - investRelief - climateExtraRelief, 0, 1);
+    const investRelief = b ? clamp((Math.max(0, b.budget - 60) * 0.0075) + Math.max(0, b.level - 1) * 0.04, 0, 0.44) : 0;
+    const climateExtraRelief = key === "climate" ? clamp((Math.max(0, (findBuilding("climate")?.budget || 60) - 60) * 0.005), 0, 0.18) : 0;
+    const treasuryRelief =
+      (key === "economy" || key === "integrity") && treasury
+        ? clamp(Math.max(0, treasury.budget - 60) * 0.006 + Math.max(0, treasury.level - 1) * 0.03, 0, 0.24)
+        : 0;
+    let target = clamp(0.1 + Math.max(0, base) + incidentPressure + majorPressure - investRelief - climateExtraRelief - treasuryRelief, 0, 1);
+    if (state.kpi[key] >= 65 && incidentPressure === 0 && majorPressure === 0) target = Math.min(target, 0.28);
     const prev = state.ops.heat[key] ?? 0.2;
-    state.ops.heat[key] = clamp(prev + (target - prev) * 0.32, 0, 1);
+    const easing = target < prev ? 0.62 : 0.24;
+    state.ops.heat[key] = clamp(prev + (target - prev) * easing, 0, 1);
   }
 }
 
@@ -4498,6 +4878,7 @@ function checkGameOver() {
   }
   if (!state.gameOver.active) return;
   state.paused = true;
+  playSfx("warnDisaster", { volumeMul: 0.95, throttleMs: 800 });
   state.monthly.modalOpen = false;
   state.monthly.report = null;
   state.election.modalOpen = false;
@@ -4698,6 +5079,9 @@ function applySimTick() {
   const avgBudget = activeBuildings.reduce((acc, b) => acc + b.budget, 0) / activeBuildings.length;
   const avgLevel = activeBuildings.reduce((acc, b) => acc + b.level, 0) / activeBuildings.length;
   const momentumBonus = state.rapid.momentum * 0.2;
+  const ease = onboardingEaseFactor();
+  const recoverBoost = 1.18 - ease * 0.18; // stronger recovery early
+  const dragDampen = 0.68 + ease * 0.32; // lighter negative drags early
 
   updateIndustryPerDay();
   updateDefensePerDay();
@@ -4720,26 +5104,76 @@ function applySimTick() {
   const climateB = findBuilding("climate");
   const integrityB = findBuilding("integrity");
   const transportB = findBuilding("transport");
+  const treasuryB = findBuilding("treasury");
 
-  state.kpi.health = clamp(state.kpi.health + (healthB.budget - 60) * 0.02 + (healthB.level - 1) * 0.15 - (state.budget.debt > 120 ? 0.28 : 0), 0, 100);
-  state.kpi.education = clamp(state.kpi.education + (eduB.budget - 60) * 0.016 + (eduB.level - 1) * 0.13, 0, 100);
-  state.kpi.safety = clamp(state.kpi.safety + (secB.budget - 60) * 0.018 + (secB.level - 1) * 0.14, 0, 100);
-  state.kpi.climate = clamp(state.kpi.climate + (climateB.budget - 60) * 0.018 + (climateB.level - 1) * 0.12 - (state.kpi.economy > 78 ? 0.12 : 0), 0, 100);
-  state.kpi.integrity = clamp(state.kpi.integrity + (integrityB.budget - 60) * 0.02 + (integrityB.level - 1) * 0.13 - (state.budget.treasury < 0 ? 0.22 : 0), 0, 100);
-  state.kpi.economy = clamp(state.kpi.economy + (transportB.budget - 60) * 0.017 + (transportB.level - 1) * 0.15 - (state.budget.debt > 110 ? 0.2 : 0), 0, 100);
+  state.kpi.health = clamp(state.kpi.health + (healthB.budget - 60) * 0.02 * recoverBoost + (healthB.level - 1) * 0.15 * recoverBoost - (state.budget.debt > 120 ? 0.28 * dragDampen : 0), 0, 100);
+  state.kpi.education = clamp(state.kpi.education + (eduB.budget - 60) * 0.016 * recoverBoost + (eduB.level - 1) * 0.13 * recoverBoost, 0, 100);
+  state.kpi.safety = clamp(state.kpi.safety + (secB.budget - 60) * 0.018 * recoverBoost + (secB.level - 1) * 0.14 * recoverBoost, 0, 100);
+  state.kpi.climate = clamp(state.kpi.climate + (climateB.budget - 60) * 0.018 * recoverBoost + (climateB.level - 1) * 0.12 * recoverBoost - (state.kpi.economy > 78 ? 0.12 * dragDampen : 0), 0, 100);
+  state.kpi.integrity = clamp(state.kpi.integrity + (integrityB.budget - 60) * 0.02 * recoverBoost + (integrityB.level - 1) * 0.13 * recoverBoost - (state.budget.treasury < 0 ? 0.22 * dragDampen : 0), 0, 100);
+  state.kpi.economy = clamp(state.kpi.economy + (transportB.budget - 60) * 0.017 * recoverBoost + (transportB.level - 1) * 0.15 * recoverBoost - (state.budget.debt > 110 ? 0.2 * dragDampen : 0), 0, 100);
   const industryUtil = (state.industry.metrics.utilization || 0) / 100;
-  state.kpi.economy = clamp(state.kpi.economy + (industryUtil - 0.45) * 1.2 + Math.max(0, state.industry.metrics.net) * 0.008, 0, 100);
-  state.kpi.stability = clamp(state.kpi.stability + (industryUtil - 0.42) * 0.42, 0, 100);
-  state.kpi.climate = clamp(state.kpi.climate - Math.max(0, state.industry.metrics.revenue - state.industry.metrics.upkeep) * 0.004, 0, 100);
+  state.kpi.economy = clamp(state.kpi.economy + (industryUtil - 0.45) * 1.2 * (0.86 + (1 - ease) * 0.14) + Math.max(0, state.industry.metrics.net) * 0.008, 0, 100);
+  state.kpi.stability = clamp(state.kpi.stability + (industryUtil - 0.42) * 0.42 * (0.88 + (1 - ease) * 0.12), 0, 100);
+  state.kpi.climate = clamp(state.kpi.climate - Math.max(0, state.industry.metrics.revenue - state.industry.metrics.upkeep) * 0.0032 * dragDampen, 0, 100);
   const defenseReadiness = (state.defense.metrics.readiness || 0) / 100;
   state.kpi.safety = clamp(state.kpi.safety + (defenseReadiness - 0.45) * 0.55, 0, 100);
   state.kpi.integrity = clamp(state.kpi.integrity + (defenseReadiness - 0.5) * 0.35, 0, 100);
+  const safetyRecoveryKick = clamp((56 - state.kpi.safety) / 56, 0, 1)
+    * (Math.max(0, secB.budget - 70) * 0.008 + Math.max(0, secB.level - 1) * 0.08);
+  const integrityRecoveryKick = clamp((58 - state.kpi.integrity) / 58, 0, 1)
+    * (Math.max(0, integrityB.budget - 70) * 0.009 + Math.max(0, integrityB.level - 1) * 0.09);
+  const healthRecoveryKick = clamp((56 - state.kpi.health) / 56, 0, 1)
+    * (Math.max(0, healthB.budget - 70) * 0.009 + Math.max(0, healthB.level - 1) * 0.1);
+  const climateRecoveryKick = clamp((58 - state.kpi.climate) / 58, 0, 1)
+    * (Math.max(0, climateB.budget - 70) * 0.01 + Math.max(0, climateB.level - 1) * 0.1);
+  const educationRecoveryKick = clamp((58 - state.kpi.education) / 58, 0, 1)
+    * (Math.max(0, eduB.budget - 70) * 0.008 + Math.max(0, eduB.level - 1) * 0.08);
+  const economyRecoveryKick = clamp((58 - state.kpi.economy) / 58, 0, 1)
+    * (Math.max(0, transportB.budget - 70) * 0.008 + Math.max(0, transportB.level - 1) * 0.08);
+  const treasuryEconomyKick = clamp((60 - state.kpi.economy) / 60, 0, 1)
+    * (
+      Math.max(0, (treasuryB?.budget || 60) - 70) * 0.01
+      + Math.max(0, (treasuryB?.level || 1) - 1) * 0.1
+      + Math.max(0, state.budget.deficit) * 0.01
+    );
+  const treasuryIntegrityKick = clamp((60 - state.kpi.integrity) / 60, 0, 1)
+    * (
+      Math.max(0, (treasuryB?.budget || 60) - 70) * 0.006
+      + Math.max(0, (treasuryB?.level || 1) - 1) * 0.06
+    );
+  state.kpi.safety = clamp(state.kpi.safety + safetyRecoveryKick, 0, 100);
+  state.kpi.integrity = clamp(state.kpi.integrity + integrityRecoveryKick, 0, 100);
+  state.kpi.health = clamp(state.kpi.health + healthRecoveryKick, 0, 100);
+  state.kpi.climate = clamp(state.kpi.climate + climateRecoveryKick, 0, 100);
+  state.kpi.education = clamp(state.kpi.education + educationRecoveryKick, 0, 100);
+  state.kpi.economy = clamp(state.kpi.economy + economyRecoveryKick, 0, 100);
+  state.kpi.economy = clamp(state.kpi.economy + treasuryEconomyKick, 0, 100);
+  state.kpi.integrity = clamp(state.kpi.integrity + treasuryIntegrityKick, 0, 100);
+
+  // Anti-stuck governor: if funded hard, red KPIs recover at a minimum pace.
+  const rescueRows = [
+    { key: "health", b: healthB },
+    { key: "education", b: eduB },
+    { key: "safety", b: secB },
+    { key: "climate", b: climateB },
+    { key: "integrity", b: integrityB },
+    { key: "economy", b: transportB },
+  ];
+  for (const row of rescueRows) {
+    if (!row.b) continue;
+    if (state.kpi[row.key] >= 46) continue;
+    if (row.b.budget < 85) continue;
+    const floorGain = clamp(0.22 + (row.b.budget - 85) * 0.01 + Math.max(0, row.b.level - 3) * 0.06, 0.22, 1.2);
+    state.kpi[row.key] = clamp(state.kpi[row.key] + floorGain, 0, 100);
+  }
   const guided = tutorialIsActive() && state.tutorial.phase !== "freeplay";
   const allowChaos = !guided;
   if (allowChaos) maybeTriggerEvents();
   if (allowChaos) maybeSpawnMajorEvent();
   if (allowChaos) maybeSpawnHousingMandate();
   if (allowChaos) maybeSpawnIncident();
+  if (allowChaos) ensureOnboardingIncident();
   if (guided) {
     maybeSpawnTutorialIncident();
     maybeSpawnTutorialRapid();
@@ -5634,6 +6068,7 @@ function emergencyTapIncident(inc) {
   if (state.budget.treasury < cost) {
     addTicker("Not enough treasury for emergency response tap.");
     state.resources.actionPoints = clamp(state.resources.actionPoints + 1, 0, state.resources.maxActionPoints);
+    playSfx("uiDenied");
     return;
   }
 
@@ -5641,10 +6076,12 @@ function emergencyTapIncident(inc) {
   inc.contained = true;
   inc.playerFunded = true;
   inc.resolveSec = Math.min(inc.resolveSec || 999, 2.8 + inc.severity * 1.2);
+  clearNowStrip();
   markOnboarding("upgradedOrDispatched");
   recordAction(inc.type.id === "corruption" ? "integrity" : inc.type.id === "flood" ? "climate" : inc.type.id === "crime" ? "security" : inc.type.id === "medical" ? "health" : "transport");
   addTicker(`Emergency dispatch funded for ${inc.code || "INCIDENT"} ${inc.type.title}.`);
   addRailEvent("⚡ Emergency Funded", `${inc.type.title} fast-tracked.`, true);
+  playSfx("uiConfirm");
   logDecisionImpact({
     title: inc.type.title,
     category: inc.type.id,
@@ -5666,12 +6103,35 @@ function emergencyTapIncident(inc) {
   updateTutorialProgress();
 }
 
+function rapidImpactFocusLabel(active) {
+  if (!active) return "Impact focus: -";
+  if (active.mode === "scenario" && Array.isArray(active.options)) {
+    const totals = emptyDemImpact();
+    for (const opt of active.options) {
+      const dem = opt?.dem_now || {};
+      for (const key of Object.keys(totals)) totals[key] += Math.abs(dem[key] || 0);
+    }
+    const ranked = Object.entries(totals)
+      .filter(([, v]) => v > 0)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 2)
+      .map(([id]) => {
+        const label = state.people.find((p) => p.id === id)?.label || id;
+        return label.split(" ")[0];
+      });
+    if (ranked.length) return `Impact focus: ${ranked.join(" · ")}`;
+  }
+  return "Impact focus: Governance confidence and service pressure.";
+}
+
 function renderRapidCard() {
   const a = state.rapid.active;
   els.rapidMomentum.textContent = String(state.rapid.momentum);
   if (!state.sim.started) {
     els.rapidTitle.textContent = "Founding phase active.";
-    els.rapidBody.textContent = "Rapid INCIDENT briefs unlock after you launch government.";
+    if (els.rapidWhat) els.rapidWhat.textContent = "Rapid INCIDENT briefs unlock after you launch government.";
+    if (els.rapidWho) els.rapidWho.textContent = "Impact focus: -";
+    els.rapidBody.textContent = "Simulation is paused during founding placement.";
     if (els.rapidEvidence) els.rapidEvidence.textContent = "";
     els.rapidTimer.textContent = "-";
     els.rapidBtnA.disabled = true;
@@ -5687,7 +6147,9 @@ function renderRapidCard() {
   if (!a) {
     if (tutorialIsActive() && !["incident", "rapid", "freeplay"].includes(state.tutorial.phase)) {
       els.rapidTitle.textContent = "Guided mode in progress.";
-      els.rapidBody.textContent = "Rapid INCIDENT briefs unlock after budget, upgrade, industry, and first manual incident.";
+      if (els.rapidWhat) els.rapidWhat.textContent = "Rapid INCIDENT briefs unlock after budget, upgrade, industry, and first manual incident.";
+      if (els.rapidWho) els.rapidWho.textContent = "Impact focus: -";
+      els.rapidBody.textContent = "Follow guided steps to unlock timed briefs.";
       if (els.rapidEvidence) els.rapidEvidence.textContent = "";
       els.rapidTimer.textContent = "-";
       els.rapidBtnA.disabled = true;
@@ -5700,15 +6162,26 @@ function renderRapidCard() {
       els.rapidCard.classList.remove("urgent");
       return;
     }
-    const hasManual = state.incidents.some((i) => !i.resolved && !i.contained);
-    if (hasManual) {
+    const manualOpen = actionableManualIncidents().length;
+    const manualBlocked = Math.max(0, manualActionIncidents().length - manualOpen);
+    if (manualOpen > 0) {
       els.rapidTitle.textContent = "No timed civic brief right now.";
       const nextIn = Math.max(0, state.rapid.nextAtDay - state.day);
-      els.rapidBody.textContent = `Manual incidents are still active on map. Next major brief in ~${nextIn} days.`;
+      if (els.rapidWhat) els.rapidWhat.textContent = "Manual incidents are still active on map.";
+      if (els.rapidWho) els.rapidWho.textContent = "Impact focus: Resolve manual incidents first.";
+      els.rapidBody.textContent = `Next major brief in ~${nextIn} days.`;
+    } else if (manualBlocked > 0) {
+      els.rapidTitle.textContent = "No direct incident action available.";
+      const nextIn = Math.max(0, state.rapid.nextAtDay - state.day);
+      if (els.rapidWhat) els.rapidWhat.textContent = "Incidents are pending while resources recover.";
+      if (els.rapidWho) els.rapidWho.textContent = "Impact focus: restore AP/treasury to intervene.";
+      els.rapidBody.textContent = `Next civic brief in ~${nextIn} days.`;
     } else {
       els.rapidTitle.textContent = "All clear.";
       const nextIn = Math.max(0, state.rapid.nextAtDay - state.day);
-      els.rapidBody.textContent = `No manual actions required right now. Next civic brief in ~${nextIn} days.`;
+      if (els.rapidWhat) els.rapidWhat.textContent = "No manual actions required right now.";
+      if (els.rapidWho) els.rapidWho.textContent = "Impact focus: -";
+      els.rapidBody.textContent = `Next civic brief in ~${nextIn} days.`;
     }
     if (els.rapidEvidence) els.rapidEvidence.textContent = "";
     els.rapidTimer.textContent = "-";
@@ -5728,18 +6201,20 @@ function renderRapidCard() {
 
   els.rapidTitle.textContent = a.title || "Civic Brief";
   if (a.mode === "scenario") {
-    const speaker = a.speaker ? `${a.speaker}: ` : "";
-    const claim = a.claim ? `"${shorten(a.claim, 96)}"` : "";
-    els.rapidBody.textContent = `${speaker}${claim}`.trim();
+    if (els.rapidWhat) els.rapidWhat.textContent = a.claim || a.prompt || a.body || "A fast-moving claim needs a call now.";
+    if (els.rapidWho) els.rapidWho.textContent = rapidImpactFocusLabel(a);
+    els.rapidBody.textContent = `Source: ${a.speaker || "Unknown"} · Choose your response before the timer expires.`;
   } else {
-    els.rapidBody.textContent = a.body;
+    if (els.rapidWhat) els.rapidWhat.textContent = a.body || "Rapid civic brief active.";
+    if (els.rapidWho) els.rapidWho.textContent = rapidImpactFocusLabel(a);
+    els.rapidBody.textContent = "Pick one option now. Delays reduce momentum.";
   }
   if (els.rapidEvidence) {
     if (a.mode === "scenario" && a.clues) {
       const parts = [];
-      if (a.clues.data) parts.push(`Data: ${shorten(a.clues.data, 68)}`);
-      if (a.clues.street) parts.push(`Street: ${shorten(a.clues.street, 68)}`);
-      if (a.clues.motive) parts.push(`Motive: ${shorten(a.clues.motive, 68)}`);
+      if (a.clues.data) parts.push(`Data: ${a.clues.data}`);
+      if (a.clues.street) parts.push(`Street: ${a.clues.street}`);
+      if (a.clues.motive) parts.push(`Motive: ${a.clues.motive}`);
       const conf = truthConfidence(a.options || []);
       const speaker = a.speaker || "Source";
       const reads = state.truth.speakerReads[speaker];
@@ -5817,10 +6292,13 @@ function renderMajorEventCard() {
   els.majorEventCard.style.borderColor = ev.color;
   els.majorEventCard.style.boxShadow = `0 10px 28px rgba(0,0,0,0.34), 0 0 24px ${ev.color}55`;
   setText(els.majorEventTitle, ev.title);
+  const impact = majorImpactLabel(ev);
+  const days = Math.max(0, ev.expiresDay - state.day);
+  setText(els.majorEventSnapshot, `${days} days left · ${impact}`);
   setText(els.majorEventBody, ev.body);
   setText(els.majorEventHint, `Hint: ${ev.hint}`);
-  setText(els.majorEventTimer, `${Math.max(0, ev.expiresDay - state.day)} days`);
-  setText(els.majorEventImpact, majorImpactLabel(ev));
+  setText(els.majorEventTimer, `${days} days`);
+  setText(els.majorEventImpact, impact);
 
   const canAP = state.resources.actionPoints >= (ev.response?.costAP ?? 1);
   const canCash = state.budget.treasury >= (ev.response?.costCash ?? 0);
@@ -5889,12 +6367,15 @@ function renderSetupOverlay() {
   if (els.setupTitle) els.setupTitle.textContent = ready ? "Ready to Launch" : "Build Your Government";
   if (els.setupBody) {
     els.setupBody.textContent = ready
-      ? "All departments are placed. Launch Government to begin guided steps: Budget -> Upgrade -> Industry -> Incident -> Rapid Brief."
+      ? "All essential departments are placed. Launch Government to begin full simulation."
       : `Place all departments first (${remaining} remaining). During Founding Phase, time and emergencies are paused so setup stays calm.`;
   }
   if (els.launchGovBtn) {
     els.launchGovBtn.disabled = !ready;
     els.launchGovBtn.textContent = ready ? "Launch Government" : `Place ${remaining} More`;
+  }
+  if (els.startPlacementBtn) {
+    els.startPlacementBtn.hidden = true;
   }
 }
 
@@ -5926,19 +6407,36 @@ function renderTutorialOverlay() {
       .join("");
   }
   if (els.tutorialFocusBtn) {
-    const focusLabel = state.tutorial.phase === "industry"
-      ? "Open Industry Panel"
-      : meta.tab === "incidents"
-        ? "Go To Incidents"
-        : "Go To Control";
-    els.tutorialFocusBtn.textContent = focusLabel;
+    const showFocus = !["budget", "upgrade"].includes(state.tutorial.phase);
+    els.tutorialFocusBtn.hidden = !showFocus;
+    if (showFocus) {
+      const focusLabel = state.tutorial.phase === "industry"
+        ? "Highlight Build Toolbox"
+        : state.tutorial.phase === "rapid"
+          ? "Go To Rapid Brief"
+          : "Go To Incidents";
+      els.tutorialFocusBtn.textContent = focusLabel;
+    }
   }
 }
 
 function renderHud() {
   setText(els.tierLabel, TIER_CONFIG[state.tierIndex].name);
   setText(els.dayLabel, String(state.day));
-  setText(els.stabilityLabel, String(round(state.kpi.stability)));
+  const hist = state.history.stability || [];
+  const trend = hist.length > 8 ? round((hist.at(-1) ?? 0) - (hist.at(-8) ?? 0)) : 0;
+  const stabilityNow = Math.round(state.kpi.stability);
+  setText(els.stabilityLabel, String(stabilityNow));
+  if (els.stabilityTrend) {
+    els.stabilityTrend.textContent = trend > 1 ? "↑" : trend < -1 ? "↓" : "→";
+    els.stabilityTrend.title = trend > 0 ? `Rising (${trend})` : trend < 0 ? `Falling (${trend})` : "Flat";
+  }
+  if (els.stabilityPill) {
+    els.stabilityPill.classList.remove("good", "warn", "bad");
+    if (stabilityNow < 50) els.stabilityPill.classList.add("bad");
+    else if (stabilityNow < 66) els.stabilityPill.classList.add("warn");
+    else els.stabilityPill.classList.add("good");
+  }
   setText(els.treasuryLabel, formatMoneyMillions(state.budget.treasury));
   const avgNet = defenseNetSignal(14);
   if (els.dailyNetLabel) {
@@ -5953,12 +6451,9 @@ function renderHud() {
   setText(els.actionPoints, String(state.resources.actionPoints));
   setText(els.streakLabel, String(state.resources.streak));
   setText(els.civilianCount, String(state.visual.civilians.length));
-  const manualIncidentTotal = state.incidents.filter((i) => !i.resolved && !i.contained).length;
-  const incidentTotal = manualIncidentTotal + state.majorEvents.length + (state.rapid.active ? 1 : 0);
+  const manualIncidentTotal = actionableManualIncidents().length;
+  const incidentTotal = manualIncidentTotal + state.majorEvents.length + (hasActionableRapidBrief() ? 1 : 0);
   setText(els.incidentCount, String(incidentTotal));
-
-  const hist = state.history.stability || [];
-  const trend = hist.length > 8 ? round((hist.at(-1) ?? 0) - (hist.at(-8) ?? 0)) : 0;
   const worstDistrict = [...state.districts].sort((a, b) => b.stress - a.stress)[0];
   const majorOpen = state.majorEvents.length;
   const remainingToPlace = state.buildings.filter((b) => !b.placed).length;
@@ -6074,6 +6569,10 @@ function renderHud() {
       els.mapTip.textContent = "Drag to pan. Scroll to zoom. Place districts, then tackle flashing MAJOR beacons and incidents.";
     }
   }
+  if (els.audioPanel) els.audioPanel.hidden = !state.ui.audioPanelOpen;
+  if (els.bgmVolumeSlider) els.bgmVolumeSlider.value = String(Math.round(state.audio.bgmVolume * 100));
+  if (els.sfxVolumeSlider) els.sfxVolumeSlider.value = String(Math.round(state.audio.sfxVolume * 100));
+  if (state.audio.bgm) state.audio.bgm.volume = state.audio.bgmVolume;
   renderApFeedback();
 
   if (els.tickerLine) els.tickerLine.textContent = state.tickerItems.join("  |  ");
@@ -6113,8 +6612,8 @@ function renderHud() {
     const hottest = Object.entries(state.ops.heat).sort((a, b) => b[1] - a[1])[0];
     const hotPct = hottest ? Math.round(hottest[1] * 100) : 0;
     const label = hottest ? prettifyTag(hottest[0]) : "Systems";
-    const manual = state.incidents.filter((i) => !i.resolved && !i.contained).length;
-    const rapid = state.rapid.active ? 1 : 0;
+    const manual = actionableManualIncidents().length;
+    const rapid = hasActionableRapidBrief() ? 1 : 0;
     const campaignTag = state.election.campaignActive
       ? ` · Election ${Math.max(0, state.election.nextElectionDay - state.day)}d`
       : "";
@@ -6156,29 +6655,6 @@ function renderHud() {
     state.ui.placementBuildingId = null;
     state.ui.placementRecommendations = [];
   }
-  const plannerHead = hasUnplaced
-    ? `<article class="event-chip hot">
-      <div class="title">🗺️ Founding Planner</div>
-      <div class="meta">1) Click an icon below. 2) Place on map. 3) Aim for highlighted recommended tiles.</div>
-      <button class="btn ${state.ui.placementBuildingId ? "primary" : ""}" data-placement-toggle="1">${state.ui.placementBuildingId ? "Placement Mode On" : "Start Placement Mode"}</button>
-      <div class="planner-palette">
-        ${BUILDING_DEFS.map((def) => {
-          const b = findBuilding(def.id);
-          const placed = b?.placed;
-          const active = state.ui.placementBuildingId === def.id;
-          return `<button class="planner-palette-btn ${active ? "active" : ""} ${placed ? "placed" : ""}" ${placed ? "disabled" : ""} data-place-id="${def.id}" title="${def.name}${placed ? " (Placed)" : ""}">
-            <img src="./assets/cozy-pack/buildings/${def.id}_lvl1.svg" alt="${def.name}" />
-            <span>${def.name.split(" ")[0]}</span>
-          </button>`;
-        }).join("")}
-      </div>
-      <div class="meta">Remaining: ${unplaced.map((b) => b.name).join(", ")}</div>
-    </article>`
-    : "";
-  const constructionCards = state.buildQueue.map(
-    (q) => `<article class="event-chip"><div class="title">🏗️ ${q.name}</div><div class="meta">Completes in ${Math.max(0, q.completeDay - state.day)} days · Cost ${formatMoneyMillions(q.cost)}</div></article>`
-  ).join("");
-  els.buildQueue.innerHTML = `${plannerHead}${constructionCards || (hasUnplaced ? "" : `<article class="event-chip"><div class="title">Queue Empty</div><div class="meta">Founding complete. Ongoing upgrades appear here with completion timers.</div></article>`)}`;
   renderIndustryPanel();
   renderDefensePanel();
 
@@ -6229,17 +6705,22 @@ function renderTabAlerts() {
     setTabAlert(els.tabPeopleAlert, false);
     setTabAlert(els.tabMissionsAlert, true);
     if (state.tutorial.phase === "incident" || state.tutorial.phase === "rapid") {
-      setTabAlert(els.tabIncidentsAlert, true, true);
+      const alertId = currentActionableIncidentAlertId();
+      const incidentsTabActive = Boolean(document.querySelector('.side-tab.is-active[data-tab="incidents"]'));
+      if (incidentsTabActive && alertId) state.ui.lastSeenIncidentAlertId = alertId;
+      const unseenActionable = Boolean(alertId && alertId !== state.ui.lastSeenIncidentAlertId);
+      setTabAlert(els.tabIncidentsAlert, unseenActionable, unseenActionable);
     } else {
       setTabAlert(els.tabControlAlert, true);
     }
     return;
   }
 
-  const manualOpen = state.incidents.filter((i) => !i.resolved && !i.contained).length;
-  const hasRapid = Boolean(state.rapid.active);
-  const incidentsNeed = manualOpen > 0 || hasRapid;
-  setTabAlert(els.tabIncidentsAlert, incidentsNeed, hasRapid);
+  const alertId = currentActionableIncidentAlertId();
+  const incidentsTabActive = Boolean(document.querySelector('.side-tab.is-active[data-tab="incidents"]'));
+  if (incidentsTabActive && alertId) state.ui.lastSeenIncidentAlertId = alertId;
+  const unseenActionable = Boolean(alertId && alertId !== state.ui.lastSeenIncidentAlertId);
+  setTabAlert(els.tabIncidentsAlert, unseenActionable, unseenActionable);
 
   const weakKpis = ["health", "education", "safety", "climate", "integrity", "economy"]
     .filter((k) => state.kpi[k] < 50);
@@ -6307,12 +6788,11 @@ function renderIncidentInbox() {
     els.incidentInbox.innerHTML = "<li>🧭 Guided mode: INCIDENTS unlock after you finish budget, upgrade, and first industry placement.</li>";
     return;
   }
-  const manual = state.incidents
-    .filter((i) => !i.resolved && !i.contained)
+  const manual = manualActionIncidents()
     .sort((a, b) => (b.severity - a.severity) || (b.daysOpen - a.daysOpen))
     .slice(0, 8);
 
-  const rapidLine = state.rapid.active
+  const rapidLine = hasActionableRapidBrief()
     ? `<li>🚨 ${state.rapid.active.incidentCode}: ${state.rapid.active.title} (${Math.max(0, state.rapid.active.expiresDay - state.day)}d)</li>`
     : "";
 
@@ -6408,18 +6888,27 @@ function renderRadarInto(svgEl, heatListEl, maxRows = 6) {
   `;
 
   if (!heatListEl) return;
-  const hotRows = points
-    .slice()
-    .sort((a, b) => b.heat - a.heat)
-    .slice(0, Math.max(1, maxRows))
+  const compact = maxRows <= 4;
+  const shortLabel = (label) => {
+    if (!compact) return label;
+    if (label === "Climate") return "Clim";
+    if (label === "Integrity") return "Int";
+    if (label === "Economy") return "Eco";
+    return label;
+  };
+  const bars = points
     .map((p) => {
       const pct = Math.round(p.heat * 100);
-      const cls = pct > 72 ? "hot" : pct > 50 ? "warm" : "";
-      const status = pct > 72 ? "HOT" : pct > 50 ? "WARM" : "STABLE";
-      return `<div class="ops-heat-row ${cls}">${p.label}: ${status} (${pct}%)</div>`;
+      const cls = pct > 72 ? "hot" : pct > 50 ? "warm" : "stable";
+      const status = pct > 72 ? "Critical pressure" : pct > 50 ? "Elevated pressure" : "Stable pressure";
+      return `<div class="ops-eq-col ${cls}" title="${p.label}: ${pct}% (${status})">
+        <div class="ops-eq-track"><div class="ops-eq-fill ${cls}" style="height:${pct}%"></div></div>
+        <div class="ops-eq-label">${shortLabel(p.label)}</div>
+        <div class="ops-eq-val">${pct}%</div>
+      </div>`;
     })
     .join("");
-  heatListEl.innerHTML = hotRows;
+  heatListEl.innerHTML = bars;
 }
 
 function initiativePreviewShift(ini) {
@@ -6551,6 +7040,7 @@ function applyInitiative(id) {
   if (state.budget.treasury < ini.costCash) {
     state.resources.actionPoints = clamp(state.resources.actionPoints + ini.costAP, 0, state.resources.maxActionPoints);
     addTicker(`Need ${formatMoneyMillions(ini.costCash)} treasury for ${ini.name}.`);
+    playSfx("uiDenied");
     return;
   }
   state.budget.treasury -= ini.costCash;
@@ -6578,6 +7068,8 @@ function applyInitiative(id) {
     confidence: "high",
     explain: ini.desc,
   });
+  playSfx("uiConfirm");
+  playSfx("econDown", { volumeMul: 0.7, throttleMs: 120 });
 }
 
 function renderInitiatives() {
@@ -6743,18 +7235,49 @@ function defenseQuickTooltip(def) {
   return `${def.name}: ${def.desc} Footprint ${def.size}x${def.size} · Build ${def.buildDays}d · Deposit ${formatMoneyMillions(deposit)} · Total ${formatMoneyMillions(def.cost)} · Upkeep ~${formatMoneyMillions(def.baseUpkeep)}/day.`;
 }
 
+function departmentQuickTooltip(id) {
+  const b = findBuilding(id);
+  if (!b) return "Core department.";
+  const why = {
+    health: "Keeps hospitals functioning and reduces long-run social cost from preventable illness.",
+    education: "Raises workforce capability and long-run productivity.",
+    transport: "Improves movement, logistics, and reliability across every system.",
+    welfare: "Stabilizes vulnerable households and prevents cascading poverty shocks.",
+    security: "Reduces crime pressure and protects everyday safety confidence.",
+    climate: "Cuts climate damage risk and improves air/environment outcomes.",
+    treasury: "Maintains fiscal capacity so the state can fund everything else sustainably.",
+    integrity: "Reduces corruption drag and improves policy trust and delivery efficiency.",
+  };
+  return `${b.name}: ${b.desc} Why build it: ${why[id] || "Provides foundational state capacity."}`;
+}
+
 function renderQuickBuildToolbox() {
   if (!els.quickBuildToolbox || !els.quickIndustryGrid || !els.quickDefenseGrid || !els.quickBuildTooltip || !els.quickBuildToggleBtn) return;
   const guided = tutorialIsActive() && state.tutorial.phase !== "freeplay";
   const guidedNeedsToolbox = ["industry", "incident", "rapid", "freeplay"].includes(state.tutorial.phase);
-  const blocked = !state.sim.started || (guided && !guidedNeedsToolbox);
+  const unplacedDepartments = state.buildings.filter((b) => !b.placed);
+  const foundingMode = unplacedDepartments.length > 0;
+  const blocked = state.gameOver.active || (state.sim.started && guided && !guidedNeedsToolbox);
   els.quickBuildToolbox.hidden = blocked;
   els.quickBuildToolbox.classList.toggle("toolbox-hidden", blocked);
+  els.quickBuildToolbox.classList.toggle("founding-mode", foundingMode);
+  const spotlight =
+    !blocked
+    && (Date.now() < (state.ui.toolboxSpotlightUntilMs || 0)
+      || (!state.sim.started && foundingMode && !state.ui.foundingFirstPickDone));
+  els.quickBuildToolbox.classList.toggle("spotlight", spotlight);
+  if (els.mapPanel) els.mapPanel.classList.toggle("toolbox-spotlight", spotlight);
+  const revealActive = !blocked && Date.now() < (state.ui.mapRevealUntilMs || 0);
+  if (els.mapPanel) els.mapPanel.classList.toggle("reveal-active", revealActive);
   if (blocked) return;
 
-  const guidedEarly = guided && ["budget", "upgrade"].includes(state.tutorial.phase);
+  const guidedEarly = !foundingMode && guided && ["budget", "upgrade"].includes(state.tutorial.phase);
+  const guidedBusyStep = !foundingMode && guided && ["budget", "upgrade", "industry", "incident", "rapid"].includes(state.tutorial.phase);
+  if (foundingMode) state.ui.quickBuildCollapsed = false;
+  if (!foundingMode && !state.sim.started) state.ui.quickBuildCollapsed = true;
   if (guidedEarly) state.ui.quickBuildCollapsed = true;
-  if (guided && state.tutorial.phase === "industry") state.ui.quickBuildCollapsed = false;
+  if (guidedBusyStep && !spotlight) state.ui.quickBuildCollapsed = true;
+  if (!foundingMode && guided && state.tutorial.phase === "industry" && spotlight) state.ui.quickBuildCollapsed = false;
   els.quickBuildToolbox.classList.toggle("is-collapsed", state.ui.quickBuildCollapsed);
   els.quickBuildToolbox.classList.toggle("guided-early", guidedEarly);
   els.quickBuildToggleBtn.textContent = state.ui.quickBuildCollapsed ? "Build +" : "Minimize";
@@ -6763,8 +7286,8 @@ function renderQuickBuildToolbox() {
   if (state.ui.quickBuildCollapsed) {
     els.quickBuildToolbox.style.left = "auto";
     els.quickBuildToolbox.style.right = "12px";
-    els.quickBuildToolbox.style.top = "12px";
-    els.quickBuildToolbox.style.bottom = "auto";
+    els.quickBuildToolbox.style.top = "auto";
+    els.quickBuildToolbox.style.bottom = "12px";
     els.quickBuildToolbox.style.width = "auto";
     els.quickBuildToolbox.style.height = "auto";
   } else {
@@ -6776,45 +7299,73 @@ function renderQuickBuildToolbox() {
     els.quickBuildToolbox.style.height = "";
   }
 
-  const industryTiles = INDUSTRY_PROJECT_DEFS.map((p) => {
-    const armed = state.ui.industryPlacement?.projectId === p.id;
-    const selected = armed || state.industry.selectedProjectId === p.id;
-    const locked = !industryTierAllowed(p);
-    const icon = `./assets/cozy-pack/actors/${p.art}.svg`;
-    return `<button type="button" class="quick-build-item ${selected ? "active" : ""} ${armed ? "armed" : ""} ${locked ? "locked" : ""}" data-quick-kind="industry" data-quick-id="${p.id}" title="${p.name}" ${locked ? "disabled" : ""}>
-      <img src="${icon}" alt="${p.name}" />
-      <span>${p.name.split(" ")[0]}</span>
-    </button>`;
-  }).join("");
-  els.quickIndustryGrid.innerHTML = industryTiles;
+  if (foundingMode) {
+    if (els.quickPrimaryTitle) els.quickPrimaryTitle.textContent = "Founding Departments";
+    if (els.quickSecondaryTitle) els.quickSecondaryTitle.textContent = "Progress";
+    if (els.quickSecondarySection) els.quickSecondarySection.hidden = true;
+    const departmentTiles = BUILDING_DEFS.map((def) => {
+      const b = findBuilding(def.id);
+      const placed = Boolean(b?.placed);
+      const armed = state.ui.placementBuildingId === def.id;
+      const icon = departmentArtSrc(def.id, 1);
+      const label = `${def.name.split(" ")[0]}${placed ? " ✓" : ""}`;
+      return `<button type="button" class="quick-build-item ${armed ? "armed" : ""} ${placed ? "placed" : "required"}" data-quick-kind="department" data-quick-id="${def.id}" title="${def.name}" ${placed ? "disabled" : ""}>
+        <img src="${icon}" alt="${def.name}" />
+        <span>${label}</span>
+      </button>`;
+    }).join("");
+    els.quickIndustryGrid.innerHTML = departmentTiles;
+    els.quickDefenseGrid.innerHTML = "";
+  } else {
+    if (els.quickPrimaryTitle) els.quickPrimaryTitle.textContent = "Industry";
+    if (els.quickSecondaryTitle) els.quickSecondaryTitle.textContent = "Defense";
+    if (els.quickSecondarySection) els.quickSecondarySection.hidden = false;
+    const industryTiles = INDUSTRY_PROJECT_DEFS.map((p) => {
+      const armed = state.ui.industryPlacement?.projectId === p.id;
+      const selected = armed || state.industry.selectedProjectId === p.id;
+      const locked = !industryTierAllowed(p);
+      const icon = `./assets/cozy-pack/actors/${p.art}.svg`;
+      return `<button type="button" class="quick-build-item ${selected ? "active" : ""} ${armed ? "armed" : ""} ${locked ? "locked" : ""}" data-quick-kind="industry" data-quick-id="${p.id}" title="${p.name}" ${locked ? "disabled" : ""}>
+        <img src="${icon}" alt="${p.name}" />
+        <span>${p.name.split(" ")[0]}</span>
+      </button>`;
+    }).join("");
+    els.quickIndustryGrid.innerHTML = industryTiles;
 
-  const defenseTiles = DEFENSE_BASE_DEFS.map((d) => {
-    const armed = state.ui.defensePlacement?.baseTypeId === d.id;
-    const selected = armed || state.defense.selectedBaseTypeId === d.id;
-    const locked = !defenseTierAllowed(d);
-    const icon = `./assets/cozy-pack/buildings/${d.buildingArtPrefix}1.svg`;
-    return `<button type="button" class="quick-build-item ${selected ? "active" : ""} ${armed ? "armed" : ""} ${locked ? "locked" : ""}" data-quick-kind="defense" data-quick-id="${d.id}" title="${d.name}" ${locked ? "disabled" : ""}>
-      <img src="${icon}" alt="${d.name}" />
-      <span>${d.name.split(" ")[0]}</span>
-    </button>`;
-  }).join("");
-  els.quickDefenseGrid.innerHTML = defenseTiles;
+    const defenseTiles = DEFENSE_BASE_DEFS.map((d) => {
+      const armed = state.ui.defensePlacement?.baseTypeId === d.id;
+      const selected = armed || state.defense.selectedBaseTypeId === d.id;
+      const locked = !defenseTierAllowed(d);
+      const icon = `./assets/cozy-pack/buildings/${d.buildingArtPrefix}1.svg`;
+      return `<button type="button" class="quick-build-item ${selected ? "active" : ""} ${armed ? "armed" : ""} ${locked ? "locked" : ""}" data-quick-kind="defense" data-quick-id="${d.id}" title="${d.name}" ${locked ? "disabled" : ""}>
+        <img src="${icon}" alt="${d.name}" />
+        <span>${d.name.split(" ")[0]}</span>
+      </button>`;
+    }).join("");
+    els.quickDefenseGrid.innerHTML = defenseTiles;
+  }
 
   let tooltip = "Hover an icon to inspect footprint, costs, and dependencies.";
   const hover = state.ui.quickBuildHover;
+  if (hover?.kind === "department") tooltip = departmentQuickTooltip(hover.id);
   if (hover?.kind === "industry") tooltip = industryQuickTooltip(projectById(hover.id));
   if (hover?.kind === "defense") tooltip = defenseQuickTooltip(defenseTypeById(hover.id));
-  if (state.ui.industryPlacement?.projectId) {
+  if (foundingMode && state.ui.placementBuildingId) {
+    const b = findBuilding(state.ui.placementBuildingId);
+    if (b) tooltip = `Armed: ${b.name}. Click any clear map tile to place.`;
+  } else if (state.ui.industryPlacement?.projectId) {
     const p = projectById(state.ui.industryPlacement.projectId);
     if (p) tooltip = `Armed: ${p.name} (${p.size}x${p.size}). Click map to place.`;
   } else if (state.ui.defensePlacement?.baseTypeId) {
     const d = defenseTypeById(state.ui.defensePlacement.baseTypeId);
     if (d) tooltip = `Armed: ${d.name} (${d.size}x${d.size}). Click map to place.`;
   }
-  if (!state.ui.industryPlacement?.projectId && !state.ui.defensePlacement?.baseTypeId) {
+  if (foundingMode && !state.ui.placementBuildingId) {
+    tooltip = `Place all 8 essential government buildings (${unplacedDepartments.length} remaining). Greyed icons are already placed.`;
+  } else if (!state.ui.industryPlacement?.projectId && !state.ui.defensePlacement?.baseTypeId) {
     tooltip = "Select any icon to arm placement. Then click a clear map tile to place.";
   }
-  if (guided && state.tutorial.phase === "industry" && !state.ui.industryPlacement?.projectId && !state.ui.defensePlacement?.baseTypeId) {
+  if (!foundingMode && guided && state.tutorial.phase === "industry" && !state.ui.industryPlacement?.projectId && !state.ui.defensePlacement?.baseTypeId) {
     tooltip = "Guided step: choose an Industry icon, then click a clear map tile to place it.";
   }
   els.quickBuildTooltip.textContent = tooltip;
@@ -6840,7 +7391,7 @@ function renderActionDock() {
     els.actionDock.innerHTML = `<button class="action-chip hot" data-action-dock="tutorial-focus">🧭 Guided: ${meta.short}${extra}</button>`;
     return;
   }
-  const manual = state.incidents.filter((i) => !i.resolved && !i.contained);
+  const manual = manualActionIncidents();
   const overloaded = state.buildings.filter((b) => b.placed && (b.state === "overloaded" || b.state === "strained"));
   const activeMajor = state.majorEvents.length;
   const initiativeInfo = initiativeInsights();
@@ -6850,7 +7401,7 @@ function renderActionDock() {
     const proj = electionProjection(false);
     items.push(`<button class="action-chip hot" data-action-dock="election">🗳️ Election ${electionDays}d · ${round(proj.national)}%</button>`);
   }
-  if (state.rapid.active) {
+  if (hasActionableRapidBrief()) {
     items.push(`<button class="action-chip hot" data-action-dock="rapid">🚨 INCIDENT ${state.rapid.active.incidentCode} (${Math.max(0, state.rapid.active.expiresDay - state.day)}d)</button>`);
   }
   if (manual.length > 0) {
@@ -6883,6 +7434,52 @@ function renderActionDock() {
   }
   els.actionDock.hidden = false;
   els.actionDock.innerHTML = items.join("");
+}
+
+function topManualIncident() {
+  const manual = manualActionIncidents()
+    .filter((i) => canPlayerActOnIncidentNow(i))
+    .sort((a, b) => (b.severity - a.severity) || (b.daysOpen - a.daysOpen));
+  return manual[0] || null;
+}
+
+function renderNowStrip() {
+  if (!els.nowStrip || !els.nowStripText) return;
+  els.nowStrip.hidden = true;
+  if (els.nowStripGo) els.nowStripGo.disabled = true;
+  if (!state.ui.nowStripTracker) state.ui.nowStripTracker = { candidateId: null, sinceMs: 0 };
+  if (!state.sim.started) {
+    return;
+  }
+  if (tutorialIsActive() && state.tutorial.phase !== "freeplay") {
+    return;
+  }
+  const blockingOverlay =
+    (els.setupOverlay && !els.setupOverlay.hidden)
+    || (els.tutorialOverlay && !els.tutorialOverlay.hidden)
+    || (els.housingCard && !els.housingCard.hidden)
+    || (els.majorEventCard && !els.majorEventCard.hidden);
+  if (blockingOverlay) {
+    return;
+  }
+  if (!hasActionableRapidBrief()) {
+    state.ui.nowStripTracker.candidateId = null;
+    state.ui.nowStripTracker.sinceMs = 0;
+    return;
+  }
+  const rapid = state.rapid.active;
+  const rapidId = rapid.incidentCode || rapid.id || `rapid_${state.day}`;
+  const now = Date.now();
+  if (state.ui.nowStripTracker.candidateId !== rapidId) {
+    state.ui.nowStripTracker.candidateId = rapidId;
+    state.ui.nowStripTracker.sinceMs = now;
+    return;
+  }
+  if (now - state.ui.nowStripTracker.sinceMs < 1200) return;
+  const daysLeft = Math.max(0, rapid.expiresDay - state.day);
+  els.nowStripText.textContent = `RAPID BRIEF: ${rapid.title || rapid.incidentCode || "Decision Needed"} · ${daysLeft}d left`;
+  if (els.nowStripGo) els.nowStripGo.disabled = false;
+  els.nowStrip.hidden = false;
 }
 
 function renderSelection() {
@@ -7022,6 +7619,7 @@ function renderUI() {
   renderQuickBuildToolbox();
   renderSetupOverlay();
   renderTutorialOverlay();
+  renderNowStrip();
 }
 
 function resizeCanvas() {
@@ -7412,10 +8010,47 @@ function handleCanvasPress(sx, sy) {
 }
 
 function bindInput() {
+  const unlock = () => unlockAudio();
+  window.addEventListener("pointerdown", unlock, { once: true, capture: true });
+  window.addEventListener("touchstart", unlock, { once: true, capture: true, passive: true });
+  window.addEventListener("keydown", unlock, { once: true, capture: true });
+
+  els.audioSettingsBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    state.ui.audioPanelOpen = !state.ui.audioPanelOpen;
+    unlockAudio();
+    ensureBgm(true);
+    renderUI();
+  });
+  els.audioPanelCloseBtn?.addEventListener("click", () => {
+    state.ui.audioPanelOpen = false;
+    renderUI();
+  });
+  els.bgmVolumeSlider?.addEventListener("input", () => {
+    state.audio.bgmVolume = clamp(Number(els.bgmVolumeSlider.value) / 100, 0, 1);
+    if (state.audio.bgm) state.audio.bgm.volume = state.audio.bgmVolume;
+    ensureBgm(true);
+  });
+  els.sfxVolumeSlider?.addEventListener("input", () => {
+    state.audio.sfxVolume = clamp(Number(els.sfxVolumeSlider.value) / 100, 0, 1);
+    playSfx("uiSelect", { throttleMs: 0, volumeMul: 0.8 });
+  });
+  document.addEventListener("click", (e) => {
+    if (!state.ui.audioPanelOpen || !els.audioPanel || !els.audioSettingsBtn) return;
+    const target = e.target;
+    if (!(target instanceof Node)) return;
+    if (els.audioPanel.contains(target) || els.audioSettingsBtn.contains(target)) return;
+    state.ui.audioPanelOpen = false;
+    renderUI();
+  });
+
   els.pauseBtn.addEventListener("click", () => {
     if (state.gameOver.active) return;
     state.paused = !state.paused;
     els.pauseBtn.textContent = state.paused ? "Resume" : "Pause";
+  });
+  els.refreshBtn?.addEventListener("click", () => {
+    window.location.reload();
   });
   els.focusBtn?.addEventListener("click", () => {
     state.ui.focusMode = !state.ui.focusMode;
@@ -7424,13 +8059,10 @@ function bindInput() {
   });
   els.startPlacementBtn?.addEventListener("click", () => {
     setActiveSideTab("control");
-    state.ui.placementBuildingId = state.buildings.find((b) => !b.placed)?.id || null;
-    state.ui.placementRecommendations = computePlacementRecommendations(state.ui.placementBuildingId);
-    state.ui.industryPlacement = null;
-    state.ui.defensePlacement = null;
-    state.selectedIndustryId = null;
-    state.selectedDefenseId = null;
-    addTicker("Placement mode armed. Select a tile on the map.");
+    state.ui.quickBuildCollapsed = false;
+    triggerToolboxSpotlight(4200);
+    const nextId = state.buildings.find((b) => !b.placed)?.id || null;
+    if (nextId) chooseDepartmentPlacement(nextId, "setup");
     renderUI();
   });
   els.launchGovBtn?.addEventListener("click", () => {
@@ -7465,48 +8097,6 @@ function bindInput() {
       if (!tab) return;
       setActiveSideTab(tab);
     });
-  });
-  els.buildQueue?.addEventListener("click", (e) => {
-    const target = e.target;
-    if (!(target instanceof HTMLElement)) return;
-    if (target.getAttribute("data-placement-toggle")) {
-      if (state.ui.placementBuildingId) {
-        state.ui.placementBuildingId = null;
-        state.ui.placementRecommendations = [];
-      } else {
-        state.ui.placementBuildingId = state.buildings.find((b) => !b.placed)?.id || null;
-        state.ui.placementRecommendations = computePlacementRecommendations(state.ui.placementBuildingId);
-        state.ui.industryPlacement = null;
-        state.ui.defensePlacement = null;
-        state.selectedIndustryId = null;
-        state.selectedDefenseId = null;
-      }
-      renderUI();
-      return;
-    }
-    const id = target.getAttribute("data-place-id");
-    if (!id) return;
-    state.ui.housingPlacement = null;
-    state.ui.industryPlacement = null;
-    state.ui.defensePlacement = null;
-    state.selectedIndustryId = null;
-    state.selectedDefenseId = null;
-    state.ui.placementBuildingId = id;
-    state.ui.placementRecommendations = computePlacementRecommendations(id);
-    addTicker(`Placement armed: ${findBuilding(id)?.name || id}.`);
-    renderUI();
-  });
-  els.buildQueue?.addEventListener("dragstart", (e) => {
-    const target = e.target;
-    if (!(target instanceof HTMLElement)) return;
-    const id = target.getAttribute("data-place-id");
-    if (!id) return;
-    e.dataTransfer?.setData("text/place-id", id);
-    state.ui.housingPlacement = null;
-    state.ui.industryPlacement = null;
-    state.selectedIndustryId = null;
-    state.ui.placementBuildingId = id;
-    state.ui.placementRecommendations = computePlacementRecommendations(id);
   });
   els.industryProjects?.addEventListener("click", (e) => {
     const target = e.target;
@@ -7586,8 +8176,7 @@ function bindInput() {
       setActiveSideTab("incidents");
       focusCameraOnTile(state.rapid.active.mapMarkerTile);
     } else if (action === "incidents") {
-      const manual = state.incidents
-        .filter((i) => !i.resolved && !i.contained)
+      const manual = manualActionIncidents()
         .sort((a, b) => (b.severity - a.severity) || (b.daysOpen - a.daysOpen));
       if (manual[0]) focusCameraOnTile(manual[0].tile);
       setActiveSideTab("incidents");
@@ -7632,6 +8221,18 @@ function bindInput() {
       const pane = document.querySelector('[data-pane="people"]');
       if (pane) pane.scrollTop = 0;
     }
+    renderUI();
+  });
+  els.nowStripGo?.addEventListener("click", () => {
+    const rapid = state.rapid.active;
+    if (!rapid) {
+      clearNowStrip();
+      renderUI();
+      return;
+    }
+    setActiveSideTab("incidents");
+    if (rapid.mapMarkerTile) focusCameraOnTile(rapid.mapMarkerTile);
+    addTicker(`${rapid.incidentCode || "RAPID"} ready: choose an option.`);
     renderUI();
   });
   els.initiativeGrid?.addEventListener("click", (e) => {
@@ -7753,6 +8354,10 @@ function bindInput() {
   const armQuickBuildFromToolbox = (kind, id) => {
     if (!kind || !id) return;
     state.ui.quickBuildCollapsed = false;
+    if (kind === "department") {
+      if (chooseDepartmentPlacement(id, "toolbox")) renderUI();
+      return;
+    }
     if (kind === "industry") {
       const p = projectById(id);
       if (!p) return;
@@ -8048,6 +8653,10 @@ function animationLoop(ts) {
   updateUiFx(dt);
   updateVisual(dt);
   drawMap();
+  if (!state.ui.lastNowStripRefreshAt || ts - state.ui.lastNowStripRefreshAt > 250) {
+    renderNowStrip();
+    state.ui.lastNowStripRefreshAt = ts;
+  }
   renderApFeedback();
   requestAnimationFrame(animationLoop);
 }
@@ -8080,8 +8689,10 @@ async function bootstrap() {
   if (!state.election.currentOpponent) state.election.currentOpponent = pickOppositionCandidate();
   try {
     await loadAssetPack();
+    await loadDepartmentPngOverrides();
     addTicker("Cozy art pack loaded.");
   } catch {
+    await loadDepartmentPngOverrides();
     addTicker("Asset pack unavailable; using fallback visuals.");
   }
   initDecorProps();
@@ -8091,6 +8702,7 @@ async function bootstrap() {
   bindInput();
   resizeCanvas();
   renderUI();
+  ensureBgm(true);
 
   addTicker("Founding phase active: place departments, then launch government to begin simulation.");
   if (truthChecks.length > 0) addTicker(`Truth Check deck loaded: ${truthChecks.length} briefs ready.`);
