@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Country Manager - Cozy Civic</title>
-    <link rel="stylesheet" href="styles.css?v=20260221i" />
+    <link rel="stylesheet" href="styles.css?v=20260315a" />
   </head>
   <body>
     <main class="shell">
@@ -73,7 +73,7 @@
             <h3 id="setupTitle">Build Your Government</h3>
             <p id="setupBody" class="muted">Place all core departments before simulation time begins. No incidents or budget drift occur until launch.</p>
             <div class="actions">
-              <button id="startPlacementBtn" class="btn">Open Build Toolbox</button>
+              <button id="startPlacementBtn" class="btn">Choose Starter Department</button>
               <button id="launchGovBtn" class="btn primary" disabled>Launch Government</button>
             </div>
           </aside>
@@ -83,7 +83,7 @@
             <p id="tutorialBody" class="muted">Follow the guided setup to learn systems before full chaos unlocks.</p>
             <div id="tutorialProgress" class="tutorial-progress"></div>
             <div class="actions">
-              <button id="tutorialFocusBtn" class="btn primary">Show Me</button>
+              <button id="tutorialFocusBtn" class="btn primary">Review Step</button>
               <button id="tutorialSkipBtn" class="btn">Skip Guide</button>
             </div>
           </aside>
@@ -329,6 +329,26 @@
       </section>
     </main>
 
+    <section id="introBriefingModal" class="intro-briefing-modal" hidden>
+      <article class="intro-briefing-card">
+        <p class="paper-kicker">Arrival Briefing</p>
+        <h2>Welcome To Auroria</h2>
+        <div class="intro-scroll">
+          <p>Auroria is prosperous on paper, but stretched underneath. Clinics are crowded, trust is brittle, infrastructure is aging, and every shortcut has a cost that shows up later.</p>
+          <p>You are not here to chase headlines. You are here to build a government that can survive pressure, fund what matters, and keep ordinary people from paying for bad priorities.</p>
+          <p>Your first objective is simple: place the core ministries, launch government, then learn the loop of budgets, upgrades, industry, incidents, and evidence-based choices.</p>
+        </div>
+        <div class="intro-points">
+          <div><strong>Founding:</strong> Place your first core departments.</div>
+          <div><strong>Early Win:</strong> Tune one budget, upgrade one facility, and start your first industry.</div>
+          <div><strong>Watch For:</strong> Short-term fixes that quietly damage trust, health, climate, or stability.</div>
+        </div>
+        <div class="paper-actions">
+          <button id="introBriefingStartBtn" class="btn primary">Begin Founding</button>
+        </div>
+      </article>
+    </section>
+
     <section id="monthlyModal" class="monthly-modal" hidden>
       <article class="monthly-paper">
         <p class="paper-kicker">Monthly Gazette</p>
@@ -381,6 +401,6 @@
       </article>
     </section>
 
-    <script type="module" src="app.js?v=20260313a"></script>
+    <script type="module" src="app.js?v=20260315a"></script>
   </body>
 </html>

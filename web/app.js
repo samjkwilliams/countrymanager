@@ -18,6 +18,19 @@ const ELECTION_FINAL_SPRINT_DAYS = 7;
 const CITY_CORE_TILE = [12, 12];
 const AUDIO_BASE = "./assets/audio";
 const DEPARTMENT_ART_BASE = "./assets/departments";
+const TERRAIN_TILE_BASE = "./assets/terrain";
+const TERRAIN_TILE_VARIANTS = {
+  undeveloped: ["tile_003", "tile_004", "tile_005", "tile_009", "tile_011"],
+  frontier: ["tile_016", "tile_017", "tile_018", "tile_019", "tile_021"],
+  grass: ["tile_022", "tile_023", "tile_024", "tile_037", "tile_038", "tile_039"],
+  lush: ["tile_027", "tile_028", "tile_029", "tile_030", "tile_031", "tile_032", "tile_033", "tile_034", "tile_035", "tile_036"],
+  park: ["tile_023", "tile_024", "tile_029", "tile_030", "tile_031", "tile_036"],
+  road: ["tile_061", "tile_069", "tile_070", "tile_071"],
+  plaza: ["tile_062", "tile_063", "tile_069", "tile_070"],
+  sidewalk: ["tile_061", "tile_062", "tile_069"],
+  water: ["tile_104", "tile_105", "tile_106", "tile_107", "tile_108", "tile_109", "tile_110", "tile_111", "tile_112", "tile_113", "tile_114"],
+  flowers: ["tile_040", "tile_041", "tile_042", "tile_045", "tile_046", "tile_047"],
+};
 const AUDIO_LIBRARY = {
   music: {
     bgm: `${AUDIO_BASE}/music/bgm_deep_waters.wav`,
@@ -800,9 +813,9 @@ const IDENTITY_AXIS_KEYS = ["careAusterity", "libertyControl", "publicDonor", "t
 const TUTORIAL_STEPS = [
   {
     id: "founding",
-    short: "Place all departments",
-    title: "Founding: Place Core Departments",
-    body: "Place all 8 departments first. Time and incidents are paused until launch.",
+    short: "Place core departments",
+    title: "Founding: Build Your Core Government",
+    body: "Start with Health, Treasury, and Transport. Then place the remaining departments before launch.",
     tab: "control",
   },
   {
@@ -816,14 +829,14 @@ const TUTORIAL_STEPS = [
     id: "upgrade",
     short: "Upgrade one facility",
     title: "Step 2: Upgrade a Facility",
-    body: "Upgrade one department so the player sees cost, AP spend, and delayed payoff.",
+    body: "Upgrade one department to raise service capacity and feel the cost, AP spend, and delayed payoff.",
     tab: "control",
   },
   {
     id: "industry",
-    short: "Place first industry zone",
-    title: "Step 3: Build Productive Capacity",
-    body: "Use the floating Build Toolbox on the map. Click any Industry icon to arm it, then click a green map area to place your first zone.",
+    short: "Build first industry",
+    title: "Step 3: Start Your First Industry",
+    body: "Arm a recommended project, then click a glowing green block on the map to start earning future revenue.",
     tab: "control",
   },
   {
@@ -849,6 +862,7 @@ const TUTORIAL_STEPS = [
   },
 ];
 const TUTORIAL_STEP_INDEX = Object.fromEntries(TUTORIAL_STEPS.map((s, i) => [s.id, i]));
+const FOUNDING_STARTER_IDS = ["health", "treasury", "transport"];
 
 function emptyDemImpact() {
   return { poverty: 0, working: 0, middle: 0, business: 0, elite: 0 };
@@ -1033,6 +1047,8 @@ const state = {
     toolboxSpotlightUntilMs: 0,
     foundingFirstPickDone: false,
     mapRevealUntilMs: 0,
+    mapSpotlightUntilMs: 0,
+    introBriefingOpen: true,
     lastSeenIncidentAlertId: null,
     initiativeGuideActive: false,
     initiativeGuideUntilDay: 0,
@@ -1204,6 +1220,12 @@ const els = {
   nowStrip: document.getElementById("nowStrip"),
   nowStripText: document.getElementById("nowStripText"),
   nowStripGo: document.getElementById("nowStripGo"),
+  tabBar: document.querySelector(".tab-bar"),
+  livePulseDock: document.querySelector(".news-strip.compact-dock"),
+  gameLayout: document.querySelector(".game-layout"),
+  sidePanel: document.querySelector(".side-panel"),
+  introBriefingModal: document.getElementById("introBriefingModal"),
+  introBriefingStartBtn: document.getElementById("introBriefingStartBtn"),
 };
 
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
@@ -1353,6 +1375,120 @@ function currentActionableIncidentAlertId() {
   const id = rapid?.incidentCode || rapid?.id || `rapid-${state.day}`;
   return `rapid:${id}`;
 }
+
+function renderOnboardingLayout() {
+  const phase = state.sim.started ? state.tutorial.phase : "founding";
+  const dayPill = els.dayLabel?.closest(".pill");
+  const treasuryPill = els.treasuryLabel?.closest(".pill");
+  const dailyNetPill = els.dailyNetLabel?.closest(".pill");
+  const civiliansPill = els.civilianCount?.closest(".pill");
+  const incidentsPill = els.incidentCount?.closest(".pill");
+  const actionPointsPill = els.actionPoints?.closest(".pill");
+  const hudMeta = document.querySelector(".hud-meta");
+  const hudDividers = document.querySelectorAll(".hud-divider");
+  const showLiteHud = state.ui.introBriefingOpen || !state.sim.started || tutorialIsActive();
+  const mapOnlyMode = state.ui.introBriefingOpen || !state.sim.started || (tutorialIsActive() && phase === "industry");
+  const layoutModeChanged = state.ui.lastMapOnlyMode !== mapOnlyMode;
+  state.ui.lastMapOnlyMode = mapOnlyMode;
+
+  if (els.trafficPill) els.trafficPill.hidden = showLiteHud;
+  if (els.focusBtn) els.focusBtn.hidden = showLiteHud;
+  if (els.refreshBtn) els.refreshBtn.hidden = showLiteHud;
+  if (dayPill) dayPill.hidden = false;
+  if (treasuryPill) treasuryPill.hidden = false;
+  if (dailyNetPill) dailyNetPill.hidden = showLiteHud;
+  if (els.stabilityPill) els.stabilityPill.hidden = false;
+  if (civiliansPill) civiliansPill.hidden = showLiteHud;
+  if (incidentsPill) incidentsPill.hidden = showLiteHud;
+  if (actionPointsPill) actionPointsPill.hidden = showLiteHud;
+  if (hudMeta) hudMeta.hidden = true;
+  hudDividers.forEach((divider) => {
+    divider.hidden = showLiteHud;
+  });
+  if (els.gameLayout) els.gameLayout.classList.toggle("onboarding-map-only", mapOnlyMode);
+  if (els.sidePanel) els.sidePanel.hidden = mapOnlyMode;
+  if (els.statusBanner) els.statusBanner.hidden = state.ui.introBriefingOpen;
+  document.querySelectorAll(".guided-focus").forEach((node) => node.classList.remove("guided-focus"));
+  if (layoutModeChanged) requestAnimationFrame(() => resizeCanvas());
+
+  if (state.ui.introBriefingOpen) {
+    if (els.tabBar) els.tabBar.hidden = true;
+    if (els.livePulseDock) els.livePulseDock.hidden = true;
+    if (els.mapTip) els.mapTip.hidden = true;
+    return;
+  }
+  const allowedTabs = onboardingAllowedTabs();
+  if (allowedTabs) {
+    const activeTab = document.querySelector(".side-tab.is-active")?.getAttribute("data-tab");
+    if (!activeTab || !allowedTabs.includes(activeTab)) {
+      setActiveSideTab(allowedTabs[0]);
+    }
+  }
+  document.querySelectorAll(".side-tab").forEach((btn) => {
+    const tab = btn.getAttribute("data-tab");
+    const locked = Boolean(allowedTabs && tab && !allowedTabs.includes(tab));
+    btn.disabled = locked;
+    btn.classList.toggle("is-locked", locked);
+    btn.title = locked ? "Complete the current guided step to unlock this tab." : "";
+  });
+
+  const selectedCard = document.querySelector(".selected-card");
+  const initiativeHubCard = els.initiativeHubCard || document.getElementById("initiativeHubCard");
+  const industryCard = document.getElementById("industryCard");
+  const defenseCard = document.getElementById("defenseCard");
+  const pulsePane = document.querySelector('[data-pane="pulse"]');
+  const peoplePane = document.querySelector('[data-pane="people"]');
+  const missionsPane = document.querySelector('[data-pane="missions"]');
+
+  if (!tutorialIsActive()) {
+    if (initiativeHubCard) initiativeHubCard.hidden = false;
+    if (industryCard) industryCard.hidden = false;
+    if (defenseCard) defenseCard.hidden = false;
+    if (selectedCard) selectedCard.hidden = false;
+    if (pulsePane) pulsePane.hidden = false;
+    if (peoplePane) peoplePane.hidden = false;
+    if (missionsPane) missionsPane.hidden = false;
+    if (els.mapTip) els.mapTip.hidden = false;
+    if (els.tabBar) els.tabBar.hidden = false;
+    if (els.livePulseDock) els.livePulseDock.hidden = false;
+    if (els.focusBtn) els.focusBtn.hidden = false;
+    if (els.refreshBtn) els.refreshBtn.hidden = false;
+    if (els.trafficPill) els.trafficPill.hidden = false;
+    if (els.statusBanner) els.statusBanner.hidden = false;
+    if (dailyNetPill) dailyNetPill.hidden = false;
+    if (civiliansPill) civiliansPill.hidden = false;
+    if (incidentsPill) incidentsPill.hidden = false;
+    if (actionPointsPill) actionPointsPill.hidden = false;
+    hudDividers.forEach((divider) => {
+      divider.hidden = false;
+    });
+    return;
+  }
+
+  const showSelected = ["budget", "upgrade"].includes(phase);
+  const showIndustry = phase === "industry";
+  const showIncidents = phase === "incident" || phase === "rapid";
+  const showMapTip = !tutorialIsActive();
+  const showTabBar = !allowedTabs || allowedTabs.length > 1;
+  const showDock = !tutorialIsActive();
+
+  if (initiativeHubCard) initiativeHubCard.hidden = true;
+  if (defenseCard) defenseCard.hidden = !showIndustry;
+  if (industryCard) industryCard.hidden = !showIndustry;
+  if (selectedCard) selectedCard.hidden = !showSelected;
+  if (pulsePane) pulsePane.hidden = !showIncidents && !allowedTabs?.includes("pulse");
+  if (peoplePane) peoplePane.hidden = !allowedTabs?.includes("people");
+  if (missionsPane) missionsPane.hidden = !allowedTabs?.includes("missions");
+  if (els.mapTip) els.mapTip.hidden = !showMapTip;
+  if (els.tabBar) els.tabBar.hidden = !showTabBar;
+  if (els.livePulseDock) els.livePulseDock.hidden = !showDock;
+  if (showSelected && selectedCard) selectedCard.classList.add("guided-focus");
+  if (showIncidents) {
+    const incidentsPane = document.querySelector('[data-pane="incidents"]');
+    incidentsPane?.classList.add("guided-focus");
+  }
+}
+
 function canPlayerActOnIncidentNow(inc) {
   if (!inc || !inc.requiresPlayerAction || !incidentSupportsDirectPlayerAction(inc) || inc.resolved || inc.contained || inc.assignedResponderId) return false;
   if (state.resources.actionPoints < 1) return false;
@@ -1367,13 +1503,15 @@ function clearNowStrip() {
   state.ui.nowStripTracker.sinceMs = 0;
 }
 function setActiveSideTab(tab) {
+  const allowed = onboardingAllowedTabs();
+  const targetTab = allowed && !allowed.includes(tab) ? allowed[0] : tab;
   document.querySelectorAll(".side-tab").forEach((btn) => {
-    btn.classList.toggle("is-active", btn.getAttribute("data-tab") === tab);
+    btn.classList.toggle("is-active", btn.getAttribute("data-tab") === targetTab);
   });
   document.querySelectorAll(".tab-pane").forEach((pane) => {
-    pane.classList.toggle("is-active", pane.getAttribute("data-pane") === tab);
+    pane.classList.toggle("is-active", pane.getAttribute("data-pane") === targetTab);
   });
-  if (tab === "incidents") {
+  if (targetTab === "incidents") {
     const alertId = currentActionableIncidentAlertId();
     if (alertId) state.ui.lastSeenIncidentAlertId = alertId;
     setTabAlert(els.tabIncidentsAlert, false, false);
@@ -1546,8 +1684,40 @@ function tutorialStepMeta(phase = state.tutorial.phase) {
   return TUTORIAL_STEPS.find((s) => s.id === phase) || TUTORIAL_STEPS[0];
 }
 
+function foundingStarterPlacedCount() {
+  return FOUNDING_STARTER_IDS.filter((id) => findBuilding(id)?.placed).length;
+}
+
+function foundingStarterComplete() {
+  return foundingStarterPlacedCount() >= FOUNDING_STARTER_IDS.length;
+}
+
+function unlockedFoundingDepartmentIds() {
+  return foundingStarterComplete() ? BUILDING_DEFS.map((b) => b.id) : FOUNDING_STARTER_IDS.slice();
+}
+
+function nextFoundingDepartmentId() {
+  const unlocked = new Set(unlockedFoundingDepartmentIds());
+  return state.buildings.find((b) => unlocked.has(b.id) && !b.placed)?.id || null;
+}
+
+function isFoundingDepartmentUnlocked(id) {
+  return unlockedFoundingDepartmentIds().includes(id);
+}
+
+function onboardingAllowedTabs() {
+  if (!tutorialIsActive()) return null;
+  if (!state.sim.started) return ["control"];
+  if (state.tutorial.phase === "incident" || state.tutorial.phase === "rapid") return ["incidents"];
+  return ["control"];
+}
+
 function triggerToolboxSpotlight(ms = 2800) {
   state.ui.toolboxSpotlightUntilMs = Date.now() + ms;
+}
+
+function triggerMapSpotlight(ms = 2800) {
+  state.ui.mapSpotlightUntilMs = Date.now() + ms;
 }
 
 function setTutorialPhase(phase, announce = true) {
@@ -1614,8 +1784,14 @@ function tutorialFocusCurrentStep() {
   if (phase === "industry") {
     setActiveSideTab("control");
     state.ui.quickBuildCollapsed = false;
-    triggerToolboxSpotlight(4200);
+    triggerToolboxSpotlight(6500);
+    triggerMapSpotlight(6500);
     setCardCollapsed("industryCard", false);
+    const recId = recommendedIndustryProjectId();
+    if (recId) {
+      chooseIndustryProject(recId);
+      addTicker("Recommended industry armed. Click a glowing green block on the map to place it.");
+    }
     const pane = document.querySelector('[data-pane="control"]');
     const card = document.getElementById("industryCard");
     if (pane && card) {
@@ -1917,18 +2093,50 @@ function loadSvgImage(src) {
   });
 }
 
+const DEPARTMENT_PNG_LEVELS = {
+  treasury: 10,
+  education: 10,
+  welfare: 10,
+  transport: 10,
+  climate: 10,
+  security: 10,
+  integrity: 10,
+  health: 10,
+};
+
 function departmentArtSrc(id, lvl = 1) {
+  const pngCap = DEPARTMENT_PNG_LEVELS[id] || 1;
+  if (lvl >= 2 && lvl <= pngCap) {
+    const title = id.charAt(0).toUpperCase() + id.slice(1);
+    return `${DEPARTMENT_ART_BASE}/${title} ${lvl}.png`;
+  }
   if (lvl === 1) return `${DEPARTMENT_ART_BASE}/${id}_lvl1.png`;
   return `./assets/cozy-pack/buildings/${id}_lvl${lvl}.svg`;
 }
 
 async function loadDepartmentPngOverrides() {
-  const tasks = BUILDING_DEFS.map(async (def) => {
+  const tasks = BUILDING_DEFS.flatMap((def) => {
+    const levels = Array.from({ length: DEPARTMENT_PNG_LEVELS[def.id] || 1 }, (_, i) => i + 1);
+    return levels.map(async (lvl) => {
+      try {
+        const img = await loadSvgImage(departmentArtSrc(def.id, lvl));
+        state.assets.buildings[`${def.id}_lvl${lvl}`] = img;
+      } catch {
+        // Keep existing fallback if png is missing.
+      }
+    });
+  });
+  await Promise.all(tasks);
+}
+
+async function loadTerrainTileOverrides() {
+  const tileIds = [...new Set(Object.values(TERRAIN_TILE_VARIANTS).flat())];
+  const tasks = tileIds.map(async (tileId) => {
     try {
-      const img = await loadSvgImage(departmentArtSrc(def.id, 1));
-      state.assets.buildings[`${def.id}_lvl1`] = img;
+      const img = await loadSvgImage(`${TERRAIN_TILE_BASE}/${tileId}.png`);
+      state.assets.tiles[tileId] = img;
     } catch {
-      // Keep existing svg fallback if png is missing.
+      // Keep fallback/cozy-pack tile if missing.
     }
   });
   await Promise.all(tasks);
@@ -1956,6 +2164,34 @@ async function loadAssetPack() {
 function drawSpriteCentered(img, x, y, w, h) {
   if (!img) return;
   ctx.drawImage(img, x - w / 2, y - h / 2, w, h);
+}
+
+function drawTerrainTopSprite(img, x, y, w, h, fullDepth = false, alpha = 1) {
+  if (!img) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  if (fullDepth) {
+    ctx.drawImage(img, x - w / 2, y - h, w, h * 2);
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(x, y - h / 2);
+    ctx.lineTo(x + w / 2, y);
+    ctx.lineTo(x, y + h / 2);
+    ctx.lineTo(x - w / 2, y);
+    ctx.closePath();
+    ctx.clip();
+    ctx.drawImage(img, x - w / 2, y - h, w, h * 2);
+  }
+  ctx.restore();
+}
+
+function terrainUnderpaintColor(kind, developed, frontier) {
+  if (kind === "water") return frontier ? "#8fbfe6" : "#7eb4df";
+  if (kind === "road" || kind === "plaza" || kind === "sidewalk") return "#8f9897";
+  if (kind === "undeveloped") return frontier ? "#7e8e72" : "#6f7c62";
+  if (kind === "frontier") return "#88a06f";
+  if (kind === "lush" || kind === "park") return developed ? "#97c767" : "#7aa05d";
+  return developed ? "#a5cf66" : frontier ? "#88a06f" : "#6f7c62";
 }
 
 function isoToScreen(ix, iy) {
@@ -2142,6 +2378,7 @@ function resolveDepartmentPlacementTile(buildingId, tile) {
 function placeBuilding(buildingId, tile) {
   const b = findBuilding(buildingId);
   if (!b) return false;
+  const wasStarterDone = foundingStarterComplete();
   const resolvedTile = resolveDepartmentPlacementTile(buildingId, tile);
   if (!resolvedTile) return false;
   const [x, y] = resolvedTile;
@@ -2154,8 +2391,16 @@ function placeBuilding(buildingId, tile) {
   state.kpi[b.kpi] = clamp(state.kpi[b.kpi] + evaln.score * 0.45, 0, 100);
   addTicker(`Placed ${b.name} at tile ${x},${y} (${evaln.label} site).`);
   addRailEvent("🧱 Department Placed", `${b.name} opened at tile ${x},${y}. Site quality: ${evaln.label}.`, false);
+  addDecisionToast(`${b.name} online`, "good");
   playSfx("placeBasic", { throttleMs: 80 });
-  state.ui.placementBuildingId = state.buildings.find((d) => !d.placed)?.id || null;
+  const starterJustCompleted = !state.sim.started && !wasStarterDone && foundingStarterComplete();
+  if (!state.sim.started && starterJustCompleted) {
+    addRailEvent("🏛️ Government Expanded", "Starter ministries are online. The remaining departments are now unlocked.", true);
+    addTicker("Starter ministries placed. The remaining government departments are now unlocked.");
+    triggerToolboxSpotlight(5200);
+    triggerMapSpotlight(5200);
+  }
+  state.ui.placementBuildingId = nextFoundingDepartmentId() || state.buildings.find((d) => !d.placed)?.id || null;
   state.ui.placementRecommendations = computePlacementRecommendations(state.ui.placementBuildingId);
   if (allBuildingsPlaced()) {
     state.ui.quickBuildCollapsed = true;
@@ -3041,6 +3286,11 @@ function projectById(id) {
 function chooseDepartmentPlacement(id, source = "toolbox") {
   const b = findBuilding(id);
   if (!b || b.placed) return false;
+  if (!state.sim.started && !isFoundingDepartmentUnlocked(id)) {
+    addTicker("Finish the three starter departments first, then the rest of government unlocks.");
+    playSfx("uiDenied");
+    return false;
+  }
   state.ui.housingPlacement = null;
   state.ui.industryPlacement = null;
   state.ui.defensePlacement = null;
@@ -3103,6 +3353,25 @@ function canPlaceIndustryZone(tile, size) {
   return { x: sx, y: sy };
 }
 
+function resolveIndustryPlacementAnchor(tile, size) {
+  if (!Array.isArray(tile)) return null;
+  const direct = canPlaceIndustryZone(tile, size);
+  if (direct) return direct;
+
+  let best = null;
+  for (let dx = -4; dx <= 4; dx += 1) {
+    for (let dy = -4; dy <= 4; dy += 1) {
+      const probe = [tile[0] + dx, tile[1] + dy];
+      const anchor = canPlaceIndustryZone(probe, size);
+      if (!anchor) continue;
+      const dist = tileDist(tile, [anchor.x + (size - 1) / 2, anchor.y + (size - 1) / 2]);
+      const score = -dist;
+      if (!best || score > best.score) best = { anchor, score };
+    }
+  }
+  return best?.anchor || null;
+}
+
 function chooseIndustryProject(id) {
   const p = projectById(id);
   if (!p) {
@@ -3139,7 +3408,7 @@ function placeIndustryZone(tile) {
   if (!mode) return false;
   const project = projectById(mode.projectId);
   if (!project) return false;
-  const anchor = canPlaceIndustryZone(tile, project.size);
+  const anchor = resolveIndustryPlacementAnchor(tile, project.size);
   if (!anchor) return false;
 
   const deposit = round(project.cost * 0.55);
@@ -5332,6 +5601,150 @@ function drawBlock(x, y, w, h, height, color) {
   ctx.fill();
 }
 
+function drawPlacementGhostSprite(sprite, x, y, w, h, ok = true) {
+  if (!sprite) return;
+  ctx.save();
+  ctx.globalAlpha = ok ? 0.76 : 0.42;
+  ctx.shadowColor = ok ? "rgba(90, 225, 170, 0.42)" : "rgba(255, 94, 87, 0.38)";
+  ctx.shadowBlur = 20 * state.camera.zoom;
+  drawSpriteCentered(sprite, x, y, w, h);
+  ctx.restore();
+}
+
+function drawConstructionOverlay(x, y, width, height, progress = 0, accent = "#ffb65e") {
+  const top = y - height;
+  const left = x - width / 2;
+  const right = x + width / 2;
+  const stripeY = y - 4 * state.camera.zoom;
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(230, 241, 255, 0.52)";
+  ctx.lineWidth = Math.max(1, 1.2 * state.camera.zoom);
+  for (let t = 0; t <= 1; t += 0.28) {
+    const sx = left + width * t;
+    ctx.beginPath();
+    ctx.moveTo(sx, y);
+    ctx.lineTo(sx, top + 6 * state.camera.zoom);
+    ctx.stroke();
+  }
+  ctx.beginPath();
+  ctx.moveTo(left, top + 10 * state.camera.zoom);
+  ctx.lineTo(right, top + 10 * state.camera.zoom);
+  ctx.moveTo(left, top + height * 0.45);
+  ctx.lineTo(right, top + height * 0.45);
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(255, 194, 112, 0.48)";
+  for (let i = 0; i < 3; i += 1) {
+    const x0 = left + i * width * 0.34;
+    ctx.beginPath();
+    ctx.moveTo(x0, stripeY);
+    ctx.lineTo(x0 + width * 0.22, stripeY + 8 * state.camera.zoom);
+    ctx.stroke();
+  }
+
+  const cranePulse = (Math.sin(performance.now() / 260) + 1) / 2;
+  const boomX = right - width * 0.1;
+  const boomTop = top - 10 * state.camera.zoom;
+  const boomLen = 18 * state.camera.zoom;
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = Math.max(1.2, 1.6 * state.camera.zoom);
+  ctx.beginPath();
+  ctx.moveTo(boomX, y - 2 * state.camera.zoom);
+  ctx.lineTo(boomX, boomTop);
+  ctx.lineTo(boomX - boomLen, boomTop - 4 * state.camera.zoom);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(boomX - boomLen * (0.2 + 0.55 * progress), boomTop - 4 * state.camera.zoom);
+  ctx.lineTo(boomX - boomLen * (0.2 + 0.55 * progress), boomTop + (6 + cranePulse * 8) * state.camera.zoom);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawBuildingAura(x, y, h3d, stateKey, pulse) {
+  const glowY = y - h3d - 10 * state.camera.zoom;
+  const palette =
+    stateKey === "thriving" ? ["rgba(115, 245, 190,", "#7af0bc"]
+    : stateKey === "strained" ? ["rgba(255, 196, 92,", "#ffbe5c"]
+      : stateKey === "overloaded" ? ["rgba(255, 102, 102,", "#ff6666"]
+        : ["rgba(114, 193, 255,", "#72c1ff"];
+  const alpha = stateKey === "stable" ? 0.12 : 0.18 + pulse * 0.12;
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(x, glowY, 15 * state.camera.zoom, 8 * state.camera.zoom, 0, 0, Math.PI * 2);
+  ctx.fillStyle = `${palette[0]}${alpha})`;
+  ctx.fill();
+  if (stateKey !== "stable") {
+    ctx.strokeStyle = palette[1];
+    ctx.lineWidth = 1.4 * state.camera.zoom;
+    ctx.beginPath();
+    ctx.moveTo(x, glowY - 4 * state.camera.zoom);
+    ctx.lineTo(x, glowY - (12 + pulse * 7) * state.camera.zoom);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawIncidentEffect(inc, x, y, pulse) {
+  const kind = inc.type?.id || "generic";
+  ctx.save();
+  if (kind === "flood") {
+    ctx.strokeStyle = `rgba(120, 214, 255, ${0.35 + pulse * 0.2})`;
+    ctx.lineWidth = 2 * state.camera.zoom;
+    for (let i = 0; i < 2; i += 1) {
+      ctx.beginPath();
+      ctx.ellipse(x, y + i * 5 * state.camera.zoom, (13 + i * 6 + pulse * 4) * state.camera.zoom, (6 + i * 2) * state.camera.zoom, -0.18, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  } else if (kind === "crime") {
+    ctx.fillStyle = `rgba(86, 176, 255, ${0.18 + pulse * 0.18})`;
+    ctx.fillRect(x - 10 * state.camera.zoom, y - 12 * state.camera.zoom, 5 * state.camera.zoom, 18 * state.camera.zoom);
+    ctx.fillStyle = `rgba(255, 94, 87, ${0.2 + pulse * 0.2})`;
+    ctx.fillRect(x + 5 * state.camera.zoom, y - 12 * state.camera.zoom, 5 * state.camera.zoom, 18 * state.camera.zoom);
+  } else if (kind === "medical") {
+    ctx.strokeStyle = `rgba(255, 225, 225, ${0.45 + pulse * 0.2})`;
+    ctx.lineWidth = 2.2 * state.camera.zoom;
+    ctx.beginPath();
+    ctx.moveTo(x, y - 12 * state.camera.zoom);
+    ctx.lineTo(x, y + 12 * state.camera.zoom);
+    ctx.moveTo(x - 12 * state.camera.zoom, y);
+    ctx.lineTo(x + 12 * state.camera.zoom, y);
+    ctx.stroke();
+  } else if (kind === "corruption") {
+    ctx.strokeStyle = `rgba(199, 143, 255, ${0.34 + pulse * 0.2})`;
+    ctx.lineWidth = 1.8 * state.camera.zoom;
+    ctx.beginPath();
+    ctx.arc(x, y, (12 + pulse * 4) * state.camera.zoom, 0.2, Math.PI * 1.8);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x + 6 * state.camera.zoom, y - 4 * state.camera.zoom, 5 * state.camera.zoom, 0, Math.PI * 2);
+    ctx.stroke();
+  } else if (kind === "fire") {
+    ctx.fillStyle = `rgba(255, 151, 71, ${0.24 + pulse * 0.16})`;
+    ctx.beginPath();
+    ctx.arc(x - 6 * state.camera.zoom, y + 3 * state.camera.zoom, 7 * state.camera.zoom, 0, Math.PI * 2);
+    ctx.arc(x + 5 * state.camera.zoom, y + 1 * state.camera.zoom, 6 * state.camera.zoom, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (kind === "cyber_grid_attack" || kind === "infra_sabotage" || kind === "airspace_incursion") {
+    ctx.strokeStyle = `rgba(104, 214, 255, ${0.36 + pulse * 0.22})`;
+    ctx.lineWidth = 2 * state.camera.zoom;
+    ctx.beginPath();
+    ctx.moveTo(x - 12 * state.camera.zoom, y - 8 * state.camera.zoom);
+    ctx.lineTo(x - 2 * state.camera.zoom, y - 1 * state.camera.zoom);
+    ctx.lineTo(x - 6 * state.camera.zoom, y + 8 * state.camera.zoom);
+    ctx.lineTo(x + 8 * state.camera.zoom, y - 4 * state.camera.zoom);
+    ctx.lineTo(x + 2 * state.camera.zoom, y + 12 * state.camera.zoom);
+    ctx.stroke();
+  } else {
+    ctx.strokeStyle = `rgba(255, 198, 106, ${0.28 + pulse * 0.2})`;
+    ctx.lineWidth = 1.8 * state.camera.zoom;
+    ctx.beginPath();
+    ctx.arc(x, y, (12 + pulse * 5) * state.camera.zoom, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawClouds() {
   for (const c of state.visual.clouds) {
     ctx.fillStyle = "rgba(255,255,255,0.55)";
@@ -5596,6 +6009,8 @@ function drawIncidents() {
     ctx.fillStyle = `${inc.type.color}AA`;
     ctx.fill();
 
+    drawIncidentEffect(inc, p.x, p.y - 8 * state.camera.zoom, pulse);
+
     const fxName = `incident_${inc.type.id}`;
     const fx = state.assets.fx[fxName];
     if (state.assets.loaded && fx) {
@@ -5623,24 +6038,50 @@ function drawIncidents() {
   ctx.fillText("!", p.x, p.y - 46 * state.camera.zoom);
 }
 
-function tileSpriteFor(x, y) {
-  if (!isDevelopedTile(x, y, 1.6)) return "grass";
-  if (isHousingTile(x, y) || isIndustryTile(x, y)) return "grass";
-  const lines = activeRoadLines();
-  if (lines.includes(x) && lines.includes(y)) return "plaza";
-  if (lines.includes(x) || lines.includes(y)) {
-    if ((x + y) % 7 === 0) return "road_turn";
-    return "road_straight";
+function terrainHash(x, y, salt = 0) {
+  return (((x * 92837111) ^ (y * 689287499) ^ (salt * 2654435761)) >>> 0);
+}
+
+function pickTerrainVariant(kind, x, y, salt = 0) {
+  const list = TERRAIN_TILE_VARIANTS[kind];
+  if (!list?.length) return null;
+  return list[terrainHash(x, y, salt) % list.length];
+}
+
+function tileVisualFor(x, y) {
+  const developedNear = isDevelopedTile(x, y, 1.6);
+  const developed = isDevelopedTile(x, y, 0.4);
+  const frontier = !developed && isDevelopedTile(x, y, 1.2);
+  const distFromCore = tileDist([x, y], CITY_CORE_TILE);
+  if (!developedNear) {
+    const remoteWet = distFromCore > 12 && (terrainHash(x, y, 51) % 1000) / 1000 < 0.1;
+    return { base: remoteWet ? pickTerrainVariant("water", x, y) : pickTerrainVariant("undeveloped", x, y), accent: null };
   }
-  const hash = ((x * 92837111) ^ (y * 689287499)) >>> 0;
+  if (isHousingTile(x, y) || isIndustryTile(x, y) || isDefenseTile(x, y)) {
+    const baseKind = isHousingTile(x, y) ? "lush" : "grass";
+    const accentChance = (terrainHash(x, y, 11) % 1000) / 1000;
+    const accent = accentChance < 0.08 ? pickTerrainVariant("flowers", x, y, 17) : null;
+    return { base: pickTerrainVariant(baseKind, x, y), accent };
+  }
+  const lines = activeRoadLines();
+  if (lines.includes(x) && lines.includes(y)) return { base: pickTerrainVariant("plaza", x, y), accent: null };
+  if (lines.includes(x) || lines.includes(y)) {
+    return { base: pickTerrainVariant("road", x, y), accent: null };
+  }
+  const hash = terrainHash(x, y);
   const climateWet = clamp((state.kpi.climate - 48) / 70, 0, 1);
   const parkBias = 0.1 + climateWet * 0.16;
-  const waterBias = 0.05 + climateWet * 0.06;
   const h = (hash % 1000) / 1000;
-  if (h < waterBias && cityRadius() > 13) return "water";
-  if (h < waterBias + parkBias) return "park";
-  if ((hash % 7) <= 1) return "sidewalk";
-  return "grass";
+  if (!developed && !frontier && distFromCore > 13 && cityRadius() > 13 && (terrainHash(x, y, 67) % 1000) / 1000 < (0.04 + climateWet * 0.04)) {
+    return { base: pickTerrainVariant("water", x, y), accent: null };
+  }
+  if (h < parkBias) {
+    const accentChance = (terrainHash(x, y, 21) % 1000) / 1000;
+    return { base: pickTerrainVariant("park", x, y), accent: accentChance < 0.18 ? pickTerrainVariant("flowers", x, y, 23) : null };
+  }
+  if ((hash % 7) <= 1) return { base: pickTerrainVariant("sidewalk", x, y), accent: null };
+  const lushChance = (terrainHash(x, y, 31) % 1000) / 1000;
+  return { base: pickTerrainVariant(lushChance < climateWet * 0.45 ? "lush" : "grass", x, y), accent: null };
 }
 
 function drawMap() {
@@ -5654,15 +6095,53 @@ function drawMap() {
   for (let x = 0; x < MAP_W; x += 1) {
     for (let y = 0; y < MAP_H; y += 1) {
       const p = isoToScreen(x, y);
-      const tileKey = tileSpriteFor(x, y);
-      const tileSprite = state.assets.tiles[tileKey];
+      const visual = tileVisualFor(x, y);
+      const tileSprite = state.assets.tiles[visual.base];
+      const accentSprite = visual.accent ? state.assets.tiles[visual.accent] : null;
       const developed = isDevelopedTile(x, y, 0.4);
       const frontier = !developed && isDevelopedTile(x, y, 1.2);
+      const perimeter = x === 0 || y === 0 || x === MAP_W - 1 || y === MAP_H - 1;
+      const kind =
+        TERRAIN_TILE_VARIANTS.water.includes(visual.base) ? "water"
+        : TERRAIN_TILE_VARIANTS.road.includes(visual.base) ? "road"
+        : TERRAIN_TILE_VARIANTS.plaza.includes(visual.base) ? "plaza"
+        : TERRAIN_TILE_VARIANTS.sidewalk.includes(visual.base) ? "sidewalk"
+        : TERRAIN_TILE_VARIANTS.park.includes(visual.base) ? "park"
+        : TERRAIN_TILE_VARIANTS.lush.includes(visual.base) ? "lush"
+        : TERRAIN_TILE_VARIANTS.frontier.includes(visual.base) ? "frontier"
+        : TERRAIN_TILE_VARIANTS.undeveloped.includes(visual.base) ? "undeveloped"
+        : "grass";
+      drawDiamond(
+        p.x,
+        p.y,
+        TILE_W * state.camera.zoom,
+        TILE_H * state.camera.zoom,
+        terrainUnderpaintColor(kind, developed, frontier),
+        "rgba(0,0,0,0)"
+      );
       if (state.assets.loaded && tileSprite) {
-        ctx.save();
-        if (!developed) ctx.globalAlpha = frontier ? 0.42 : 0.22;
-        drawSpriteCentered(tileSprite, p.x, p.y, TILE_W * 1.1 * state.camera.zoom, TILE_H * 1.08 * state.camera.zoom);
-        ctx.restore();
+        const alpha = !developed ? (frontier ? 0.54 : 0.34) : 1;
+        drawTerrainTopSprite(
+          tileSprite,
+          p.x,
+          p.y,
+          TILE_W * 1.06 * state.camera.zoom,
+          TILE_H * 1.02 * state.camera.zoom,
+          perimeter,
+          alpha
+        );
+        if (accentSprite && developed) {
+          ctx.save();
+          ctx.globalAlpha = 0.92;
+          drawSpriteCentered(
+            accentSprite,
+            p.x,
+            p.y - 2 * state.camera.zoom,
+            TILE_W * 0.8 * state.camera.zoom,
+            TILE_H * 0.8 * state.camera.zoom
+          );
+          ctx.restore();
+        }
       } else {
         const alt = (x + y) % 2 === 0;
         const fill = !developed ? (frontier ? "#4f6881" : "#374a5c") : (alt ? "#9fd0b0" : "#93c5a8");
@@ -5671,6 +6150,27 @@ function drawMap() {
         if (developed && isRoadTile(x, y) && (x + y) % 3 !== 0) {
           drawDiamond(p.x, p.y - 1, TILE_W * 0.9 * state.camera.zoom, TILE_H * 0.7 * state.camera.zoom, "#b9b3a3", "#9b9688");
         }
+      }
+
+      if (developed && isRoadTile(x, y)) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(255, 247, 226, 0.42)";
+        ctx.lineWidth = Math.max(0.8, 1.2 * state.camera.zoom);
+        const hasLR = isRoadTile(x - 1, y) || isRoadTile(x + 1, y);
+        const hasUD = isRoadTile(x, y - 1) || isRoadTile(x, y + 1);
+        if (hasLR) {
+          ctx.beginPath();
+          ctx.moveTo(p.x - TILE_W * 0.14 * state.camera.zoom, p.y);
+          ctx.lineTo(p.x + TILE_W * 0.14 * state.camera.zoom, p.y);
+          ctx.stroke();
+        }
+        if (hasUD) {
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y - TILE_H * 0.14 * state.camera.zoom);
+          ctx.lineTo(p.x, p.y + TILE_H * 0.14 * state.camera.zoom);
+          ctx.stroke();
+        }
+        ctx.restore();
       }
     }
   }
@@ -5739,6 +6239,7 @@ function drawMap() {
     const elapsed = clamp(state.day - (z.startDay || 0), 0, total);
     const progress = clamp(elapsed / total, 0, 1);
     if (!live || upgrading) {
+      drawConstructionOverlay(cp.x, cp.y - 4 * state.camera.zoom, (52 + z.size * 18) * state.camera.zoom, (38 + z.size * 10) * state.camera.zoom, progress, "#ffb65e");
       const bw = (58 + z.size * 12) * state.camera.zoom;
       const bh = 5 * state.camera.zoom;
       const bx = cp.x - bw / 2;
@@ -5834,6 +6335,7 @@ function drawMap() {
     const elapsed = clamp(state.day - (b.startDay || 0), 0, total);
     const progress = clamp(elapsed / total, 0, 1);
     if (b.status !== "active") {
+      drawConstructionOverlay(cp.x, cp.y - 4 * state.camera.zoom, (58 + size * 18) * state.camera.zoom, (44 + size * 10) * state.camera.zoom, progress, "#89c5ff");
       const bw = (58 + size * 12) * state.camera.zoom;
       const bh = 5 * state.camera.zoom;
       const bx = cp.x - bw / 2;
@@ -5877,10 +6379,17 @@ function drawMap() {
       }
     }
     const cp = isoToScreen(sx + size / 2, sy + size / 2);
+    const pDef = projectById(state.ui.industryPlacement.projectId);
+    const ghostArt = pDef ? state.assets.actors[pDef.art] : null;
     ctx.fillStyle = "#fff3e4";
     ctx.font = `${Math.max(10, 12 * state.camera.zoom)}px sans-serif`;
     ctx.textAlign = "center";
     ctx.fillText(`Industry ${size}x${size} ${ok ? "ready" : "blocked"}`, cp.x, cp.y - 22 * state.camera.zoom);
+    if (ghostArt) {
+      const w = (54 + size * 24) * state.camera.zoom;
+      const h = (46 + size * 18) * state.camera.zoom;
+      drawPlacementGhostSprite(ghostArt, cp.x, cp.y - 16 * state.camera.zoom, w, h, ok);
+    }
   }
 
   if (state.ui.defensePlacement && state.ui.hoverTile) {
@@ -5905,10 +6414,16 @@ function drawMap() {
       }
     }
     const cp = isoToScreen(sx + size / 2, sy + size / 2);
+    const ghostArt = def ? state.assets.buildings[`${def.buildingArtPrefix}1`] : null;
     ctx.fillStyle = "#eef5ff";
     ctx.font = `${Math.max(10, 12 * state.camera.zoom)}px sans-serif`;
     ctx.textAlign = "center";
     ctx.fillText(`Defense ${size}x${size} ${ok ? "ready" : "blocked"}`, cp.x, cp.y - 22 * state.camera.zoom);
+    if (ghostArt) {
+      const w = (58 + size * 20) * state.camera.zoom;
+      const h = (62 + size * 18) * state.camera.zoom;
+      drawPlacementGhostSprite(ghostArt, cp.x, cp.y - 16 * state.camera.zoom, w, h, ok);
+    }
   }
 
   if (state.ui.housingPlacement && state.ui.hoverTile) {
@@ -5954,6 +6469,7 @@ function drawMap() {
     const p = isoToScreen(hx, hy);
     const ok = isTileBuildable(hx, hy);
     const evaln = ok ? placementEvaluation(state.ui.placementBuildingId, [hx, hy]) : null;
+    const ghostSprite = state.assets.buildings[`${state.ui.placementBuildingId}_lvl1`];
     drawDiamond(
       p.x,
       p.y - 2 * state.camera.zoom,
@@ -5968,6 +6484,9 @@ function drawMap() {
       ctx.textAlign = "center";
       ctx.fillText(`Placement: ${evaln.label} (${evaln.score})`, p.x, p.y - 20 * state.camera.zoom);
     }
+    if (ghostSprite) {
+      drawPlacementGhostSprite(ghostSprite, p.x, p.y - 34 * state.camera.zoom, TILE_W * 1.62 * state.camera.zoom, TILE_H * 2.9 * state.camera.zoom, ok);
+    }
   }
 
   drawProsperityDecor(prosperity);
@@ -5980,7 +6499,8 @@ function drawMap() {
     .sort((a, b) => a.tile[0] + a.tile[1] - (b.tile[0] + b.tile[1]));
   for (const b of drawOrder) {
     const p = isoToScreen(b.tile[0], b.tile[1]);
-    const lvl = Math.max(1, Math.min(3, b.level));
+    const maxArtLevel = DEPARTMENT_PNG_LEVELS[b.id] || 3;
+    const lvl = Math.max(1, Math.min(maxArtLevel, b.level));
     const bSprite = state.assets.buildings[`${b.id}_lvl${lvl}`];
     const w = TILE_W * 1.62 * state.camera.zoom;
     const h = TILE_H * 2.9 * state.camera.zoom;
@@ -5993,6 +6513,8 @@ function drawMap() {
       const bh = TILE_H * 0.56 * state.camera.zoom;
       drawBlock(p.x, p.y - 4 * state.camera.zoom, bw, bh, h3d, buildingColor(b.color, b.state));
     }
+
+    drawBuildingAura(p.x, p.y, h3d, b.state, pulse);
 
     if (b.id === state.selectedBuildingId) {
       drawDiamond(p.x, p.y + 2, TILE_W * 0.8 * state.camera.zoom, TILE_H * 0.7 * state.camera.zoom, "rgba(255,220,130,0.35)", "#f0b35c");
@@ -6014,6 +6536,14 @@ function drawMap() {
       ctx.beginPath();
       ctx.arc(p.x - 8 * state.camera.zoom, p.y - h3d - 8 * state.camera.zoom, 2.5 * state.camera.zoom, 0, Math.PI * 2);
       ctx.arc(p.x + 7 * state.camera.zoom, p.y - h3d - 5 * state.camera.zoom, 2.2 * state.camera.zoom, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (b.state !== "thriving" && b.level >= 3 && ((performance.now() / 250 + b.tile[0] + b.tile[1]) % 1) > 0.46) {
+      ctx.fillStyle = "rgba(255, 240, 190, 0.18)";
+      ctx.beginPath();
+      ctx.rect(p.x - 8 * state.camera.zoom, p.y - h3d - 18 * state.camera.zoom, 4 * state.camera.zoom, 7 * state.camera.zoom);
+      ctx.rect(p.x + 4 * state.camera.zoom, p.y - h3d - 16 * state.camera.zoom, 4 * state.camera.zoom, 7 * state.camera.zoom);
       ctx.fill();
     }
 
@@ -6387,30 +6917,40 @@ function renderHousingCard() {
 
 function renderSetupOverlay() {
   if (!els.setupOverlay) return;
-  if (state.sim.started) {
+  if (state.sim.started || state.ui.introBriefingOpen) {
     els.setupOverlay.hidden = true;
     return;
   }
   els.setupOverlay.hidden = false;
   const remaining = state.buildings.filter((b) => !b.placed).length;
   const ready = remaining === 0;
+  const starterPlaced = foundingStarterPlacedCount();
+  const starterDone = foundingStarterComplete();
   if (els.setupTitle) els.setupTitle.textContent = ready ? "Ready to Launch" : "Build Your Government";
   if (els.setupBody) {
     els.setupBody.textContent = ready
       ? "All essential departments are placed. Launch Government to begin full simulation."
-      : `Place all departments first (${remaining} remaining). During Founding Phase, time and emergencies are paused so setup stays calm.`;
+      : !starterDone
+        ? `Start with 3 core ministries: Health, Treasury, and Transport (${starterPlaced}/3 placed). Click a flashing icon, then click one of the glowing tiles on the map.`
+        : `Good. Now place the remaining ${remaining} departments to complete your government. Time and emergencies stay paused until launch.`;
   }
   if (els.launchGovBtn) {
     els.launchGovBtn.disabled = !ready;
-    els.launchGovBtn.textContent = ready ? "Launch Government" : `Place ${remaining} More`;
+    els.launchGovBtn.hidden = !ready;
+    els.launchGovBtn.textContent = "Launch Government";
   }
   if (els.startPlacementBtn) {
-    els.startPlacementBtn.hidden = true;
+    els.startPlacementBtn.hidden = ready;
+    els.startPlacementBtn.textContent = !starterDone ? "Choose Starter Department" : "Choose Next Department";
   }
 }
 
 function renderTutorialOverlay() {
   if (!els.tutorialOverlay) return;
+  if (state.ui.introBriefingOpen) {
+    els.tutorialOverlay.hidden = true;
+    return;
+  }
   const guided = tutorialIsActive() && state.sim.started && state.tutorial.phase !== "founding" && state.tutorial.phase !== "freeplay";
   els.tutorialOverlay.hidden = !guided;
   if (!guided) return;
@@ -6441,13 +6981,18 @@ function renderTutorialOverlay() {
     els.tutorialFocusBtn.hidden = !showFocus;
     if (showFocus) {
       const focusLabel = state.tutorial.phase === "industry"
-        ? "Highlight Build Toolbox"
+        ? "Choose First Industry"
         : state.tutorial.phase === "rapid"
-          ? "Go To Rapid Brief"
-          : "Go To Incidents";
+          ? "Review Brief"
+          : "Review Incident";
       els.tutorialFocusBtn.textContent = focusLabel;
     }
   }
+}
+
+function renderIntroBriefing() {
+  if (!els.introBriefingModal) return;
+  els.introBriefingModal.hidden = !state.ui.introBriefingOpen;
 }
 
 function renderHud() {
@@ -6487,6 +7032,18 @@ function renderHud() {
   const worstDistrict = [...state.districts].sort((a, b) => b.stress - a.stress)[0];
   const majorOpen = state.majorEvents.length;
   const remainingToPlace = state.buildings.filter((b) => !b.placed).length;
+  const weakestSystems = [
+    ["health", state.kpi.health],
+    ["education", state.kpi.education],
+    ["safety", state.kpi.safety],
+    ["climate", state.kpi.climate],
+    ["integrity", state.kpi.integrity],
+    ["economy", state.kpi.economy],
+  ].sort((a, b) => a[1] - b[1]);
+  const weakestSystem = weakestSystems[0];
+  const weakSystemCount = weakestSystems.filter(([, value]) => value < 45).length;
+  const weakestLabel = weakestSystem ? prettifyTag(weakestSystem[0]) : "Systems";
+  const weakestValue = weakestSystem ? weakestSystem[1] : 100;
   let light = "🟢";
   let tone = "good";
   els.statusBanner?.classList.remove("warn", "bad");
@@ -6494,7 +7051,9 @@ function renderHud() {
   if (remainingToPlace > 0) {
     light = "🟠";
     tone = "buildout";
-    els.statusBanner.textContent = `Status: Founding phase - place ${remainingToPlace} remaining departments.`;
+    els.statusBanner.textContent = foundingStarterComplete()
+      ? `Status: Founding phase - place ${remainingToPlace} remaining departments.`
+      : `Status: Founding phase - place starter ministries (${foundingStarterPlacedCount()}/3).`;
     els.statusBanner?.classList.add("warn");
     els.trafficPill?.classList.add("warn");
   } else if (!state.sim.started) {
@@ -6553,20 +7112,30 @@ function renderHud() {
     els.statusBanner.textContent = "Status: Industry bottleneck - dependencies are incomplete, output is underperforming.";
     els.statusBanner?.classList.add("warn");
     els.trafficPill?.classList.add("warn");
-  } else if (state.kpi.stability < 40 || state.incidents.length >= 6 || majorOpen > 0) {
+  } else if (majorOpen > 0 || hasActionableRapidBrief() || manualIncidentTotal > 0 || state.kpi.stability < 40 || weakSystemCount >= 3 || weakestValue < 28) {
     els.statusBanner?.classList.add("bad");
     els.trafficPill?.classList.add("bad");
     light = "🔴";
     tone = "critical";
     els.statusBanner.textContent = majorOpen > 0
       ? `Status: MAJOR INCIDENT active (${majorOpen}) - rapid intervention recommended.`
-      : `Status: Critical pressure (${worstDistrict.label}).`;
-  } else if (state.kpi.stability < 58 || trend < -2 || state.incidents.length >= 3) {
+      : hasActionableRapidBrief()
+        ? "Status: Rapid brief waiting - make an evidence call."
+        : manualIncidentTotal > 0
+          ? `Status: Manual incident${manualIncidentTotal > 1 ? "s" : ""} waiting - open Incidents to respond.`
+          : weakestValue < 28
+            ? `Status: ${weakestLabel} is in critical condition - reinforce funding or capacity now.`
+            : weakSystemCount >= 3
+              ? `Status: Multiple systems are under heavy strain - start with ${weakestLabel}.`
+              : "Status: Stability is critically low - immediate intervention recommended.";
+  } else if (state.kpi.stability < 58 || trend < -2 || weakSystemCount >= 1) {
     els.statusBanner?.classList.add("warn");
     els.trafficPill?.classList.add("warn");
     light = "🟠";
     tone = "warning";
-    els.statusBanner.textContent = `Status: Warning trend (${worstDistrict.label}).`;
+    els.statusBanner.textContent = weakSystemCount >= 1
+      ? `Status: ${weakestLabel} is trending low - monitor and reinforce before it slips.`
+      : `Status: Warning trend (${worstDistrict.label}).`;
   } else if (state.ui.initiativeGuideActive) {
     els.statusBanner?.classList.add("warn");
     els.trafficPill?.classList.add("warn");
@@ -6583,7 +7152,9 @@ function renderHud() {
   if (els.trafficPill) els.trafficPill.title = `Traffic light: ${tone}. ${majorHint}. ${rapidHint}. ${topIncidents ? `Open: ${topIncidents}.` : "No open incidents."}`;
   if (els.mapTip) {
     if (!state.sim.started) {
-      els.mapTip.textContent = "Founding phase: pick a department icon, place all 8 buildings, then launch government.";
+      els.mapTip.textContent = foundingStarterComplete()
+        ? "Founding phase: place the remaining departments, then launch government."
+        : "Founding phase: place Health, Treasury, and Transport first. Click a flashing icon, then a glowing tile.";
     } else if (tutorialIsActive() && state.tutorial.phase !== "freeplay") {
       const meta = tutorialStepMeta();
       els.mapTip.textContent = `Guided mode: ${meta.body}`;
@@ -6733,7 +7304,7 @@ function renderTabAlerts() {
     setTabAlert(els.tabIncidentsAlert, false);
     setTabAlert(els.tabPulseAlert, false);
     setTabAlert(els.tabPeopleAlert, false);
-    setTabAlert(els.tabMissionsAlert, true);
+    setTabAlert(els.tabMissionsAlert, false);
     if (state.tutorial.phase === "incident" || state.tutorial.phase === "rapid") {
       const alertId = currentActionableIncidentAlertId();
       const incidentsTabActive = Boolean(document.querySelector('.side-tab.is-active[data-tab="incidents"]'));
@@ -7281,10 +7852,45 @@ function departmentQuickTooltip(id) {
   return `${b.name}: ${b.desc} Why build it: ${why[id] || "Provides foundational state capacity."}`;
 }
 
+function updateQuickBuildTooltip() {
+  if (!els.quickBuildTooltip || !els.quickBuildToolbox || els.quickBuildToolbox.hidden) return;
+  const guided = tutorialIsActive() && state.tutorial.phase !== "freeplay";
+  const unplacedDepartments = state.buildings.filter((b) => !b.placed);
+  const foundingMode = unplacedDepartments.length > 0;
+  const hover = state.ui.quickBuildHover;
+  let tooltip = "Hover an icon to inspect footprint, costs, and dependencies.";
+  if (hover?.kind === "department") tooltip = departmentQuickTooltip(hover.id);
+  if (hover?.kind === "industry") tooltip = industryQuickTooltip(projectById(hover.id));
+  if (hover?.kind === "defense") tooltip = defenseQuickTooltip(defenseTypeById(hover.id));
+  if (foundingMode && state.ui.placementBuildingId) {
+    const b = findBuilding(state.ui.placementBuildingId);
+    if (b) tooltip = `Armed: ${b.name}. Click any clear map tile to place.`;
+  } else if (state.ui.industryPlacement?.projectId) {
+    const p = projectById(state.ui.industryPlacement.projectId);
+    if (p) tooltip = `Armed: ${p.name} (${p.size}x${p.size}). Click map to place.`;
+  } else if (state.ui.defensePlacement?.baseTypeId) {
+    const d = defenseTypeById(state.ui.defensePlacement.baseTypeId);
+    if (d) tooltip = `Armed: ${d.name} (${d.size}x${d.size}). Click map to place.`;
+  }
+  if (foundingMode && !state.ui.placementBuildingId) {
+    tooltip = foundingStarterComplete()
+      ? `Place the remaining ${unplacedDepartments.length} departments to complete government.`
+      : `Start with Health, Treasury, and Transport (${foundingStarterPlacedCount()}/3 placed).`;
+  } else if (!state.ui.industryPlacement?.projectId && !state.ui.defensePlacement?.baseTypeId) {
+    const unlockedIndustry = INDUSTRY_PROJECT_DEFS.filter((p) => industryTierAllowed(p)).map((p) => p.name).join(", ") || "None yet";
+    const unlockedDefense = DEFENSE_BASE_DEFS.filter((d) => defenseTierAllowed(d)).map((d) => d.name).join(", ") || "None yet";
+    tooltip = `Available now: Industry - ${unlockedIndustry}. Defense - ${unlockedDefense}. Locked icons show the tier they unlock in.`;
+  }
+  if (!foundingMode && guided && state.tutorial.phase === "industry" && !state.ui.industryPlacement?.projectId && !state.ui.defensePlacement?.baseTypeId) {
+    tooltip = "Guided step: choose an Industry icon, then click a clear map tile to place it.";
+  }
+  els.quickBuildTooltip.textContent = tooltip;
+}
+
 function renderQuickBuildToolbox() {
   if (!els.quickBuildToolbox || !els.quickIndustryGrid || !els.quickDefenseGrid || !els.quickBuildTooltip || !els.quickBuildToggleBtn) return;
   const guided = tutorialIsActive() && state.tutorial.phase !== "freeplay";
-  const guidedNeedsToolbox = ["industry", "incident", "rapid", "freeplay"].includes(state.tutorial.phase);
+  const guidedNeedsToolbox = state.tutorial.phase === "industry";
   const unplacedDepartments = state.buildings.filter((b) => !b.placed);
   const foundingMode = unplacedDepartments.length > 0;
   const blocked = state.gameOver.active || (state.sim.started && guided && !guidedNeedsToolbox);
@@ -7299,6 +7905,8 @@ function renderQuickBuildToolbox() {
   if (els.mapPanel) els.mapPanel.classList.toggle("toolbox-spotlight", spotlight);
   const revealActive = !blocked && Date.now() < (state.ui.mapRevealUntilMs || 0);
   if (els.mapPanel) els.mapPanel.classList.toggle("reveal-active", revealActive);
+  const mapSpotlight = !blocked && Date.now() < (state.ui.mapSpotlightUntilMs || 0);
+  if (els.mapPanel) els.mapPanel.classList.toggle("map-action-spotlight", mapSpotlight);
   if (blocked) return;
 
   const guidedEarly = !foundingMode && guided && ["budget", "upgrade"].includes(state.tutorial.phase);
@@ -7333,7 +7941,8 @@ function renderQuickBuildToolbox() {
     if (els.quickPrimaryTitle) els.quickPrimaryTitle.textContent = "Founding Departments";
     if (els.quickSecondaryTitle) els.quickSecondaryTitle.textContent = "Progress";
     if (els.quickSecondarySection) els.quickSecondarySection.hidden = true;
-    const departmentTiles = BUILDING_DEFS.map((def) => {
+    const unlockedIds = new Set(unlockedFoundingDepartmentIds());
+    const departmentTiles = BUILDING_DEFS.filter((def) => unlockedIds.has(def.id)).map((def) => {
       const b = findBuilding(def.id);
       const placed = Boolean(b?.placed);
       const armed = state.ui.placementBuildingId === def.id;
@@ -7355,9 +7964,11 @@ function renderQuickBuildToolbox() {
       const selected = armed || state.industry.selectedProjectId === p.id;
       const locked = !industryTierAllowed(p);
       const icon = `./assets/cozy-pack/actors/${p.art}.svg`;
-      return `<button type="button" class="quick-build-item ${selected ? "active" : ""} ${armed ? "armed" : ""} ${locked ? "locked" : ""}" data-quick-kind="industry" data-quick-id="${p.id}" title="${p.name}" ${locked ? "disabled" : ""}>
+      const status = locked ? `Unlocks at ${TIER_CONFIG[p.tier].name}` : "Available now";
+      return `<button type="button" class="quick-build-item ${selected ? "active" : ""} ${armed ? "armed" : ""} ${locked ? "locked" : ""}" data-quick-kind="industry" data-quick-id="${p.id}" title="${p.name} · ${status}" ${locked ? "disabled" : ""}>
         <img src="${icon}" alt="${p.name}" />
         <span>${p.name.split(" ")[0]}</span>
+        ${locked ? `<em class="quick-lock-badge">${TIER_CONFIG[p.tier].name}</em>` : ""}
       </button>`;
     }).join("");
     els.quickIndustryGrid.innerHTML = industryTiles;
@@ -7367,58 +7978,23 @@ function renderQuickBuildToolbox() {
       const selected = armed || state.defense.selectedBaseTypeId === d.id;
       const locked = !defenseTierAllowed(d);
       const icon = `./assets/cozy-pack/buildings/${d.buildingArtPrefix}1.svg`;
-      return `<button type="button" class="quick-build-item ${selected ? "active" : ""} ${armed ? "armed" : ""} ${locked ? "locked" : ""}" data-quick-kind="defense" data-quick-id="${d.id}" title="${d.name}" ${locked ? "disabled" : ""}>
+      const status = locked ? `Unlocks at ${TIER_CONFIG[d.tier].name}` : "Available now";
+      return `<button type="button" class="quick-build-item ${selected ? "active" : ""} ${armed ? "armed" : ""} ${locked ? "locked" : ""}" data-quick-kind="defense" data-quick-id="${d.id}" title="${d.name} · ${status}" ${locked ? "disabled" : ""}>
         <img src="${icon}" alt="${d.name}" />
         <span>${d.name.split(" ")[0]}</span>
+        ${locked ? `<em class="quick-lock-badge">${TIER_CONFIG[d.tier].name}</em>` : ""}
       </button>`;
     }).join("");
     els.quickDefenseGrid.innerHTML = defenseTiles;
   }
 
-  let tooltip = "Hover an icon to inspect footprint, costs, and dependencies.";
-  const hover = state.ui.quickBuildHover;
-  if (hover?.kind === "department") tooltip = departmentQuickTooltip(hover.id);
-  if (hover?.kind === "industry") tooltip = industryQuickTooltip(projectById(hover.id));
-  if (hover?.kind === "defense") tooltip = defenseQuickTooltip(defenseTypeById(hover.id));
-  if (foundingMode && state.ui.placementBuildingId) {
-    const b = findBuilding(state.ui.placementBuildingId);
-    if (b) tooltip = `Armed: ${b.name}. Click any clear map tile to place.`;
-  } else if (state.ui.industryPlacement?.projectId) {
-    const p = projectById(state.ui.industryPlacement.projectId);
-    if (p) tooltip = `Armed: ${p.name} (${p.size}x${p.size}). Click map to place.`;
-  } else if (state.ui.defensePlacement?.baseTypeId) {
-    const d = defenseTypeById(state.ui.defensePlacement.baseTypeId);
-    if (d) tooltip = `Armed: ${d.name} (${d.size}x${d.size}). Click map to place.`;
-  }
-  if (foundingMode && !state.ui.placementBuildingId) {
-    tooltip = `Place all 8 essential government buildings (${unplacedDepartments.length} remaining). Greyed icons are already placed.`;
-  } else if (!state.ui.industryPlacement?.projectId && !state.ui.defensePlacement?.baseTypeId) {
-    tooltip = "Select any icon to arm placement. Then click a clear map tile to place.";
-  }
-  if (!foundingMode && guided && state.tutorial.phase === "industry" && !state.ui.industryPlacement?.projectId && !state.ui.defensePlacement?.baseTypeId) {
-    tooltip = "Guided step: choose an Industry icon, then click a clear map tile to place it.";
-  }
-  els.quickBuildTooltip.textContent = tooltip;
+  updateQuickBuildTooltip();
 }
 
 function renderActionDock() {
   if (!els.actionDock) return;
-  if (!state.sim.started) {
+  if (!state.sim.started || (tutorialIsActive() && state.tutorial.phase !== "freeplay")) {
     els.actionDock.hidden = true;
-    return;
-  }
-  if (tutorialIsActive() && state.tutorial.phase !== "freeplay") {
-    const meta = tutorialStepMeta();
-    const extra =
-      state.tutorial.phase === "incident"
-        ? (state.incidents.find((i) => i.id === state.tutorial.manualIncidentId && !i.resolved)
-            ? " · manual incident live"
-            : " · waiting for incident spawn")
-        : state.tutorial.phase === "rapid"
-          ? (state.rapid.active ? ` · ${Math.max(0, state.rapid.active.expiresDay - state.day)}d` : " · brief incoming")
-          : "";
-    els.actionDock.hidden = false;
-    els.actionDock.innerHTML = `<button class="action-chip hot" data-action-dock="tutorial-focus">🧭 Guided: ${meta.short}${extra}</button>`;
     return;
   }
   const manual = manualActionIncidents();
@@ -7645,11 +8221,13 @@ function renderSelection() {
 
 function renderUI() {
   renderHud();
+  renderOnboardingLayout();
   renderSelection();
   renderQuickBuildToolbox();
   renderSetupOverlay();
   renderTutorialOverlay();
   renderNowStrip();
+  renderIntroBriefing();
 }
 
 function resizeCanvas() {
@@ -8082,6 +8660,18 @@ function bindInput() {
   els.refreshBtn?.addEventListener("click", () => {
     window.location.reload();
   });
+  els.introBriefingStartBtn?.addEventListener("click", () => {
+    state.ui.introBriefingOpen = false;
+    triggerToolboxSpotlight(6500);
+    triggerMapSpotlight(6500);
+    const nextId = nextFoundingDepartmentId();
+    if (nextId) {
+      chooseDepartmentPlacement(nextId, "setup");
+      const target = (state.ui.placementRecommendations || [])[0]?.tile || resolveDepartmentPlacementTile(nextId, CITY_CORE_TILE);
+      if (target) focusCameraOnTile(target);
+    }
+    renderUI();
+  });
   els.focusBtn?.addEventListener("click", () => {
     state.ui.focusMode = !state.ui.focusMode;
     document.body.classList.toggle("focus-mode", state.ui.focusMode);
@@ -8090,9 +8680,14 @@ function bindInput() {
   els.startPlacementBtn?.addEventListener("click", () => {
     setActiveSideTab("control");
     state.ui.quickBuildCollapsed = false;
-    triggerToolboxSpotlight(4200);
-    const nextId = state.buildings.find((b) => !b.placed)?.id || null;
-    if (nextId) chooseDepartmentPlacement(nextId, "setup");
+    triggerToolboxSpotlight(6500);
+    triggerMapSpotlight(6500);
+    const nextId = nextFoundingDepartmentId();
+    if (nextId) {
+      chooseDepartmentPlacement(nextId, "setup");
+      const target = (state.ui.placementRecommendations || [])[0]?.tile || resolveDepartmentPlacementTile(nextId, CITY_CORE_TILE);
+      if (target) focusCameraOnTile(target);
+    }
     renderUI();
   });
   els.launchGovBtn?.addEventListener("click", () => {
@@ -8419,11 +9014,7 @@ function bindInput() {
     }
   };
 
-  let lastQuickBuildArmAt = 0;
   const handleQuickBuildArm = (e) => {
-    const now = Date.now();
-    if (now - lastQuickBuildArmAt < 120) return;
-    lastQuickBuildArmAt = now;
     const target = e.target;
     if (!(target instanceof HTMLElement)) return;
     const btn = target.closest("[data-quick-kind]");
@@ -8434,8 +9025,18 @@ function bindInput() {
     const id = btn.getAttribute("data-quick-id");
     armQuickBuildFromToolbox(kind, id);
   };
-  els.quickBuildToolbox?.addEventListener("pointerup", handleQuickBuildArm);
   els.quickBuildToolbox?.addEventListener("click", handleQuickBuildArm);
+  els.quickBuildToolbox?.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    handleQuickBuildArm(e);
+  });
+  document.addEventListener("click", (e) => {
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+    const btn = target.closest("#quickBuildToolbox [data-quick-kind]");
+    if (!(btn instanceof HTMLElement)) return;
+    handleQuickBuildArm(e);
+  }, true);
   const quickHoverHandler = (e) => {
     const target = e.target;
     if (!(target instanceof HTMLElement)) return;
@@ -8445,18 +9046,18 @@ function bindInput() {
     const id = btn.getAttribute("data-quick-id");
     if (!kind || !id) return;
     state.ui.quickBuildHover = { kind, id };
-    renderQuickBuildToolbox();
+    updateQuickBuildTooltip();
   };
   els.quickBuildToolbox?.addEventListener("mouseover", quickHoverHandler);
   els.quickBuildToolbox?.addEventListener("focusin", quickHoverHandler);
   els.quickBuildToolbox?.addEventListener("mouseleave", () => {
     state.ui.quickBuildHover = null;
-    renderQuickBuildToolbox();
+    updateQuickBuildTooltip();
   });
   els.quickBuildToolbox?.addEventListener("focusout", () => {
     if (document.activeElement && els.quickBuildToolbox.contains(document.activeElement)) return;
     state.ui.quickBuildHover = null;
-    renderQuickBuildToolbox();
+    updateQuickBuildTooltip();
   });
 
   canvas.addEventListener("mousedown", (e) => {
@@ -8665,6 +9266,12 @@ function bindInput() {
   );
 
   window.addEventListener("resize", () => { resizeCanvas(); });
+  if (window.ResizeObserver && els.mapPanel) {
+    const mapResizeObserver = new ResizeObserver(() => {
+      resizeCanvas();
+    });
+    mapResizeObserver.observe(els.mapPanel);
+  }
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && state.monthly.modalOpen) {
       closeMonthlyModal();
@@ -8720,9 +9327,11 @@ async function bootstrap() {
   try {
     await loadAssetPack();
     await loadDepartmentPngOverrides();
+    await loadTerrainTileOverrides();
     addTicker("Cozy art pack loaded.");
   } catch {
     await loadDepartmentPngOverrides();
+    await loadTerrainTileOverrides();
     addTicker("Asset pack unavailable; using fallback visuals.");
   }
   initDecorProps();
