@@ -1,24 +1,24 @@
 .DS_Store
 
 # Local source/reference art and audio not needed for runtime deploy
-Building Tycoon Sound FX Pack/
-Epic Vol2 Deep Waters Main.wav
-buildings.psd
-statecraft rise to power.png
-Climate 1.png
-Education 1.png
-Health 1.png
-Integrity 1.png
-Security 1.png
-Transport 1.png
-Treasury 1.png
-Welfare 1.png
-Climate *.png
-Education *.png
-Health *.png
-Integrity *.png
-Security *.png
-Transport *.png
-Treasury *.png
-Welfare *.png
-Tiles/
+/Building Tycoon Sound FX Pack/
+/Epic Vol2 Deep Waters Main.wav
+/buildings.psd
+/statecraft rise to power.png
+/Climate 1.png
+/Education 1.png
+/Health 1.png
+/Integrity 1.png
+/Security 1.png
+/Transport 1.png
+/Treasury 1.png
+/Welfare 1.png
+/Climate *.png
+/Education *.png
+/Health *.png
+/Integrity *.png
+/Security *.png
+/Transport *.png
+/Treasury *.png
+/Welfare *.png
+/Tiles/
