@@ -971,6 +971,22 @@ h1 {
   box-shadow: 0 0 0 3px rgba(255, 122, 92, 0.34), 0 0 34px rgba(255, 122, 92, 0.22), inset 0 0 36px rgba(255, 112, 96, 0.08);
 }
 
+[data-pane="incidents"].urgent-pane::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 22px;
+  background: radial-gradient(circle at 50% 18%, rgba(255, 118, 98, 0.24), rgba(255, 118, 98, 0.06) 42%, transparent 78%);
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 0;
+}
+
+[data-pane="incidents"].urgent-pane > * {
+  position: relative;
+  z-index: 1;
+}
+
 [data-pane="incidents"].urgent-pane > .rapid-card {
   border-color: rgba(255, 146, 96, 0.92);
   box-shadow: 0 0 0 2px rgba(255, 122, 92, 0.34), 0 0 38px rgba(255, 122, 92, 0.32);
@@ -987,13 +1003,13 @@ h1 {
 
 @keyframes incident-pane-pulse {
   from {
-    box-shadow: 0 0 0 2px rgba(255, 122, 92, 0.22), 0 0 22px rgba(255, 122, 92, 0.16), inset 0 0 20px rgba(255, 112, 96, 0.06);
+    box-shadow: 0 0 0 2px rgba(255, 122, 92, 0.22), 0 0 26px rgba(255, 122, 92, 0.18), inset 0 0 22px rgba(255, 112, 96, 0.08);
     background: linear-gradient(180deg, rgba(18, 38, 64, 0.98), rgba(11, 24, 43, 0.98));
     transform: translateY(0);
   }
   to {
-    box-shadow: 0 0 0 5px rgba(255, 122, 92, 0.56), 0 0 48px rgba(255, 122, 92, 0.36), inset 0 0 48px rgba(255, 112, 96, 0.16);
-    background: linear-gradient(180deg, rgba(70, 30, 34, 0.98), rgba(20, 26, 48, 0.98));
+    box-shadow: 0 0 0 6px rgba(255, 122, 92, 0.6), 0 0 62px rgba(255, 122, 92, 0.42), inset 0 0 68px rgba(255, 112, 96, 0.2);
+    background: linear-gradient(180deg, rgba(88, 34, 38, 0.98), rgba(25, 28, 51, 0.98));
     transform: translateY(-1px);
   }
 }
@@ -1732,7 +1748,8 @@ h1 {
   position: absolute;
   left: 4px;
   bottom: calc(100% + 8px);
-  width: min(300px, 92%);
+  width: min(220px, 78%);
+  min-height: 0;
   padding: 8px 10px;
   border-radius: 14px;
   border: 1px solid rgba(255, 191, 74, 0.64);

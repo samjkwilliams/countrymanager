@@ -6928,6 +6928,29 @@ function drawAtmosphere() {
   }
 }
 
+function drawPostProcessFx() {
+  const w = state.camera.viewW;
+  const h = state.camera.viewH;
+  ctx.save();
+  const vignette = ctx.createRadialGradient(w * 0.5, h * 0.5, Math.min(w, h) * 0.18, w * 0.5, h * 0.5, Math.max(w, h) * 0.72);
+  vignette.addColorStop(0, "rgba(0,0,0,0)");
+  vignette.addColorStop(0.72, "rgba(4,10,18,0.05)");
+  vignette.addColorStop(1, "rgba(2,6,12,0.16)");
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.globalAlpha = 0.05;
+  ctx.fillStyle = "#dfe7f2";
+  const step = 6;
+  const offset = Math.floor(performance.now() / 45) % step;
+  for (let y = offset; y < h; y += step) {
+    for (let x = (y / step) % 2 === 0 ? 0 : 3; x < w; x += step) {
+      if (((x + y + offset) % 17) < 3) ctx.fillRect(x, y, 1, 1);
+    }
+  }
+  ctx.restore();
+}
+
 function drawTraffic() {
   for (const v of state.visual.vehicles) {
     const p = isoToScreen(v.x, v.y);
@@ -7271,26 +7294,6 @@ function drawMap() {
         }
       }
 
-      if (developed && isRoadTile(x, y)) {
-        ctx.save();
-        ctx.strokeStyle = "rgba(255, 247, 226, 0.42)";
-        ctx.lineWidth = Math.max(0.8, 1.2 * state.camera.zoom);
-        const hasLR = spatial.roadTiles.has(tileKey(x - 1, y)) || spatial.roadTiles.has(tileKey(x + 1, y));
-        const hasUD = spatial.roadTiles.has(tileKey(x, y - 1)) || spatial.roadTiles.has(tileKey(x, y + 1));
-        if (hasLR) {
-          ctx.beginPath();
-          ctx.moveTo(p.x - TILE_W * 0.14 * state.camera.zoom, p.y);
-          ctx.lineTo(p.x + TILE_W * 0.14 * state.camera.zoom, p.y);
-          ctx.stroke();
-        }
-        if (hasUD) {
-          ctx.beginPath();
-          ctx.moveTo(p.x, p.y - TILE_H * 0.14 * state.camera.zoom);
-          ctx.lineTo(p.x, p.y + TILE_H * 0.14 * state.camera.zoom);
-          ctx.stroke();
-        }
-        ctx.restore();
-      }
     }
   }
 
@@ -7709,6 +7712,7 @@ function drawMap() {
   drawResponders();
   drawRipples();
   drawAtmosphere();
+  drawPostProcessFx();
 }
 
 function pickBuildingAt(sx, sy) {
@@ -8644,12 +8648,11 @@ function renderPulseMiniBoard() {
 function renderOpsRadar() {
   if (els.dockRadarHint) {
     const showHint = !tutorialIsActive() && state.sim.started && state.day <= state.ui.radarHintUntilDay && !state.ui.radarHintDismissed;
-    els.dockRadarHint.hidden = !showHint;
-    if (showHint) {
-      if (els.dockRadarHintText) {
-        els.dockRadarHintText.textContent = "This radar is your city balance. Outward spokes mean strain, and buildings plus incident responses pull them back in.";
-      }
-    }
+    const hintText = showHint
+      ? "This radar is your city balance. Outward spokes mean strain, and buildings plus incident responses pull them back in."
+      : "";
+    if (els.dockRadarHintText) els.dockRadarHintText.textContent = hintText;
+    els.dockRadarHint.hidden = !hintText;
   }
   document.querySelector(".dock-radar-wrap")?.classList.toggle("guided-focus", !tutorialIsActive() && state.sim.started && state.day <= state.ui.radarHintUntilDay && !state.ui.radarHintDismissed);
   renderRadarInto(els.dockRadarSvg, els.dockHeatList, 4);
