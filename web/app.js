@@ -10014,10 +10014,14 @@ function bindInput() {
     }
     renderUI();
   });
-  els.dockRadarDismissBtn?.addEventListener("click", () => {
+  const dismissRadarHint = (e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
     state.ui.radarHintDismissed = true;
     renderUI();
-  });
+  };
+  els.dockRadarDismissBtn?.addEventListener("pointerdown", dismissRadarHint);
+  els.dockRadarDismissBtn?.addEventListener("click", dismissRadarHint);
   els.startPlacementBtn?.addEventListener("click", () => {
     focusControlPanel();
     state.ui.quickBuildCollapsed = false;
