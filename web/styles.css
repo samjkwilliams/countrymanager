@@ -2130,44 +2130,60 @@ h1 {
   height: 100%;
   object-fit: cover;
   object-position: center center;
-  filter: saturate(1.02) contrast(1.02);
+  filter: saturate(1.04) contrast(1.03);
 }
 
-.splash-screen-copy {
+.splash-screen-content {
   position: relative;
   z-index: 1;
   min-height: 100vh;
-  max-width: 760px;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  gap: 16px;
-  padding: clamp(28px, 4vw, 46px) clamp(24px, 4vw, 56px) clamp(38px, 5vw, 64px);
+  align-items: center;
+  justify-content: flex-start;
+  gap: 22px;
+  padding: clamp(44px, 6vw, 72px) clamp(20px, 4vw, 36px) clamp(36px, 5vw, 56px);
   background:
-    linear-gradient(90deg, rgba(4, 12, 24, 0.94) 0%, rgba(4, 12, 24, 0.8) 42%, rgba(4, 12, 24, 0.2) 78%, rgba(4, 12, 24, 0) 100%);
+    radial-gradient(circle at 50% 72%, rgba(6, 16, 32, 0.14), transparent 22%),
+    linear-gradient(180deg, rgba(4, 12, 24, 0.22) 0%, rgba(4, 12, 24, 0.1) 22%, rgba(4, 12, 24, 0.4) 58%, rgba(4, 12, 24, 0.78) 100%);
+}
+
+.splash-dialog {
+  width: min(760px, 54vw);
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  padding: clamp(20px, 2.4vw, 28px) clamp(22px, 3vw, 34px);
+  border: 1px solid rgba(255, 173, 92, 0.34);
+  border-radius: 26px;
+  background: linear-gradient(180deg, rgba(6, 18, 34, 0.48), rgba(4, 12, 24, 0.62));
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(10px);
+  text-align: center;
 }
 
 .intro-briefing-card h2 {
   margin: 0;
   color: #ffe1cb;
-  max-width: 12ch;
-  font-size: clamp(34px, 5vw, 72px);
-  line-height: 0.98;
+  max-width: 14ch;
+  font-size: clamp(28px, 3.3vw, 48px);
+  line-height: 1.04;
 }
 
 .intro-logo {
   display: block;
-  width: min(420px, 78%);
+  width: min(520px, 72vw);
   height: auto;
-  margin: 0 0 6px;
-  filter: drop-shadow(0 0 18px rgba(255, 124, 36, 0.24));
+  margin: 0;
+  filter: drop-shadow(0 0 22px rgba(255, 124, 36, 0.18));
 }
 
 .intro-lead {
   color: #d5e0f3;
-  max-width: 22ch;
-  font-size: clamp(20px, 2.4vw, 31px);
-  line-height: 1.45;
+  max-width: 30ch;
+  margin: 0;
+  font-size: clamp(18px, 1.5vw, 24px);
+  line-height: 1.5;
 }
 
 .intro-points {
@@ -2193,38 +2209,45 @@ h1 {
   margin-top: 4px;
 }
 
-.splash-screen-copy .paper-actions {
-  justify-content: flex-start;
-  margin-top: 10px;
+.splash-actions {
+  justify-content: center;
+  margin-top: 2px;
 }
 
-.splash-screen-copy .btn.primary {
+.splash-dialog .btn.primary {
   min-width: 190px;
   min-height: 64px;
   font-size: 1.26rem;
 }
 
 @media (max-width: 860px) {
-  .splash-screen-copy {
+  .splash-screen-content {
     min-height: 100vh;
-    max-width: none;
-    justify-content: flex-end;
-    padding: 24px 20px 28px;
-    background: linear-gradient(180deg, rgba(4, 12, 24, 0.15) 0%, rgba(4, 12, 24, 0.34) 28%, rgba(4, 12, 24, 0.9) 70%, rgba(4, 12, 24, 0.97) 100%);
+    justify-content: flex-start;
+    gap: 18px;
+    padding: 34px 16px 24px;
+    background: linear-gradient(180deg, rgba(4, 12, 24, 0.22) 0%, rgba(4, 12, 24, 0.16) 22%, rgba(4, 12, 24, 0.58) 62%, rgba(4, 12, 24, 0.85) 100%);
   }
 
   .intro-logo {
-    width: min(320px, 82%);
+    width: min(320px, 86vw);
+  }
+
+  .splash-dialog {
+    width: min(94vw, 560px);
+    gap: 12px;
+    padding: 18px 16px 20px;
+    border-radius: 22px;
   }
 
   .intro-briefing-card h2 {
-    max-width: none;
-    font-size: clamp(32px, 10vw, 54px);
+    max-width: 12ch;
+    font-size: clamp(24px, 7vw, 38px);
   }
 
   .intro-lead {
-    max-width: none;
-    font-size: clamp(18px, 5.3vw, 24px);
+    max-width: 28ch;
+    font-size: clamp(16px, 4.5vw, 20px);
   }
 }
 
