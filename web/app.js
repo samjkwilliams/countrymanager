@@ -1457,6 +1457,7 @@ function renderOnboardingLayout() {
 
   document.querySelectorAll(".guided-focus").forEach((node) => node.classList.remove("guided-focus"));
   if (els.refreshBtn) els.refreshBtn.hidden = showLiteHud;
+  if (els.pauseBtn) els.pauseBtn.hidden = state.ui.introBriefingOpen || !state.sim.started;
   if (dayPill) dayPill.hidden = false;
   if (treasuryPill) treasuryPill.hidden = false;
   if (dailyNetPill) dailyNetPill.hidden = showLiteHud;
@@ -6472,19 +6473,35 @@ function drawTutorialBuildingPulse(building, x, y, h3d) {
   if (!tutorialPulseBuildingIds().includes(building.id)) return;
   const zoom = state.camera.zoom;
   const pulse = (Math.sin(performance.now() / 240) + 1) / 2;
-  const radiusX = (22 + pulse * 8) * zoom;
-  const radiusY = (12 + pulse * 5) * zoom;
+  const radiusX = (26 + pulse * 14) * zoom;
+  const radiusY = (14 + pulse * 8) * zoom;
+  const crownY = y - h3d - 24 * zoom;
   ctx.save();
+  ctx.shadowColor = "rgba(255, 195, 86, 0.82)";
+  ctx.shadowBlur = 22 * zoom;
   ctx.beginPath();
   ctx.ellipse(x, y - h3d - 6 * zoom, radiusX, radiusY, 0, 0, Math.PI * 2);
-  ctx.strokeStyle = `rgba(110, 230, 170, ${0.48 + pulse * 0.28})`;
-  ctx.lineWidth = Math.max(1.6, 2.2 * zoom);
+  ctx.strokeStyle = `rgba(255, 205, 92, ${0.78 + pulse * 0.2})`;
+  ctx.lineWidth = Math.max(2.2, 3.2 * zoom);
   ctx.stroke();
   ctx.beginPath();
-  ctx.ellipse(x, y + 2 * zoom, radiusX * 0.92, radiusY * 0.82, 0, 0, Math.PI * 2);
-  ctx.strokeStyle = `rgba(110, 230, 170, ${0.24 + pulse * 0.16})`;
-  ctx.lineWidth = Math.max(1.2, 1.6 * zoom);
+  ctx.ellipse(x, y - h3d - 6 * zoom, radiusX * 1.28, radiusY * 1.16, 0, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(255, 136, 56, ${0.44 + pulse * 0.24})`;
+  ctx.lineWidth = Math.max(1.4, 2 * zoom);
   ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.beginPath();
+  ctx.moveTo(x, crownY);
+  ctx.lineTo(x - 11 * zoom, crownY - 18 * zoom);
+  ctx.lineTo(x + 11 * zoom, crownY - 18 * zoom);
+  ctx.closePath();
+  ctx.fillStyle = `rgba(255, 191, 74, ${0.84 + pulse * 0.12})`;
+  ctx.fill();
+  ctx.fillStyle = "#102033";
+  ctx.font = `900 ${Math.max(9, 11 * zoom)}px "Orbitron", "Rajdhani", sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("!", x, crownY - 15 * zoom);
   ctx.restore();
 }
 
@@ -6651,6 +6668,81 @@ function drawBuildingSkillCheck() {
   ctx.restore();
 }
 
+function drawLiveBuildingSkillCue(building, incident) {
+  if (!building?.placed || !building.tile || !incident) return;
+  if (state.ui.activeSkillCheck?.buildingId === building.id) return;
+  const p = isoToScreen(building.tile[0], building.tile[1]);
+  const zoom = state.camera.zoom;
+  const y = p.y - (66 + building.level * 12) * zoom;
+  const width = 110 * zoom;
+  const height = 20 * zoom;
+  const x = p.x - width / 2;
+  const pad = 2 * zoom;
+  const config = skillCheckConfig(building, incident);
+  const value = liveSkillCheckValue(building, incident);
+  const markerX = x + pad + (width - pad * 2) * value;
+  const start = x + pad + (width - pad * 2) * (config.targetCenter - config.targetWidth / 2);
+  const end = x + pad + (width - pad * 2) * (config.targetCenter + config.targetWidth / 2);
+  const pulse = (Math.sin(performance.now() / 110) + 1) / 2;
+
+  ctx.save();
+  ctx.shadowColor = "rgba(255, 162, 74, 0.56)";
+  ctx.shadowBlur = 18 * zoom;
+  if (ctx.roundRect) {
+    ctx.beginPath();
+    ctx.roundRect(x, y, width, height, 999);
+    ctx.fillStyle = "rgba(7, 18, 30, 0.97)";
+    ctx.strokeStyle = `rgba(255, 167, 71, ${0.72 + pulse * 0.18})`;
+    ctx.lineWidth = Math.max(1.5, 1.8 * zoom);
+    ctx.fill();
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = "rgba(7, 18, 30, 0.97)";
+    ctx.strokeStyle = `rgba(255, 167, 71, ${0.72 + pulse * 0.18})`;
+    ctx.fillRect(x, y, width, height);
+    ctx.strokeRect(x, y, width, height);
+  }
+  ctx.shadowBlur = 0;
+  const innerX = x + pad;
+  const innerY = y + pad;
+  const innerW = width - pad * 2;
+  const innerH = height - pad * 2;
+  if (ctx.roundRect) {
+    ctx.beginPath();
+    ctx.roundRect(innerX, innerY, innerW, innerH, 999);
+    ctx.fillStyle = "rgba(152, 44, 44, 0.82)";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.roundRect(Math.max(innerX, start), innerY, Math.max(8 * zoom, end - start), innerH, 999);
+    ctx.fillStyle = "rgba(103, 211, 146, 0.98)";
+    ctx.fill();
+  } else {
+    ctx.fillStyle = "rgba(152, 44, 44, 0.82)";
+    ctx.fillRect(innerX, innerY, innerW, innerH);
+    ctx.fillStyle = "rgba(103, 211, 146, 0.98)";
+    ctx.fillRect(Math.max(innerX, start), innerY, Math.max(8 * zoom, end - start), innerH);
+  }
+  ctx.strokeStyle = "#f4fbff";
+  ctx.lineWidth = Math.max(1.2, 1.5 * zoom);
+  ctx.beginPath();
+  ctx.moveTo(markerX, y - 6 * zoom);
+  ctx.lineTo(markerX, y + height + 6 * zoom);
+  ctx.stroke();
+  ctx.fillStyle = "#f4fbff";
+  ctx.beginPath();
+  ctx.arc(markerX, y + height / 2, 4.2 * zoom, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#fff1de";
+  ctx.font = `900 ${Math.max(9, 10 * zoom)}px "Orbitron", "Rajdhani", sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("CLICK TO RESPOND", p.x, y - 12 * zoom);
+  ctx.font = `800 ${Math.max(8, 9 * zoom)}px "Orbitron", "Rajdhani", sans-serif`;
+  ctx.fillStyle = `rgba(255, 214, 168, ${0.82 + pulse * 0.18})`;
+  ctx.fillText("STOP IN GREEN", p.x, y + height + 12 * zoom);
+  ctx.restore();
+}
+
 function drawSkillBursts() {
   for (const burst of state.ui.skillBursts || []) {
     const building = findBuilding(burst.buildingId);
@@ -6658,8 +6750,8 @@ function drawSkillBursts() {
     const p = isoToScreen(building.tile[0], building.tile[1]);
     const duration = burst.duration || 1.15;
     const progress = 1 - burst.ttl / duration;
-    const radius = (10 + progress * 24) * state.camera.zoom;
-    const alpha = clamp(0.58 * (1 - progress), 0, 0.58);
+    const radius = (18 + progress * 42) * state.camera.zoom;
+    const alpha = clamp(0.86 * (1 - progress), 0, 0.86);
     const color = burst.grade === "perfect"
       ? `rgba(103, 211, 146, ${alpha})`
       : burst.grade === "good"
@@ -6688,13 +6780,13 @@ function drawSkillBursts() {
         : burst.grade === "poor"
           ? "PARTIAL RELIEF"
           : "MISSED WINDOW";
-    const textY = p.y - (60 + building.level * 10) * state.camera.zoom - progress * 16 * state.camera.zoom;
-    const subY = textY + 18 * state.camera.zoom;
-    const pillW = 62 * state.camera.zoom;
-    const pillH = 18 * state.camera.zoom;
+    const textY = p.y - (70 + building.level * 12) * state.camera.zoom - progress * 18 * state.camera.zoom;
+    const subY = textY + 22 * state.camera.zoom;
+    const pillW = 84 * state.camera.zoom;
+    const pillH = 24 * state.camera.zoom;
     const glowY = p.y - (22 + building.level * 7) * state.camera.zoom;
-    const glowW = (28 + (1 - progress) * 18) * state.camera.zoom;
-    const glowH = (12 + (1 - progress) * 10) * state.camera.zoom;
+    const glowW = (46 + (1 - progress) * 34) * state.camera.zoom;
+    const glowH = (20 + (1 - progress) * 18) * state.camera.zoom;
     ctx.save();
     ctx.beginPath();
     ctx.ellipse(p.x, glowY, glowW, glowH, 0, 0, Math.PI * 2);
@@ -6703,19 +6795,19 @@ function drawSkillBursts() {
     ctx.beginPath();
     ctx.arc(p.x, p.y - (36 + building.level * 10) * state.camera.zoom, radius, 0, Math.PI * 2);
     ctx.strokeStyle = color;
-    ctx.lineWidth = Math.max(1.5, 2 * state.camera.zoom);
+    ctx.lineWidth = Math.max(2.2, 3 * state.camera.zoom);
     ctx.stroke();
     ctx.beginPath();
     ctx.arc(p.x, p.y - (36 + building.level * 10) * state.camera.zoom, Math.max(6 * state.camera.zoom, radius * 0.58), 0, Math.PI * 2);
     ctx.strokeStyle = color.replace(/, 0\.\d+\)/, `, ${Math.max(0.18, alpha * 0.85).toFixed(2)})`);
-    ctx.lineWidth = Math.max(1, 1.4 * state.camera.zoom);
+    ctx.lineWidth = Math.max(1.4, 2 * state.camera.zoom);
     ctx.stroke();
     for (let i = 0; i < 6; i += 1) {
       const a = (Math.PI * 2 * i) / 6 + progress * 1.4;
       const px = p.x + Math.cos(a) * radius * 0.7;
       const py = p.y - (36 + building.level * 10) * state.camera.zoom + Math.sin(a) * radius * 0.45;
       ctx.beginPath();
-      ctx.arc(px, py, Math.max(1.4, 2.2 * state.camera.zoom * (1 - progress * 0.55)), 0, Math.PI * 2);
+      ctx.arc(px, py, Math.max(2.2, 3.4 * state.camera.zoom * (1 - progress * 0.55)), 0, Math.PI * 2);
       ctx.fillStyle = color.replace(/, 0\.\d+\)/, `, ${Math.max(0.12, alpha).toFixed(2)})`);
       ctx.fill();
     }
@@ -6724,17 +6816,17 @@ function drawSkillBursts() {
       ctx.roundRect(p.x - pillW / 2, textY - pillH / 2, pillW, pillH, 999);
       ctx.fillStyle = labelFill;
       ctx.strokeStyle = color.replace(/, 0\.\d+\)/, ", 0.92)");
-      ctx.lineWidth = Math.max(1, 1.2 * state.camera.zoom);
+      ctx.lineWidth = Math.max(1.2, 1.6 * state.camera.zoom);
       ctx.fill();
       ctx.stroke();
     }
     ctx.fillStyle = "#f5fbff";
-    ctx.font = `700 ${Math.max(9, 10 * state.camera.zoom)}px sans-serif`;
+    ctx.font = `900 ${Math.max(11, 13 * state.camera.zoom)}px sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(label, p.x, textY + 0.5 * state.camera.zoom);
     ctx.fillStyle = "#d9ecff";
-    ctx.font = `${Math.max(7, 8 * state.camera.zoom)}px sans-serif`;
+    ctx.font = `${Math.max(9, 10 * state.camera.zoom)}px sans-serif`;
     ctx.fillText(impactLabel, p.x, subY);
     ctx.restore();
   }
@@ -7561,6 +7653,10 @@ function drawMap() {
     drawBuildingPressureBar(b, p.x, p.y - h3d - 18 * state.camera.zoom);
     const action = buildingActionContext(b);
     if (action) {
+      if (action.type === "manualIncident") {
+        const incident = state.incidents.find((inc) => inc.id === action.incidentId);
+        drawLiveBuildingSkillCue(b, incident);
+      }
       drawBuildingAlertBadge(
         action.priority,
         p.x + 24 * state.camera.zoom,
@@ -7739,7 +7835,7 @@ function startBuildingSkillCheck(building, inc) {
   inc.resolveSec = clamp((4.1 + (inc.severity || 1) * 1.45) - effect * 2.1, 1.2, 7.4);
   applyServicePressureMap({ [inc.type.kpi]: (inc.severity || 1) * effect * 1.2 }, 1);
   state.kpi.stability = clamp(state.kpi.stability + 0.18 + effect * 0.35, 0, 100);
-  state.ui.skillBursts.push({ buildingId: building.id, grade, ttl: 1.15, duration: 1.15 });
+  state.ui.skillBursts.push({ buildingId: building.id, grade, ttl: 1.45, duration: 1.45 });
   state.ui.skillBursts = state.ui.skillBursts.slice(-8);
   clearNowStrip();
   markOnboarding("upgradedOrDispatched");
@@ -9420,7 +9516,7 @@ function updateCamera(dt) {
 function updateUiFx(dt) {
   if (state.ui.activeSkillCheck?.status === "resolved") {
     const resolvedFor = performance.now() - (state.ui.activeSkillCheck.resolvedAt || 0);
-    if (resolvedFor >= 700) clearActiveSkillCheck();
+    if (resolvedFor >= 1150) clearActiveSkillCheck();
   }
   state.ui.ripples = state.ui.ripples
     .map((r) => ({ ...r, ttl: r.ttl - dt }))
