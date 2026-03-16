@@ -2008,6 +2008,10 @@ function departmentServiceMetrics(building, targetBudget = building?.budget, tar
     demand += Math.max(0, (state.growth.score || 60) - 64) * 0.012;
   }
 
+  if (building.kpi === "economy") {
+    demand += industryNet * 0.006 + Math.max(0, state.kpi.economy - 74) * 0.012;
+  }
+
   demand += clamp(svc?.pressure || 0, 0, 16);
 
   const reserveCap = clamp(3 + level * 1.2 + Math.max(0, budget - 60) * 0.08, 3, 32);
@@ -5842,7 +5846,10 @@ function runDepartmentServiceTick(rows, recoverBoost, dragDampen) {
     const svc = serviceStateForKey(row.key);
     const metrics = departmentServiceMetrics(row.building);
     const level = Math.max(1, row.building.level || 1);
+    const budget = row.building.budget || 60;
+    const autoOn = Boolean(state.ui.autoBudgetByBuilding?.[row.building.id]);
     const health = clamp(svc.health ?? state.kpi[row.key] ?? 60, 0, 100);
+    let nextPressure = clamp(svc.pressure || 0, 0, 16);
     const reserveCap = metrics.reserveCap;
     const reserveRatio = reserveCap > 0 ? clamp((svc.reserve || 0) / reserveCap, 0, 1) : 0;
     const surplus = Math.max(0, metrics.coverage);
@@ -5853,14 +5860,18 @@ function runDepartmentServiceTick(rows, recoverBoost, dragDampen) {
     if (surplus > 0) {
       const reserveGain = surplus * (0.24 + level * 0.015) * (0.95 + reserveRatio * 0.2);
       nextReserve = clamp(nextReserve + reserveGain, 0, reserveCap);
-      const gainBand = health >= 88 ? 0.07 : health >= 76 ? 0.14 : health >= 62 ? 0.22 : 0.34;
-      nextHealth += surplus * gainBand * recoverBoost + (nextReserve / Math.max(1, reserveCap)) * 0.06;
+      const gainBand = health >= 88 ? 0.1 : health >= 76 ? 0.2 : health >= 62 ? 0.34 : 0.54;
+      const capitalLift = Math.max(0, level - 1) * 0.018 + Math.max(0, budget - 70) * 0.0028;
+      const autoLift = autoOn ? (health < 60 ? 0.16 : health < 72 ? 0.1 : 0.04) : 0;
+      nextHealth += surplus * (gainBand + capitalLift + autoLift) * recoverBoost + (nextReserve / Math.max(1, reserveCap)) * 0.1;
+      nextPressure = clamp(nextPressure - surplus * (health < 60 ? 0.9 : 0.48) - reserveRatio * 0.3, 0, 16);
     } else if (shortage > 0) {
       const reserveAbsorb = Math.min(nextReserve, shortage * (0.9 + level * 0.03));
       nextReserve = clamp(nextReserve - reserveAbsorb, 0, reserveCap);
       const unmet = Math.max(0, shortage - reserveAbsorb);
       const lossBand = health >= 85 ? 0.18 : health >= 70 ? 0.26 : health >= 54 ? 0.34 : 0.44;
       nextHealth -= unmet * lossBand * dragDampen + shortage * 0.035;
+      nextPressure = clamp(nextPressure + unmet * 0.14 + shortage * 0.04, 0, 16);
     }
 
     nextHealth -= row.debtPenalty + row.highPenalty;
@@ -5868,6 +5879,7 @@ function runDepartmentServiceTick(rows, recoverBoost, dragDampen) {
     svc.demand = round(metrics.demand * 10) / 10;
     svc.capacity = round(metrics.capacity * 10) / 10;
     svc.coverage = round(metrics.coverage * 10) / 10;
+    svc.pressure = round(nextPressure * 10) / 10;
     svc.reserveCap = round(reserveCap * 10) / 10;
     svc.reserve = round(clamp(nextReserve, 0, reserveCap) * 10) / 10;
     svc.health = clamp(nextHealth, 0, 100);
