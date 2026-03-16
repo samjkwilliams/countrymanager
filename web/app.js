@@ -1455,6 +1455,7 @@ function renderOnboardingLayout() {
   const layoutModeChanged = state.ui.lastMapOnlyMode !== mapOnlyMode;
   state.ui.lastMapOnlyMode = mapOnlyMode;
 
+  document.querySelectorAll(".guided-focus").forEach((node) => node.classList.remove("guided-focus"));
   if (els.refreshBtn) els.refreshBtn.hidden = showLiteHud;
   if (dayPill) dayPill.hidden = false;
   if (treasuryPill) treasuryPill.hidden = false;
@@ -1467,7 +1468,6 @@ function renderOnboardingLayout() {
   if (els.gameLayout) els.gameLayout.classList.toggle("onboarding-map-only", mapOnlyMode);
   if (els.sidePanel) els.sidePanel.hidden = mapOnlyMode;
   if (els.statusBanner) els.statusBanner.hidden = state.ui.introBriefingOpen;
-  document.querySelectorAll(".guided-focus").forEach((node) => node.classList.remove("guided-focus"));
   if (layoutModeChanged) requestAnimationFrame(() => resizeCanvas());
 
   if (state.ui.introBriefingOpen) {
@@ -1536,6 +1536,39 @@ function renderOnboardingLayout() {
   if (showIncidents) {
     const incidentsPane = document.querySelector('[data-pane="incidents"]');
     incidentsPane?.classList.add("guided-focus");
+  }
+}
+
+function tutorialPulseBuildingIds() {
+  if (!tutorialIsActive() || !state.sim.started) return [];
+  if (state.tutorial.phase === "budget" || state.tutorial.phase === "upgrade") {
+    if (state.selectedBuildingId) return [state.selectedBuildingId];
+    return state.buildings.filter((b) => b.placed && SERVICE_KEYS.includes(b.kpi)).map((b) => b.id);
+  }
+  if (state.tutorial.phase === "incident") {
+    const inc = state.incidents.find((i) => i.id === state.tutorial.manualIncidentId && !i.resolved && !i.contained);
+    const anchor = incidentAnchorBuilding(inc);
+    return anchor ? [anchor.id] : [];
+  }
+  return [];
+}
+
+function applyTutorialHighlights() {
+  if (!tutorialIsActive() || !state.sim.started) return;
+  const phase = state.tutorial.phase;
+  if ((phase === "budget" || phase === "upgrade") && state.selectedBuildingId) {
+    els.budgetSlider?.classList.add("guided-focus");
+    if (phase === "budget") {
+      els.applyBudgetBtn?.classList.add("guided-focus");
+    }
+    if (phase === "upgrade") {
+      els.upgradeBtn?.classList.add("guided-focus");
+    }
+  }
+  if (phase === "rapid") {
+    const incidentsPane = document.querySelector('[data-pane="incidents"]');
+    incidentsPane?.classList.add("guided-focus");
+    els.rapidCard?.classList.add("guided-focus");
   }
 }
 
@@ -6435,6 +6468,26 @@ function drawBuildingPressureBar(building, x, y) {
   ctx.restore();
 }
 
+function drawTutorialBuildingPulse(building, x, y, h3d) {
+  if (!tutorialPulseBuildingIds().includes(building.id)) return;
+  const zoom = state.camera.zoom;
+  const pulse = (Math.sin(performance.now() / 240) + 1) / 2;
+  const radiusX = (22 + pulse * 8) * zoom;
+  const radiusY = (12 + pulse * 5) * zoom;
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(x, y - h3d - 6 * zoom, radiusX, radiusY, 0, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(110, 230, 170, ${0.48 + pulse * 0.28})`;
+  ctx.lineWidth = Math.max(1.6, 2.2 * zoom);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(x, y + 2 * zoom, radiusX * 0.92, radiusY * 0.82, 0, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(110, 230, 170, ${0.24 + pulse * 0.16})`;
+  ctx.lineWidth = Math.max(1.2, 1.6 * zoom);
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawBuildingAlertBadge(priority, x, y, id, active = false, label = "!", title = "") {
   const zoom = state.camera.zoom;
   const danger = priority === "high";
@@ -7497,6 +7550,8 @@ function drawMap() {
       if (glow) drawSpriteCentered(glow, p.x, p.y - h3d - 14 * state.camera.zoom, 22 * state.camera.zoom, 22 * state.camera.zoom);
     }
 
+    drawTutorialBuildingPulse(b, p.x, p.y, h3d);
+
     const iconMeta = BUILDING_STATE_META[b.state] || BUILDING_STATE_META.stable;
     ctx.fillStyle = "#1f2d39";
     ctx.font = `${Math.max(10, 12 * state.camera.zoom)}px sans-serif`;
@@ -7584,6 +7639,26 @@ function clearActiveSkillCheck() {
   flushDeferredMomentUi();
 }
 
+function skillCheckSeed(id = "") {
+  let hash = 0;
+  for (let i = 0; i < id.length; i += 1) {
+    hash = ((hash << 5) - hash + id.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+function skillCheckConfig(building, inc) {
+  const width = clamp(0.26 - (inc?.severity || 1) * 0.03, 0.11, 0.24);
+  const seed = skillCheckSeed(`${building?.id || "building"}:${inc?.id || "incident"}`);
+  const center = 0.5 + (((seed % 1000) / 1000) - 0.5) * 0.2;
+  return {
+    speed: 1 + Math.max(0, (inc?.severity || 1) - 1) * 0.18,
+    targetWidth: width,
+    targetCenter: clamp(center, width / 2 + 0.04, 1 - width / 2 - 0.04),
+    phaseOffset: (seed % 1000) / 1000,
+  };
+}
+
 function skillCheckValue(skill, now = performance.now()) {
   if (!skill) return 0.5;
   if (Number.isFinite(skill.stopValue)) return clamp(skill.stopValue, 0, 1);
@@ -7591,6 +7666,13 @@ function skillCheckValue(skill, now = performance.now()) {
   const speed = skill.speed || 1;
   const cycleMs = 1325 / speed;
   const phase = (elapsed % cycleMs) / cycleMs;
+  return phase < 0.5 ? phase * 2 : 2 - phase * 2;
+}
+
+function liveSkillCheckValue(building, inc, now = performance.now()) {
+  const config = skillCheckConfig(building, inc);
+  const cycleMs = 1325 / config.speed;
+  const phase = (((now / cycleMs) + config.phaseOffset) % 1 + 1) % 1;
   return phase < 0.5 ? phase * 2 : 2 - phase * 2;
 }
 
@@ -7610,45 +7692,12 @@ function startBuildingSkillCheck(building, inc) {
     return false;
   }
   state.budget.treasury -= cost;
-  const width = clamp(0.26 - (inc.severity || 1) * 0.03, 0.11, 0.24);
-  const center = 0.5 + rand(-0.1, 0.1);
-  state.ui.activeSkillCheck = {
-    buildingId: building.id,
-    incidentId: inc.id,
-    startedAt: performance.now(),
-    speed: 1 + Math.max(0, (inc.severity || 1) - 1) * 0.18,
-    targetCenter: clamp(center, width / 2 + 0.04, 1 - width / 2 - 0.04),
-    targetWidth: width,
-    cost,
-    status: "running",
-    stopValue: null,
-    resolvedAt: 0,
-    resultText: "",
-    grade: null,
-  };
-  state.selectedBuildingId = building.id;
-  state.ui.mapHudOpen = false;
-  state.ui.mapHudCollapsed = false;
-  markOnboarding("selectedBuilding");
-  addTicker(`Intervene: stop the response meter in the green zone for ${inc.type.title}.`);
-  playSfx("uiSelect");
-  return true;
-}
-
-function resolveBuildingSkillCheck(stopValue = null) {
-  const skill = state.ui.activeSkillCheck;
-  if (!skill) return false;
-  if (skill.status === "resolved") return false;
-  const inc = state.incidents.find((i) => i.id === skill.incidentId);
-  if (!inc || inc.resolved || inc.contained) {
-    clearActiveSkillCheck();
-    return false;
-  }
-  const value = clamp(stopValue ?? skillCheckValue(skill), 0, 1);
-  const centerGap = Math.abs(value - skill.targetCenter);
-  const perfectWidth = skill.targetWidth * 0.28;
-  const goodWidth = skill.targetWidth * 0.5;
-  const poorWidth = skill.targetWidth * 0.95;
+  const config = skillCheckConfig(building, inc);
+  const value = liveSkillCheckValue(building, inc);
+  const centerGap = Math.abs(value - config.targetCenter);
+  const perfectWidth = config.targetWidth * 0.28;
+  const goodWidth = config.targetWidth * 0.5;
+  const poorWidth = config.targetWidth * 0.95;
   let grade = "miss";
   let effect = 0.3;
   let toast = "Miss";
@@ -7666,12 +7715,31 @@ function resolveBuildingSkillCheck(stopValue = null) {
     toast = "Poor";
   }
 
+  state.ui.activeSkillCheck = {
+    buildingId: building.id,
+    incidentId: inc.id,
+    startedAt: performance.now(),
+    speed: config.speed,
+    targetCenter: config.targetCenter,
+    targetWidth: config.targetWidth,
+    cost,
+    status: "resolved",
+    stopValue: value,
+    resolvedAt: performance.now(),
+    resultText: toast.toUpperCase(),
+    grade,
+  };
+  state.selectedBuildingId = building.id;
+  state.ui.mapHudOpen = false;
+  state.ui.mapHudCollapsed = false;
+  markOnboarding("selectedBuilding");
+
   inc.contained = true;
   inc.playerFunded = true;
   inc.resolveSec = clamp((4.1 + (inc.severity || 1) * 1.45) - effect * 2.1, 1.2, 7.4);
   applyServicePressureMap({ [inc.type.kpi]: (inc.severity || 1) * effect * 1.2 }, 1);
   state.kpi.stability = clamp(state.kpi.stability + 0.18 + effect * 0.35, 0, 100);
-  state.ui.skillBursts.push({ buildingId: skill.buildingId, grade, ttl: 1.15, duration: 1.15 });
+  state.ui.skillBursts.push({ buildingId: building.id, grade, ttl: 1.15, duration: 1.15 });
   state.ui.skillBursts = state.ui.skillBursts.slice(-8);
   clearNowStrip();
   markOnboarding("upgradedOrDispatched");
@@ -7699,16 +7767,11 @@ function resolveBuildingSkillCheck(stopValue = null) {
     },
     trustDelta: 0.15 + effect * 0.35,
     axisDrift: { careAusterity: 0.5, libertyControl: inc.type.id === "crime" ? -0.3 : 0.1, publicDonor: 0.2, truthSpin: 0.1 },
-    treasuryDeltaNow: -(skill.cost || 0),
+    treasuryDeltaNow: -cost,
     kpiNow: { [inc.type.kpi]: round(effect * 0.8 * 10) / 10, stability: round((0.12 + effect * 0.2) * 10) / 10 },
     confidence: grade === "perfect" ? "high" : grade === "good" ? "medium" : "low",
     explain: "Hands-on intervention scaled the response quality instead of acting as an instant guaranteed fix.",
   });
-  skill.status = "resolved";
-  skill.stopValue = value;
-  skill.resolvedAt = performance.now();
-  skill.resultText = toast.toUpperCase();
-  skill.grade = grade;
   updateTutorialProgress();
   return true;
 }
@@ -9243,6 +9306,7 @@ function renderUI() {
   renderTutorialOverlay();
   renderNowStrip();
   renderIntroBriefing();
+  applyTutorialHighlights();
 }
 
 function resizeCanvas() {
