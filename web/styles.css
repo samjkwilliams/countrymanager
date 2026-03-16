@@ -966,34 +966,17 @@ h1 {
 [data-pane="incidents"].urgent-pane {
   position: relative;
   border-radius: 18px;
-  animation: incident-pane-pulse var(--urgent-speed, 0.9s) ease-in-out infinite alternate;
-  background: linear-gradient(180deg, rgba(18, 38, 64, 0.98), rgba(11, 24, 43, 0.98));
-  box-shadow: 0 0 0 3px rgba(255, 122, 92, 0.34), 0 0 34px rgba(255, 122, 92, 0.22), inset 0 0 36px rgba(255, 112, 96, 0.08);
-}
-
-[data-pane="incidents"].urgent-pane::before {
-  content: "";
-  position: absolute;
-  inset: -6px;
-  border-radius: 22px;
-  background: radial-gradient(circle at 50% 18%, rgba(255, 118, 98, 0.24), rgba(255, 118, 98, 0.06) 42%, transparent 78%);
-  opacity: 0.9;
-  pointer-events: none;
-  z-index: 0;
-}
-
-[data-pane="incidents"].urgent-pane > * {
-  position: relative;
-  z-index: 1;
+  box-shadow: 0 0 0 2px rgba(255, 122, 92, 0.18);
 }
 
 [data-pane="incidents"].urgent-pane > .rapid-card {
-  border-color: rgba(255, 146, 96, 0.92);
-  box-shadow: 0 0 0 2px rgba(255, 122, 92, 0.34), 0 0 38px rgba(255, 122, 92, 0.32);
+  border-color: rgba(255, 146, 96, 0.96);
+  animation: incident-pane-pulse var(--urgent-speed, 0.9s) ease-in-out infinite alternate;
+  box-shadow: 0 0 0 2px rgba(255, 122, 92, 0.34), 0 0 42px rgba(255, 122, 92, 0.36);
 }
 
 [data-pane="incidents"].urgent-pane > #initiativesCard {
-  box-shadow: 0 0 0 1px rgba(255, 122, 92, 0.14), 0 0 20px rgba(255, 122, 92, 0.14);
+  box-shadow: none;
 }
 
 [data-pane="incidents"].urgent-pane > .rapid-card h2,
@@ -1003,13 +986,13 @@ h1 {
 
 @keyframes incident-pane-pulse {
   from {
-    box-shadow: 0 0 0 2px rgba(255, 122, 92, 0.22), 0 0 26px rgba(255, 122, 92, 0.18), inset 0 0 22px rgba(255, 112, 96, 0.08);
+    box-shadow: 0 0 0 2px rgba(255, 122, 92, 0.22), 0 0 26px rgba(255, 122, 92, 0.18), inset 0 0 28px rgba(255, 112, 96, 0.08);
     background: linear-gradient(180deg, rgba(18, 38, 64, 0.98), rgba(11, 24, 43, 0.98));
     transform: translateY(0);
   }
   to {
-    box-shadow: 0 0 0 6px rgba(255, 122, 92, 0.6), 0 0 62px rgba(255, 122, 92, 0.42), inset 0 0 68px rgba(255, 112, 96, 0.2);
-    background: linear-gradient(180deg, rgba(88, 34, 38, 0.98), rgba(25, 28, 51, 0.98));
+    box-shadow: 0 0 0 6px rgba(255, 122, 92, 0.6), 0 0 62px rgba(255, 122, 92, 0.42), inset 0 0 88px rgba(255, 112, 96, 0.24);
+    background: linear-gradient(180deg, rgba(104, 38, 42, 0.98), rgba(28, 30, 54, 0.98));
     transform: translateY(-1px);
   }
 }
@@ -1761,6 +1744,7 @@ h1 {
   gap: 8px;
   box-shadow: 0 14px 24px rgba(0, 0, 0, 0.34), 0 0 24px rgba(255, 170, 74, 0.22);
   z-index: 3;
+  pointer-events: auto;
 }
 
 .dock-head {
