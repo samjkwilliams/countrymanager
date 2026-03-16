@@ -1066,6 +1066,7 @@ const state = {
     lastSeenIncidentAlertId: null,
     initiativeGuideActive: false,
     initiativeGuideUntilDay: 0,
+    radarHintUntilDay: 0,
     buildingButtons: [],
     activeSkillCheck: null,
     skillBursts: [],
@@ -1163,6 +1164,7 @@ const els = {
   peopleGrid: document.getElementById("peopleGrid"),
   initiativeGrid: document.getElementById("initiativeGrid"),
   initiativesCard: document.getElementById("initiativesCard"),
+  dockRadarHint: document.getElementById("dockRadarHint"),
   initiativeHubCard: document.getElementById("initiativeHubCard"),
   initiativeHubHint: document.getElementById("initiativeHubHint"),
   initiativeQuickGrid: document.getElementById("initiativeQuickGrid"),
@@ -1559,7 +1561,6 @@ function applyTutorialHighlights() {
   const phase = state.tutorial.phase;
   if ((phase === "budget" || phase === "upgrade") && state.selectedBuildingId) {
     els.budgetSlider?.classList.add("guided-focus");
-    document.querySelector(".dock-radar-wrap")?.classList.add("guided-focus");
     if (phase === "budget") {
       els.applyBudgetBtn?.classList.add("guided-focus");
     }
@@ -1570,7 +1571,6 @@ function applyTutorialHighlights() {
   if (phase === "rapid") {
     const incidentsPane = document.querySelector('[data-pane="incidents"]');
     incidentsPane?.classList.add("guided-focus");
-    els.rapidCard?.classList.add("guided-focus");
   }
 }
 
@@ -2014,12 +2014,12 @@ const DEPARTMENT_LOAD_PROFILE = {
 };
 
 const SERVICE_LOAD_SCHEDULE = {
-  health: { startDay: 18, rampDays: 24, radiusStart: 10, radiusRamp: 5, growthStart: 64, growthRamp: 18 },
-  education: { startDay: 28, rampDays: 28, radiusStart: 11, radiusRamp: 5, growthStart: 68, growthRamp: 18 },
-  safety: { startDay: 16, rampDays: 22, radiusStart: 10, radiusRamp: 4, growthStart: 63, growthRamp: 16 },
-  climate: { startDay: 36, rampDays: 32, radiusStart: 12, radiusRamp: 6, growthStart: 72, growthRamp: 18 },
-  integrity: { startDay: 24, rampDays: 28, radiusStart: 10, radiusRamp: 5, growthStart: 66, growthRamp: 16 },
-  economy: { startDay: 14, rampDays: 20, radiusStart: 10, radiusRamp: 4, growthStart: 62, growthRamp: 14 },
+  health: { startDay: 24, rampDays: 34, radiusStart: 11, radiusRamp: 6, growthStart: 66, growthRamp: 22 },
+  education: { startDay: 34, rampDays: 38, radiusStart: 12, radiusRamp: 6, growthStart: 70, growthRamp: 22 },
+  safety: { startDay: 22, rampDays: 32, radiusStart: 11, radiusRamp: 5, growthStart: 65, growthRamp: 20 },
+  climate: { startDay: 42, rampDays: 42, radiusStart: 13, radiusRamp: 7, growthStart: 74, growthRamp: 22 },
+  integrity: { startDay: 30, rampDays: 36, radiusStart: 11, radiusRamp: 6, growthStart: 68, growthRamp: 20 },
+  economy: { startDay: 20, rampDays: 30, radiusStart: 11, radiusRamp: 5, growthStart: 64, growthRamp: 18 },
 };
 
 function serviceLoadActivation(key) {
@@ -2043,8 +2043,8 @@ function departmentDemandLoad(building) {
   const profile = DEPARTMENT_LOAD_PROFILE[building.kpi] || DEPARTMENT_LOAD_PROFILE.health;
   const activation = serviceLoadActivation(building.kpi);
   const radiusLoad = Math.max(0, cityRadius() - 10);
-  const timeLoad = Math.max(0, state.day - 24) / 30;
-  const growthLoad = Math.max(0, (state.growth.score || 60) - 60) / 12;
+  const timeLoad = Math.max(0, state.day - 24) / 40;
+  const growthLoad = Math.max(0, (state.growth.score || 60) - 60) / 16;
   const industryLoad = Math.max(0, state.industry.metrics.utilization || 0) / 100;
   const incidentLoad = state.incidents.filter((inc) => !inc.resolved && inc.type.kpi === building.kpi).length;
   const majorLoad = state.majorEvents.filter((ev) => (ev.domain || "").includes(building.kpi === "safety" ? "security" : building.kpi)).length;
@@ -2053,7 +2053,7 @@ function departmentDemandLoad(building) {
     : building.kpi === "economy"
       ? Math.max(0, (state.budget.debt - 90) / 80)
       : 0;
-  return profile.base
+  return profile.base * 0.94
     + radiusLoad * profile.growth * (0.18 + activation.radius * 0.82)
     + timeLoad * profile.time * (0.16 + activation.day * 0.84)
     + growthLoad * 0.1 * (0.18 + activation.growth * 0.82)
@@ -2216,6 +2216,9 @@ function setTutorialPhase(phase, announce = true) {
       );
       addTicker("Initiatives unlocked: open the Initiatives tab to launch targeted social programs.");
     }
+    state.ui.radarHintUntilDay = state.day + 10;
+    addRailEvent("📈 City Balance", "The radar in Live Pulse shows which systems are drifting. Buildings, budgets, and responses are how you pull those spokes back.", true);
+    addTicker("Live Pulse radar unlocked: watch the spokes to see where your city is drifting out of balance.");
     addTicker("Guided mode complete. Full simulation chaos is now unlocked.");
     addRailEvent("✅ Tutorial Complete", "All systems unlocked: random incidents, major events, and rapid briefs.", true);
   }
@@ -4718,10 +4721,11 @@ function spawnIncident(forceTypeId = null, options = {}) {
     !autoOnlyType.has(type.id) && (
       severity >= 3
     || highImpactType.has(type.id)
-    || (severity === 2 && Math.random() < 0.3)
+    || (severity === 2 && Math.random() < 0.12)
     );
+  const currentManualCount = actionableManualIncidents().length;
   const requiresPlayerAction = Boolean(
-    opts.requiresPlayerAction ?? opts.tutorialManual ?? inferredManual
+    opts.requiresPlayerAction ?? opts.tutorialManual ?? (inferredManual && currentManualCount < 2)
   );
 
   const incident = {
@@ -4753,9 +4757,9 @@ function spawnIncident(forceTypeId = null, options = {}) {
 
 function updateIncidentsPerDay() {
   const ease = onboardingEaseFactor();
-  const penaltyMult = 0.64 + ease * 0.22; // softer penalties overall
-  const stabilityPenaltyMult = 0.54 + ease * 0.3; // softer stability bleed
-  const escalationCadence = ease < 0.6 ? 6 : 5; // slower severity ramp
+  const penaltyMult = 0.5 + ease * 0.18; // softer penalties overall
+  const stabilityPenaltyMult = 0.44 + ease * 0.22; // softer stability bleed
+  const escalationCadence = ease < 0.6 ? 8 : 7; // slower severity ramp
   const responseByType = {
     crime: "security",
     medical: "health",
@@ -4828,7 +4832,7 @@ function maybeSpawnIncident() {
   });
   const pressure = clamp((100 - state.kpi.stability) / 100, 0, 1);
   const defenseRisk = clamp((65 - (state.defense.metrics.readiness || 0)) / 100, 0, 0.12);
-  const chance = 0.028 + pressure * 0.072 + defenseRisk + Math.min(0.028, state.incidents.length * 0.003);
+  const chance = 0.016 + pressure * 0.05 + defenseRisk * 0.75 + Math.min(0.016, state.incidents.length * 0.002);
   if (Math.random() >= chance) return;
   const total = weighted.reduce((a, x) => a + x.w, 0);
   let roll = Math.random() * total;
@@ -6060,8 +6064,8 @@ function applySimTick() {
   const activeBuildings = placedBuildings.length ? placedBuildings : state.buildings;
   const momentumBonus = state.rapid.momentum * 0.2;
   const ease = onboardingEaseFactor();
-  const recoverBoost = 1.18 - ease * 0.18; // stronger recovery early
-  const dragDampen = 0.68 + ease * 0.32; // lighter negative drags early
+  const recoverBoost = 1.24 - ease * 0.16; // stronger recovery early
+  const dragDampen = 0.58 + ease * 0.26; // lighter negative drags early
   ensureServiceState();
   syncServiceHealthFromKpi();
   decayServicePressure();
@@ -6583,7 +6587,7 @@ function drawBuildingSkillCheck() {
   if (!building?.placed || !building.tile) return;
   const p = isoToScreen(building.tile[0], building.tile[1]);
   const zoom = state.camera.zoom;
-  const y = p.y - (64 + building.level * 11) * zoom;
+  const y = p.y + 10 * zoom;
   const width = 94 * zoom;
   const height = 18 * zoom;
   const x = p.x - width / 2;
@@ -6691,7 +6695,7 @@ function drawLiveBuildingSkillCue(building, incident) {
   if (state.ui.activeSkillCheck?.buildingId === building.id) return;
   const p = isoToScreen(building.tile[0], building.tile[1]);
   const zoom = state.camera.zoom;
-  const y = p.y - (66 + building.level * 12) * zoom;
+  const y = p.y + 10 * zoom;
   const width = 110 * zoom;
   const height = 20 * zoom;
   const x = p.x - width / 2;
@@ -7613,12 +7617,14 @@ function drawMap() {
     const maxArtLevel = DEPARTMENT_PNG_LEVELS[b.id] || 3;
     const lvl = Math.max(1, Math.min(maxArtLevel, b.level));
     const bSprite = state.assets.buildings[`${b.id}_lvl${lvl}`];
-    const w = TILE_W * 1.62 * state.camera.zoom;
-    const h = TILE_H * 2.9 * state.camera.zoom;
+    const grandeurScale = b.level >= 9 ? 1.5 : 1;
+    const w = TILE_W * 1.62 * state.camera.zoom * grandeurScale;
+    const h = TILE_H * 2.9 * state.camera.zoom * grandeurScale;
     const h3d = (18 + b.level * 11) * state.camera.zoom;
+    const spriteYOffset = (34 + (grandeurScale - 1) * 18) * state.camera.zoom;
 
     if (state.assets.loaded && bSprite) {
-      drawSpriteContained(bSprite, p.x, p.y - 34 * state.camera.zoom, w, h);
+      drawSpriteContained(bSprite, p.x, p.y - spriteYOffset, w, h);
     } else {
       const bw = TILE_W * 0.62 * state.camera.zoom;
       const bh = TILE_H * 0.56 * state.camera.zoom;
@@ -8615,6 +8621,13 @@ function renderPulseMiniBoard() {
 }
 
 function renderOpsRadar() {
+  if (els.dockRadarHint) {
+    const showHint = !tutorialIsActive() && state.sim.started && state.day <= state.ui.radarHintUntilDay;
+    els.dockRadarHint.hidden = !showHint;
+    if (showHint) {
+      els.dockRadarHint.textContent = "This radar is your city balance. Any spoke pushing outward is under strain, and departments plus incident responses pull it back in.";
+    }
+  }
   renderRadarInto(els.dockRadarSvg, els.dockHeatList, 4);
 }
 

@@ -969,29 +969,13 @@ h1 {
   animation: incident-pane-pulse 0.85s ease-in-out infinite alternate;
 }
 
-[data-pane="incidents"].urgent-pane::after {
-  content: "ADDRESS ME";
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: rgba(255, 103, 90, 0.92);
-  color: #fff7f4;
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-  box-shadow: 0 0 20px rgba(255, 120, 108, 0.42);
-  pointer-events: none;
-}
-
 @keyframes incident-pane-pulse {
   from {
-    box-shadow: 0 0 0 2px rgba(255, 122, 92, 0.26), 0 0 18px rgba(255, 122, 92, 0.18);
+    box-shadow: 0 0 0 2px rgba(255, 122, 92, 0.22), 0 0 18px rgba(255, 122, 92, 0.16);
     transform: translateY(0);
   }
   to {
-    box-shadow: 0 0 0 4px rgba(255, 122, 92, 0.56), 0 0 34px rgba(255, 122, 92, 0.34);
+    box-shadow: 0 0 0 4px rgba(255, 122, 92, 0.48), 0 0 34px rgba(255, 122, 92, 0.28);
     transform: translateY(-1px);
   }
 }
@@ -1327,10 +1311,11 @@ h1 {
   display: grid;
   height: 100%;
   min-height: 0;
-  overflow-y: auto;
-  gap: 8px;
-  padding-right: 2px;
+  overflow: hidden;
+  gap: 6px;
+  padding-right: 0;
   align-content: start;
+  grid-template-rows: auto auto;
 }
 
 .tab-pane.is-active {
@@ -1341,21 +1326,21 @@ h1 {
   border-width: 2px;
   border-color: rgba(255, 124, 36, 0.56);
   background: linear-gradient(180deg, rgba(14, 34, 58, 0.96), rgba(9, 23, 40, 0.96));
-  padding: 8px;
+  padding: 7px;
 }
 
 .rapid-card h2 {
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .rapid-card .brief-snapshot {
   margin-top: 4px;
-  font-size: 12px;
-  line-height: 1.2;
+  font-size: 11px;
+  line-height: 1.16;
 }
 
 .rapid-card .muted {
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .rapid-card .mini-grid {
@@ -1364,13 +1349,13 @@ h1 {
 }
 
 .rapid-card .mini-grid strong {
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .rapid-card .actions .btn {
-  min-height: 40px;
-  padding: 6px 8px;
-  font-size: 11px;
+  min-height: 34px;
+  padding: 5px 6px;
+  font-size: 10px;
 }
 
 .rapid-card.urgent {
@@ -1474,19 +1459,19 @@ h1 {
 .rapid-actions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
   width: 100%;
 }
 
 .rapid-actions .btn {
-  min-height: 72px;
-  padding: 10px 8px;
+  min-height: 54px;
+  padding: 7px 6px;
   white-space: normal;
   overflow-wrap: anywhere;
   line-height: 1.02;
   text-transform: none;
   letter-spacing: 0.02em;
-  font-size: clamp(12px, 0.95vw, 18px);
+  font-size: clamp(10px, 0.78vw, 14px);
 }
 
 .kpi-grid {
@@ -1725,6 +1710,17 @@ h1 {
   overflow: hidden;
 }
 
+.dock-radar-hint {
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 191, 74, 0.46);
+  background: rgba(16, 39, 66, 0.9);
+  color: #f1dfc4;
+  font-size: 11px;
+  line-height: 1.25;
+  animation: incident-pane-pulse 1s ease-in-out infinite alternate;
+}
+
 .dock-head {
   display: flex;
   justify-content: space-between;
@@ -1883,7 +1879,7 @@ h1 {
   margin-top: 4px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  gap: 5px;
 }
 
 .initiative-icon-btn {
@@ -1891,11 +1887,11 @@ h1 {
   border-radius: 12px;
   background: rgba(9, 25, 43, 0.9);
   color: #e8f0ff;
-  padding: 6px 5px;
+  padding: 5px 4px;
   display: grid;
   justify-items: center;
-  gap: 3px;
-  min-height: 66px;
+  gap: 2px;
+  min-height: 56px;
   cursor: pointer;
   transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
 }
@@ -1917,34 +1913,34 @@ h1 {
 }
 
 .initiative-emoji {
-  font-size: 18px;
+  font-size: 15px;
   line-height: 1;
 }
 
 .initiative-label {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 800;
   text-align: center;
-  line-height: 1.1;
+  line-height: 1.02;
 }
 
 .initiative-cost {
-  font-size: 8px;
+  font-size: 7px;
   color: #9ec0e9;
 }
 
 #initiativesCard {
-  padding: 8px;
+  padding: 7px;
 }
 
 #initiativesCard h3 {
-  font-size: 16px;
+  font-size: 14px;
 }
 
 #initiativesCard > .muted {
   margin-top: 2px;
-  font-size: 11px;
-  line-height: 1.2;
+  font-size: 10px;
+  line-height: 1.1;
 }
 
 #initiativeHubCard.tutorial-highlight {
