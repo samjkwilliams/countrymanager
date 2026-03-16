@@ -6933,14 +6933,14 @@ function drawPostProcessFx() {
   const h = state.camera.viewH;
   ctx.save();
   const bloomA = ctx.createRadialGradient(w * 0.22, h * 0.16, 0, w * 0.22, h * 0.16, Math.min(w, h) * 0.24);
-  bloomA.addColorStop(0, "rgba(255, 214, 150, 0.09)");
-  bloomA.addColorStop(0.55, "rgba(255, 186, 120, 0.035)");
+  bloomA.addColorStop(0, "rgba(255, 214, 150, 0.108)");
+  bloomA.addColorStop(0.55, "rgba(255, 186, 120, 0.042)");
   bloomA.addColorStop(1, "rgba(255, 186, 120, 0)");
   ctx.fillStyle = bloomA;
   ctx.fillRect(0, 0, w, h);
   const bloomB = ctx.createRadialGradient(w * 0.78, h * 0.22, 0, w * 0.78, h * 0.22, Math.min(w, h) * 0.2);
-  bloomB.addColorStop(0, "rgba(160, 214, 255, 0.05)");
-  bloomB.addColorStop(0.6, "rgba(160, 214, 255, 0.018)");
+  bloomB.addColorStop(0, "rgba(160, 214, 255, 0.06)");
+  bloomB.addColorStop(0.6, "rgba(160, 214, 255, 0.022)");
   bloomB.addColorStop(1, "rgba(160, 214, 255, 0)");
   ctx.fillStyle = bloomB;
   ctx.fillRect(0, 0, w, h);
