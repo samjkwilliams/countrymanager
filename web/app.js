@@ -5865,6 +5865,16 @@ function runDepartmentServiceTick(rows, recoverBoost, dragDampen) {
       const autoLift = autoOn ? (health < 60 ? 0.16 : health < 72 ? 0.1 : 0.04) : 0;
       nextHealth += surplus * (gainBand + capitalLift + autoLift) * recoverBoost + (nextReserve / Math.max(1, reserveCap)) * 0.1;
       nextPressure = clamp(nextPressure - surplus * (health < 60 ? 0.9 : 0.48) - reserveRatio * 0.3, 0, 16);
+
+      // If a service is clearly over-covered, let it visibly recover toward healthy range.
+      if (health < 72 && surplus > 0.35) {
+        const recoveryTarget = 72;
+        const recoveryGap = recoveryTarget - health;
+        const reserveAssist = 0.06 + reserveRatio * 0.1;
+        const capitalAssist = Math.max(0, level - 3) * 0.03 + Math.max(0, budget - 80) * 0.0035;
+        nextHealth += recoveryGap * (reserveAssist + capitalAssist) * (0.16 + Math.min(0.28, surplus * 0.08));
+        nextPressure = clamp(nextPressure - 0.35 - surplus * 0.12, 0, 16);
+      }
     } else if (shortage > 0) {
       const reserveAbsorb = Math.min(nextReserve, shortage * (0.9 + level * 0.03));
       nextReserve = clamp(nextReserve - reserveAbsorb, 0, reserveCap);
