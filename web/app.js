@@ -6603,9 +6603,10 @@ function drawSkillBursts() {
     const building = findBuilding(burst.buildingId);
     if (!building?.placed || !building.tile) continue;
     const p = isoToScreen(building.tile[0], building.tile[1]);
-    const progress = 1 - burst.ttl / 0.8;
-    const radius = (8 + progress * 18) * state.camera.zoom;
-    const alpha = clamp(0.45 * (1 - progress), 0, 0.45);
+    const duration = burst.duration || 1.15;
+    const progress = 1 - burst.ttl / duration;
+    const radius = (10 + progress * 24) * state.camera.zoom;
+    const alpha = clamp(0.58 * (1 - progress), 0, 0.58);
     const color = burst.grade === "perfect"
       ? `rgba(103, 211, 146, ${alpha})`
       : burst.grade === "good"
@@ -6627,15 +6628,44 @@ function drawSkillBursts() {
         : burst.grade === "poor"
           ? "rgba(92, 58, 18, 0.96)"
           : "rgba(96, 34, 34, 0.96)";
-    const textY = p.y - (58 + building.level * 10) * state.camera.zoom - progress * 12 * state.camera.zoom;
-    const pillW = 56 * state.camera.zoom;
+    const impactLabel = burst.grade === "perfect"
+      ? "SERVICE BOOST"
+      : burst.grade === "good"
+        ? "SERVICES LIFTED"
+        : burst.grade === "poor"
+          ? "PARTIAL RELIEF"
+          : "MISSED WINDOW";
+    const textY = p.y - (60 + building.level * 10) * state.camera.zoom - progress * 16 * state.camera.zoom;
+    const subY = textY + 18 * state.camera.zoom;
+    const pillW = 62 * state.camera.zoom;
     const pillH = 18 * state.camera.zoom;
+    const glowY = p.y - (22 + building.level * 7) * state.camera.zoom;
+    const glowW = (28 + (1 - progress) * 18) * state.camera.zoom;
+    const glowH = (12 + (1 - progress) * 10) * state.camera.zoom;
     ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(p.x, glowY, glowW, glowH, 0, 0, Math.PI * 2);
+    ctx.fillStyle = color.replace(/, 0\.\d+\)/, `, ${Math.max(0.12, alpha * 0.55).toFixed(2)})`);
+    ctx.fill();
     ctx.beginPath();
     ctx.arc(p.x, p.y - (36 + building.level * 10) * state.camera.zoom, radius, 0, Math.PI * 2);
     ctx.strokeStyle = color;
     ctx.lineWidth = Math.max(1.5, 2 * state.camera.zoom);
     ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(p.x, p.y - (36 + building.level * 10) * state.camera.zoom, Math.max(6 * state.camera.zoom, radius * 0.58), 0, Math.PI * 2);
+    ctx.strokeStyle = color.replace(/, 0\.\d+\)/, `, ${Math.max(0.18, alpha * 0.85).toFixed(2)})`);
+    ctx.lineWidth = Math.max(1, 1.4 * state.camera.zoom);
+    ctx.stroke();
+    for (let i = 0; i < 6; i += 1) {
+      const a = (Math.PI * 2 * i) / 6 + progress * 1.4;
+      const px = p.x + Math.cos(a) * radius * 0.7;
+      const py = p.y - (36 + building.level * 10) * state.camera.zoom + Math.sin(a) * radius * 0.45;
+      ctx.beginPath();
+      ctx.arc(px, py, Math.max(1.4, 2.2 * state.camera.zoom * (1 - progress * 0.55)), 0, Math.PI * 2);
+      ctx.fillStyle = color.replace(/, 0\.\d+\)/, `, ${Math.max(0.12, alpha).toFixed(2)})`);
+      ctx.fill();
+    }
     if (ctx.roundRect) {
       ctx.beginPath();
       ctx.roundRect(p.x - pillW / 2, textY - pillH / 2, pillW, pillH, 999);
@@ -6650,6 +6680,9 @@ function drawSkillBursts() {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(label, p.x, textY + 0.5 * state.camera.zoom);
+    ctx.fillStyle = "#d9ecff";
+    ctx.font = `${Math.max(7, 8 * state.camera.zoom)}px sans-serif`;
+    ctx.fillText(impactLabel, p.x, subY);
     ctx.restore();
   }
 }
@@ -7638,7 +7671,7 @@ function resolveBuildingSkillCheck(stopValue = null) {
   inc.resolveSec = clamp((4.1 + (inc.severity || 1) * 1.45) - effect * 2.1, 1.2, 7.4);
   applyServicePressureMap({ [inc.type.kpi]: (inc.severity || 1) * effect * 1.2 }, 1);
   state.kpi.stability = clamp(state.kpi.stability + 0.18 + effect * 0.35, 0, 100);
-  state.ui.skillBursts.push({ buildingId: skill.buildingId, grade, ttl: 0.8 });
+  state.ui.skillBursts.push({ buildingId: skill.buildingId, grade, ttl: 1.15, duration: 1.15 });
   state.ui.skillBursts = state.ui.skillBursts.slice(-8);
   clearNowStrip();
   markOnboarding("upgradedOrDispatched");
