@@ -1069,6 +1069,8 @@ const state = {
     buildingButtons: [],
     activeSkillCheck: null,
     skillBursts: [],
+    deferredMonthlyReport: null,
+    deferredElectionReport: null,
     mapHudCollapsed: false,
     mapHudInfoOpen: false,
     mapHudOpen: false,
@@ -1558,6 +1560,10 @@ function hasBlockingMapOverlay() {
     || (els.housingCard && !els.housingCard.hidden)
     || (els.majorEventCard && !els.majorEventCard.hidden)
   );
+}
+
+function hasMomentFocusLock() {
+  return Boolean(state.ui.activeSkillCheck);
 }
 
 function setActiveSideTab(tab) {
@@ -5295,6 +5301,10 @@ function refreshAdvisorBrief() {
 
 function openMonthlyModal(report) {
   if (!els.monthlyModal) return;
+  if (hasMomentFocusLock()) {
+    state.ui.deferredMonthlyReport = report;
+    return;
+  }
   state.election.modalOpen = false;
   state.monthly.report = report;
   state.monthly.modalOpen = true;
@@ -5316,6 +5326,10 @@ function closeMonthlyModal() {
 
 function openElectionModal(report) {
   if (!els.electionModal) return;
+  if (hasMomentFocusLock()) {
+    state.ui.deferredElectionReport = report;
+    return;
+  }
   state.monthly.modalOpen = false;
   state.election.report = report;
   state.election.modalOpen = true;
@@ -5332,6 +5346,21 @@ function closeElectionModal() {
     state.paused = false;
     state.ui.pausedByModal = false;
     syncPauseButton();
+  }
+}
+
+function flushDeferredMomentUi() {
+  if (hasMomentFocusLock()) return;
+  if (state.ui.deferredElectionReport) {
+    const report = state.ui.deferredElectionReport;
+    state.ui.deferredElectionReport = null;
+    openElectionModal(report);
+    return;
+  }
+  if (state.ui.deferredMonthlyReport) {
+    const report = state.ui.deferredMonthlyReport;
+    state.ui.deferredMonthlyReport = null;
+    openMonthlyModal(report);
   }
 }
 
@@ -6467,31 +6496,37 @@ function drawBuildingSkillCheck() {
   if (!building?.placed || !building.tile) return;
   const p = isoToScreen(building.tile[0], building.tile[1]);
   const zoom = state.camera.zoom;
-  const y = p.y - (58 + building.level * 11) * zoom;
-  const width = 76 * zoom;
-  const height = 14 * zoom;
+  const y = p.y - (64 + building.level * 11) * zoom;
+  const width = 94 * zoom;
+  const height = 18 * zoom;
   const x = p.x - width / 2;
   const pad = 2 * zoom;
   const value = skillCheckValue(skill);
   const markerX = x + pad + (width - pad * 2) * value;
   const start = x + pad + (width - pad * 2) * (skill.targetCenter - skill.targetWidth / 2);
   const end = x + pad + (width - pad * 2) * (skill.targetCenter + skill.targetWidth / 2);
+  const titleY = y - 12 * zoom;
+  const hintY = y + height + 12 * zoom;
+  const pulse = (Math.sin(performance.now() / 130) + 1) / 2;
 
   ctx.save();
+  ctx.shadowColor = "rgba(8, 18, 28, 0.45)";
+  ctx.shadowBlur = 14 * zoom;
   if (ctx.roundRect) {
     ctx.beginPath();
     ctx.roundRect(x, y, width, height, 999);
     ctx.fillStyle = "rgba(7, 18, 30, 0.96)";
-    ctx.strokeStyle = "rgba(255, 157, 63, 0.5)";
-    ctx.lineWidth = Math.max(1, 1.2 * zoom);
+    ctx.strokeStyle = `rgba(255, 157, 63, ${0.56 + pulse * 0.18})`;
+    ctx.lineWidth = Math.max(1.2, 1.5 * zoom);
     ctx.fill();
     ctx.stroke();
   } else {
     ctx.fillStyle = "rgba(7, 18, 30, 0.96)";
-    ctx.strokeStyle = "rgba(255, 157, 63, 0.5)";
+    ctx.strokeStyle = `rgba(255, 157, 63, ${0.56 + pulse * 0.18})`;
     ctx.fillRect(x, y, width, height);
     ctx.strokeRect(x, y, width, height);
   }
+  ctx.shadowBlur = 0;
   const innerY = y + pad;
   const innerH = height - pad * 2;
   const innerX = x + pad;
@@ -6511,15 +6546,22 @@ function drawBuildingSkillCheck() {
     ctx.fillRect(Math.max(innerX, start), innerY, Math.max(4 * zoom, end - start), innerH);
   }
   ctx.strokeStyle = "#eef7ff";
-  ctx.lineWidth = Math.max(1, 1.4 * zoom);
+  ctx.lineWidth = Math.max(1.2, 1.6 * zoom);
   ctx.beginPath();
-  ctx.moveTo(markerX, y - 2 * zoom);
-  ctx.lineTo(markerX, y + height + 2 * zoom);
+  ctx.moveTo(markerX, y - 4 * zoom);
+  ctx.lineTo(markerX, y + height + 4 * zoom);
   ctx.stroke();
+  ctx.fillStyle = "#eef7ff";
+  ctx.beginPath();
+  ctx.arc(markerX, y + height / 2, 3.4 * zoom, 0, Math.PI * 2);
+  ctx.fill();
   ctx.fillStyle = "#ffe7d2";
-  ctx.font = `${Math.max(9, 10 * zoom)}px sans-serif`;
+  ctx.font = `700 ${Math.max(9, 10 * zoom)}px sans-serif`;
   ctx.textAlign = "center";
-  ctx.fillText("Click to stop", p.x, y - 8 * zoom);
+  ctx.fillText("STOP IN GREEN", p.x, titleY);
+  ctx.fillStyle = "#d5e7fb";
+  ctx.font = `${Math.max(8, 9 * zoom)}px sans-serif`;
+  ctx.fillText("Click anywhere to stop", p.x, hintY);
   ctx.restore();
 }
 
@@ -6536,14 +6578,45 @@ function drawSkillBursts() {
       : burst.grade === "good"
         ? `rgba(111, 180, 255, ${alpha})`
         : burst.grade === "poor"
-          ? `rgba(255, 184, 95, ${alpha})`
-          : `rgba(228, 107, 104, ${alpha})`;
+        ? `rgba(255, 184, 95, ${alpha})`
+        : `rgba(228, 107, 104, ${alpha})`;
+    const label = burst.grade === "perfect"
+      ? "PERFECT"
+      : burst.grade === "good"
+        ? "GOOD"
+        : burst.grade === "poor"
+          ? "POOR"
+          : "MISS";
+    const labelFill = burst.grade === "perfect"
+      ? "rgba(22, 68, 43, 0.96)"
+      : burst.grade === "good"
+        ? "rgba(26, 48, 86, 0.96)"
+        : burst.grade === "poor"
+          ? "rgba(92, 58, 18, 0.96)"
+          : "rgba(96, 34, 34, 0.96)";
+    const textY = p.y - (58 + building.level * 10) * state.camera.zoom - progress * 12 * state.camera.zoom;
+    const pillW = 56 * state.camera.zoom;
+    const pillH = 18 * state.camera.zoom;
     ctx.save();
     ctx.beginPath();
     ctx.arc(p.x, p.y - (36 + building.level * 10) * state.camera.zoom, radius, 0, Math.PI * 2);
     ctx.strokeStyle = color;
     ctx.lineWidth = Math.max(1.5, 2 * state.camera.zoom);
     ctx.stroke();
+    if (ctx.roundRect) {
+      ctx.beginPath();
+      ctx.roundRect(p.x - pillW / 2, textY - pillH / 2, pillW, pillH, 999);
+      ctx.fillStyle = labelFill;
+      ctx.strokeStyle = color.replace(/, 0\.\d+\)/, ", 0.92)");
+      ctx.lineWidth = Math.max(1, 1.2 * state.camera.zoom);
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.fillStyle = "#f5fbff";
+    ctx.font = `700 ${Math.max(9, 10 * state.camera.zoom)}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, p.x, textY + 0.5 * state.camera.zoom);
     ctx.restore();
   }
 }
@@ -7442,6 +7515,7 @@ function pickMajorEventAt(sx, sy) {
 
 function clearActiveSkillCheck() {
   state.ui.activeSkillCheck = null;
+  flushDeferredMomentUi();
 }
 
 function skillCheckValue(skill, now = performance.now()) {
@@ -7504,7 +7578,7 @@ function resolveBuildingSkillCheck(stopValue = null) {
   const poorWidth = skill.targetWidth * 0.95;
   let grade = "miss";
   let effect = 0.3;
-  let toast = "Late";
+  let toast = "Miss";
   if (centerGap <= perfectWidth) {
     grade = "perfect";
     effect = 1.45;
@@ -7516,7 +7590,7 @@ function resolveBuildingSkillCheck(stopValue = null) {
   } else if (centerGap <= poorWidth) {
     grade = "poor";
     effect = 0.68;
-    toast = "Partial";
+    toast = "Poor";
   }
 
   inc.contained = true;
@@ -7775,6 +7849,10 @@ function majorEventCardTarget() {
 
 function renderMajorEventCard() {
   if (!els.majorEventCard) return;
+  if (hasMomentFocusLock()) {
+    els.majorEventCard.hidden = true;
+    return;
+  }
   if (state.housing.active) {
     els.majorEventCard.hidden = true;
     return;
@@ -7821,6 +7899,10 @@ function renderMajorEventCard() {
 
 function renderHousingCard() {
   if (!els.housingCard) return;
+  if (hasMomentFocusLock()) {
+    els.housingCard.hidden = true;
+    return;
+  }
   const m = state.housing.active;
   if (!state.sim.started || !m) {
     els.housingCard.hidden = true;
@@ -7887,7 +7969,7 @@ function renderSetupOverlay() {
 
 function renderTutorialOverlay() {
   if (!els.tutorialOverlay) return;
-  if (state.ui.introBriefingOpen) {
+  if (state.ui.introBriefingOpen || hasMomentFocusLock()) {
     els.tutorialOverlay.hidden = true;
     return;
   }
@@ -8830,6 +8912,9 @@ function renderNowStrip() {
   if (tutorialIsActive() && state.tutorial.phase !== "freeplay") {
     return;
   }
+  if (hasMomentFocusLock()) {
+    return;
+  }
   const blockingOverlay = hasBlockingMapOverlay();
   if (blockingOverlay) {
     return;
@@ -8858,6 +8943,11 @@ function renderSelection() {
   const hud = els.mapSelectionHud;
   const hudBody = els.mapSelectionBody;
   const descWrap = els.selectedDescWrap;
+  if (hasMomentFocusLock()) {
+    state.ui.mapHudOpen = false;
+    if (hud) hud.hidden = true;
+    return;
+  }
   if (hasBlockingMapOverlay()) {
     state.ui.mapHudOpen = false;
     if (hud) hud.hidden = true;
@@ -9379,6 +9469,7 @@ function initFromBaseline(base) {
 function handleCanvasPress(sx, sy) {
   if (state.gameOver.active) return;
   if (state.ui.activeSkillCheck) {
+    state.ui.ripples.push({ x: sx, y: sy, ttl: 0.32 });
     resolveBuildingSkillCheck();
     renderUI();
     return;
