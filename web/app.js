@@ -6932,6 +6932,18 @@ function drawPostProcessFx() {
   const w = state.camera.viewW;
   const h = state.camera.viewH;
   ctx.save();
+  const bloomA = ctx.createRadialGradient(w * 0.22, h * 0.16, 0, w * 0.22, h * 0.16, Math.min(w, h) * 0.24);
+  bloomA.addColorStop(0, "rgba(255, 214, 150, 0.09)");
+  bloomA.addColorStop(0.55, "rgba(255, 186, 120, 0.035)");
+  bloomA.addColorStop(1, "rgba(255, 186, 120, 0)");
+  ctx.fillStyle = bloomA;
+  ctx.fillRect(0, 0, w, h);
+  const bloomB = ctx.createRadialGradient(w * 0.78, h * 0.22, 0, w * 0.78, h * 0.22, Math.min(w, h) * 0.2);
+  bloomB.addColorStop(0, "rgba(160, 214, 255, 0.05)");
+  bloomB.addColorStop(0.6, "rgba(160, 214, 255, 0.018)");
+  bloomB.addColorStop(1, "rgba(160, 214, 255, 0)");
+  ctx.fillStyle = bloomB;
+  ctx.fillRect(0, 0, w, h);
   const vignette = ctx.createRadialGradient(w * 0.5, h * 0.5, Math.min(w, h) * 0.18, w * 0.5, h * 0.5, Math.max(w, h) * 0.72);
   vignette.addColorStop(0, "rgba(0,0,0,0)");
   vignette.addColorStop(0.72, "rgba(4,10,18,0.05)");
@@ -7993,6 +8005,10 @@ function rapidImpactFocusLabel(active) {
 function renderRapidCard() {
   const a = state.rapid.active;
   const incidentsPane = document.querySelector('[data-pane="incidents"]');
+  els.rapidCard.classList.remove("urgent");
+  incidentsPane?.classList.remove("urgent-pane");
+  incidentsPane?.style.removeProperty("--urgent-speed");
+  els.rapidCard.style.removeProperty("--urgent-speed");
   els.rapidMomentum.textContent = String(state.rapid.momentum);
   if (!state.sim.started) {
     els.rapidTitle.textContent = "Founding phase active.";
@@ -8008,10 +8024,6 @@ function renderRapidCard() {
     els.rapidBtnB.textContent = "Option B";
     if (els.rapidBtnC) els.rapidBtnC.textContent = "Option C";
     if (els.rapidBtnC) els.rapidBtnC.style.display = "none";
-    els.rapidCard.classList.remove("urgent");
-    incidentsPane?.classList.remove("urgent-pane");
-    incidentsPane?.style.removeProperty("--urgent-speed");
-    els.rapidCard.style.removeProperty("--urgent-speed");
     return;
   }
   if (!a) {
@@ -8029,10 +8041,6 @@ function renderRapidCard() {
       els.rapidBtnB.textContent = "Option B";
       if (els.rapidBtnC) els.rapidBtnC.textContent = "Option C";
       if (els.rapidBtnC) els.rapidBtnC.style.display = "none";
-      els.rapidCard.classList.remove("urgent");
-      incidentsPane?.classList.remove("urgent-pane");
-      incidentsPane?.style.removeProperty("--urgent-speed");
-      els.rapidCard.style.removeProperty("--urgent-speed");
       return;
     }
     const manualOpen = actionableManualIncidents().length;
@@ -8073,9 +8081,6 @@ function renderRapidCard() {
     if (manualOpen > 0) {
       incidentsPane?.style.setProperty("--urgent-speed", "0.95s");
       els.rapidCard.style.setProperty("--urgent-speed", "0.95s");
-    } else {
-      incidentsPane?.style.removeProperty("--urgent-speed");
-      els.rapidCard.style.removeProperty("--urgent-speed");
     }
     return;
   }
@@ -8653,6 +8658,7 @@ function renderOpsRadar() {
       : "";
     if (els.dockRadarHintText) els.dockRadarHintText.textContent = hintText;
     els.dockRadarHint.hidden = !hintText;
+    if (!hintText && els.dockRadarHintText) els.dockRadarHintText.textContent = "";
   }
   document.querySelector(".dock-radar-wrap")?.classList.toggle("guided-focus", !tutorialIsActive() && state.sim.started && state.day <= state.ui.radarHintUntilDay && !state.ui.radarHintDismissed);
   renderRadarInto(els.dockRadarSvg, els.dockHeatList, 4);
@@ -10005,7 +10011,11 @@ function bindInput() {
   els.refreshBtn?.addEventListener("click", () => {
     window.location.reload();
   });
-  els.introBriefingStartBtn?.addEventListener("click", () => {
+  const beginFounding = (e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    if (!state.ui.introBriefingOpen) return;
+    if (els.introBriefingStartBtn) els.introBriefingStartBtn.disabled = true;
     state.ui.introBriefingOpen = false;
     triggerToolboxSpotlight(6500);
     triggerMapSpotlight(6500);
@@ -10016,7 +10026,9 @@ function bindInput() {
       if (target) focusCameraOnTile(target);
     }
     renderUI();
-  });
+  };
+  els.introBriefingStartBtn?.addEventListener("pointerdown", beginFounding);
+  els.introBriefingStartBtn?.addEventListener("click", beginFounding);
   const dismissRadarHint = (e) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
