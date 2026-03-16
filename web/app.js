@@ -855,7 +855,7 @@ const TUTORIAL_STEPS = [
     id: "incident",
     short: "Resolve one incident",
     title: "Step 4: Handle Your First Incident",
-    body: "A manual incident is now live. Click its marker and fund emergency response.",
+    body: "A manual incident is now live. Click the alert badge on the building, then stop the response meter in the green zone.",
     tab: "incidents",
   },
   {
@@ -1067,6 +1067,8 @@ const state = {
     initiativeGuideActive: false,
     initiativeGuideUntilDay: 0,
     buildingButtons: [],
+    activeSkillCheck: null,
+    skillBursts: [],
     mapHudCollapsed: false,
     mapHudInfoOpen: false,
     mapHudOpen: false,
@@ -1387,6 +1389,42 @@ function manualActionIncidents() {
       && !i.assignedResponderId
   );
 }
+
+function incidentAnchorBuilding(inc) {
+  if (!inc) return null;
+  if (inc.anchorBuildingId) return findBuilding(inc.anchorBuildingId);
+  const mapKeyToBuilding = {
+    health: "health",
+    education: "education",
+    safety: "security",
+    climate: "climate",
+    integrity: "integrity",
+    economy: "transport",
+  };
+  return findBuilding(mapKeyToBuilding[inc.type?.kpi] || "");
+}
+
+function actionableIncidentForBuilding(buildingId) {
+  return actionableManualIncidents()
+    .filter((inc) => incidentAnchorBuilding(inc)?.id === buildingId)
+    .sort((a, b) => (b.severity || 0) - (a.severity || 0) || (a.daysOpen || 0) - (b.daysOpen || 0))[0] || null;
+}
+
+function buildingActionContext(building) {
+  if (!building?.placed) return null;
+  const inc = actionableIncidentForBuilding(building.id);
+  if (inc) {
+    return {
+      type: "manualIncident",
+      incidentId: inc.id,
+      priority: inc.severity >= 3 ? "high" : "medium",
+      label: "!",
+      title: inc.type?.title || "Issue",
+    };
+  }
+  return null;
+}
+
 function actionableManualIncidents() {
   return manualActionIncidents().filter((i) => canPlayerActOnIncidentNow(i));
 }
@@ -1892,7 +1930,7 @@ function decayServicePressure() {
   ensureServiceState();
   for (const key of SERVICE_KEYS) {
     const svc = state.services[key];
-    svc.pressure = clamp((svc.pressure || 0) * 0.84 - 0.04, 0, 16);
+    svc.pressure = clamp((svc.pressure || 0) * 0.62 - 0.14, 0, 12);
   }
 }
 
@@ -1913,13 +1951,13 @@ function applyServicePressureMap(map, scale = 1) {
     if (!svc) continue;
     if (delta < 0) {
       const hit = Math.abs(delta);
-      svc.pressure = clamp((svc.pressure || 0) + hit * 0.92, 0, 16);
-      svc.reserve = clamp((svc.reserve || 0) - hit * 0.38, 0, svc.reserveCap || 12);
-      svc.health = clamp((svc.health ?? state.kpi[key] ?? 60) - hit * 0.12, 0, 100);
+      svc.pressure = clamp((svc.pressure || 0) + hit * 0.52, 0, 12);
+      svc.reserve = clamp((svc.reserve || 0) - hit * 0.24, 0, svc.reserveCap || 12);
+      svc.health = clamp((svc.health ?? state.kpi[key] ?? 60) - hit * 0.02, 0, 100);
     } else if (delta > 0) {
-      svc.pressure = clamp((svc.pressure || 0) - delta * 0.7, 0, 16);
-      svc.reserve = clamp((svc.reserve || 0) + delta * 0.45, 0, svc.reserveCap || 12);
-      svc.health = clamp((svc.health ?? state.kpi[key] ?? 60) + delta * 0.38, 0, 100);
+      svc.pressure = clamp((svc.pressure || 0) - delta * 0.85, 0, 16);
+      svc.reserve = clamp((svc.reserve || 0) + delta * 0.55, 0, svc.reserveCap || 12);
+      svc.health = clamp((svc.health ?? state.kpi[key] ?? 60) + delta * 0.44, 0, 100);
     }
     state.kpi[key] = svc.health;
   }
@@ -1934,6 +1972,24 @@ const DEPARTMENT_LOAD_PROFILE = {
   economy: { base: 0.86, growth: 0.12, time: 0.05, industry: 0.05, incident: 0.1, major: 0.16 },
 };
 
+const SERVICE_LOAD_SCHEDULE = {
+  health: { startDay: 18, rampDays: 24, radiusStart: 10, radiusRamp: 5, growthStart: 64, growthRamp: 18 },
+  education: { startDay: 28, rampDays: 28, radiusStart: 11, radiusRamp: 5, growthStart: 68, growthRamp: 18 },
+  safety: { startDay: 16, rampDays: 22, radiusStart: 10, radiusRamp: 4, growthStart: 63, growthRamp: 16 },
+  climate: { startDay: 36, rampDays: 32, radiusStart: 12, radiusRamp: 6, growthStart: 72, growthRamp: 18 },
+  integrity: { startDay: 24, rampDays: 28, radiusStart: 10, radiusRamp: 5, growthStart: 66, growthRamp: 16 },
+  economy: { startDay: 14, rampDays: 20, radiusStart: 10, radiusRamp: 4, growthStart: 62, growthRamp: 14 },
+};
+
+function serviceLoadActivation(key) {
+  const schedule = SERVICE_LOAD_SCHEDULE[key] || SERVICE_LOAD_SCHEDULE.health;
+  return {
+    day: clamp((state.day - schedule.startDay) / schedule.rampDays, 0, 1),
+    radius: clamp((cityRadius() - schedule.radiusStart) / schedule.radiusRamp, 0, 1),
+    growth: clamp(((state.growth.score || 60) - schedule.growthStart) / schedule.growthRamp, 0, 1),
+  };
+}
+
 function departmentBudgetCeiling(building) {
   if (!building) return 120;
   const growthLift = Math.max(0, cityRadius() - 10) * 5;
@@ -1944,6 +2000,7 @@ function departmentBudgetCeiling(building) {
 function departmentDemandLoad(building) {
   if (!building?.placed) return 0;
   const profile = DEPARTMENT_LOAD_PROFILE[building.kpi] || DEPARTMENT_LOAD_PROFILE.health;
+  const activation = serviceLoadActivation(building.kpi);
   const radiusLoad = Math.max(0, cityRadius() - 10);
   const timeLoad = Math.max(0, state.day - 24) / 30;
   const growthLoad = Math.max(0, (state.growth.score || 60) - 60) / 12;
@@ -1951,14 +2008,14 @@ function departmentDemandLoad(building) {
   const incidentLoad = state.incidents.filter((inc) => !inc.resolved && inc.type.kpi === building.kpi).length;
   const majorLoad = state.majorEvents.filter((ev) => (ev.domain || "").includes(building.kpi === "safety" ? "security" : building.kpi)).length;
   const instabilityLoad = building.kpi === "integrity"
-    ? Math.max(0, (60 - state.kpi.stability) / 24) + (state.election.campaignActive ? 0.22 : 0)
+    ? Math.max(0, (58 - state.kpi.stability) / 34) + (state.election.campaignActive ? 0.12 : 0)
     : building.kpi === "economy"
       ? Math.max(0, (state.budget.debt - 90) / 80)
       : 0;
   return profile.base
-    + radiusLoad * profile.growth
-    + timeLoad * profile.time
-    + growthLoad * 0.1
+    + radiusLoad * profile.growth * (0.18 + activation.radius * 0.82)
+    + timeLoad * profile.time * (0.16 + activation.day * 0.84)
+    + growthLoad * 0.1 * (0.18 + activation.growth * 0.82)
     + industryLoad * profile.industry
     + incidentLoad * profile.incident
     + majorLoad * profile.major
@@ -2012,7 +2069,7 @@ function departmentServiceMetrics(building, targetBudget = building?.budget, tar
     demand += industryNet * 0.006 + Math.max(0, state.kpi.economy - 74) * 0.012;
   }
 
-  demand += clamp(svc?.pressure || 0, 0, 16);
+  demand += clamp((svc?.pressure || 0) * 0.28, 0, 4.4);
 
   const reserveCap = clamp(3 + level * 1.2 + Math.max(0, budget - 60) * 0.08, 3, 32);
   return {
@@ -2183,8 +2240,8 @@ function maybeSpawnTutorialIncident() {
   if (!inc) return;
   state.tutorial.firstIncidentSpawned = true;
   state.tutorial.manualIncidentId = inc.id;
-  addTicker("Guided incident spawned. Click the map marker to dispatch emergency response.");
-  addRailEvent("❗ Tutorial Incident", "Manual response required. Tap marker on map.", true);
+  addTicker("Guided incident spawned. Click the building alert badge to run a manual response.");
+  addRailEvent("❗ Tutorial Incident", "Manual response required. Click the building alert badge.", true);
   setActiveSideTab("incidents");
   focusCameraOnTile(inc.tile);
 }
@@ -4474,13 +4531,13 @@ function maybeSpawnMajorEvent() {
   if (state.day < state.major.nextAtDay) return;
   const stress = clamp((100 - state.kpi.stability) / 100, 0, 1);
   const moodRisk = clamp((55 - state.people.reduce((a, p) => a + p.happiness, 0) / state.people.length) / 55, 0, 1);
-  const chance = 0.22 + stress * 0.2 + moodRisk * 0.12;
+  const chance = 0.14 + stress * 0.14 + moodRisk * 0.08;
   if (Math.random() > chance) {
-    state.major.nextAtDay = state.day + Math.max(8, MAJOR_EVENT_INTERVAL_DAYS - 4);
+    state.major.nextAtDay = state.day + Math.max(10, MAJOR_EVENT_INTERVAL_DAYS - 2);
     return;
   }
   spawnMajorEvent();
-  state.major.nextAtDay = state.day + MAJOR_EVENT_INTERVAL_DAYS + Math.floor(rand(-4, 6));
+  state.major.nextAtDay = state.day + MAJOR_EVENT_INTERVAL_DAYS + Math.floor(rand(0, 8));
 }
 
 function resolveMajorEvent(eventId) {
@@ -4626,6 +4683,7 @@ function spawnIncident(forceTypeId = null, options = {}) {
   const incident = {
     id: `inc_${Date.now()}_${Math.floor(Math.random() * 9999)}`,
     type,
+    anchorBuildingId: targetBuilding?.id || null,
     tile: [targetTile[0] + rand(-1.5, 1.5), targetTile[1] + rand(-1.5, 1.5)],
     severity,
     daysOpen: 0,
@@ -4645,7 +4703,7 @@ function spawnIncident(forceTypeId = null, options = {}) {
   const code = `${prefix}-${String(state.day).padStart(3, "0")}-${String(state.incidents.length).padStart(2, "0")}`;
   incident.code = code;
   addTicker(`${code}: ${incident.type.title} near ${targetBuilding.name}.`);
-  addRailEvent(incident.type.title, incident.tutorialManual ? "Guided response: tap marker for emergency intervention." : "Tap incident on map for emergency intervention.", true);
+  addRailEvent(incident.type.title, incident.tutorialManual ? "Guided response: click the building alert badge to intervene." : "Manual response available on the affected building.", true);
   return incident;
 }
 
@@ -4726,7 +4784,7 @@ function maybeSpawnIncident() {
   });
   const pressure = clamp((100 - state.kpi.stability) / 100, 0, 1);
   const defenseRisk = clamp((65 - (state.defense.metrics.readiness || 0)) / 100, 0, 0.12);
-  const chance = 0.045 + pressure * 0.1 + defenseRisk + Math.min(0.045, state.incidents.length * 0.004);
+  const chance = 0.028 + pressure * 0.072 + defenseRisk + Math.min(0.028, state.incidents.length * 0.003);
   if (Math.random() >= chance) return;
   const total = weighted.reduce((a, x) => a + x.w, 0);
   let roll = Math.random() * total;
@@ -5591,7 +5649,15 @@ function updateOpsHeat() {
   };
   const treasury = findBuilding("treasury");
   for (const key of domains) {
-    const base = clamp((54 - state.kpi[key]) / 24, -0.3, 1);
+    const svc = serviceStateForKey(key);
+    const coverage = svc?.coverage ?? 0;
+    const reserveCap = Math.max(1, svc?.reserveCap || 0);
+    const reserveRatio = clamp((svc?.reserve || 0) / reserveCap, 0, 1);
+    const servicePressure = clamp((svc?.pressure || 0) / 9.5, 0, 1);
+    const healthPressure = clamp((58 - state.kpi[key]) / 34, 0, 0.55);
+    const shortagePressure = clamp(-coverage / 3.4, 0, 0.82);
+    const reservePressure = clamp((0.44 - reserveRatio) * 0.92, 0, 0.34);
+    const surplusRelief = clamp(Math.max(0, coverage) * 0.08 + reserveRatio * 0.06, 0, 0.22);
     const incidentPressure = state.incidents.filter((i) => !i.resolved && i.type.kpi === key).length * 0.08;
     const majorPressure = state.majorEvents.filter((e) => (e.domain || "").includes(key === "safety" ? "security" : key)).length * 0.12;
     const b = findBuilding(mapKeyToBuilding[key]);
@@ -5601,10 +5667,17 @@ function updateOpsHeat() {
       (key === "economy" || key === "integrity") && treasury
         ? clamp(Math.max(0, treasury.budget - 60) * 0.006 + Math.max(0, treasury.level - 1) * 0.03, 0, 0.24)
         : 0;
-    let target = clamp(0.1 + Math.max(0, base) + incidentPressure + majorPressure - investRelief - climateExtraRelief - treasuryRelief, 0, 1);
-    if (state.kpi[key] >= 65 && incidentPressure === 0 && majorPressure === 0) target = Math.min(target, 0.28);
+    let target = clamp(
+      0.06 + servicePressure * 0.58 + healthPressure + shortagePressure + reservePressure + incidentPressure + majorPressure
+      - investRelief - climateExtraRelief - treasuryRelief - surplusRelief,
+      0,
+      1
+    );
+    if ((svc?.pressure || 0) < 1.2 && coverage > 0.18 && reserveRatio > 0.36 && incidentPressure === 0 && majorPressure === 0) {
+      target = Math.min(target, 0.18);
+    }
     const prev = state.ops.heat[key] ?? 0.2;
-    const easing = target < prev ? 0.62 : 0.24;
+    const easing = target < prev ? 0.72 : 0.18;
     state.ops.heat[key] = clamp(prev + (target - prev) * easing, 0, 1);
   }
 }
@@ -5849,7 +5922,7 @@ function runDepartmentServiceTick(rows, recoverBoost, dragDampen) {
     const budget = row.building.budget || 60;
     const autoOn = Boolean(state.ui.autoBudgetByBuilding?.[row.building.id]);
     const health = clamp(svc.health ?? state.kpi[row.key] ?? 60, 0, 100);
-    let nextPressure = clamp(svc.pressure || 0, 0, 16);
+    let nextPressure = clamp(svc.pressure || 0, 0, 12);
     const reserveCap = metrics.reserveCap;
     const reserveRatio = reserveCap > 0 ? clamp((svc.reserve || 0) / reserveCap, 0, 1) : 0;
     const surplus = Math.max(0, metrics.coverage);
@@ -5858,30 +5931,31 @@ function runDepartmentServiceTick(rows, recoverBoost, dragDampen) {
     let nextReserve = clamp(svc.reserve || 0, 0, reserveCap);
 
     if (surplus > 0) {
-      const reserveGain = surplus * (0.24 + level * 0.015) * (0.95 + reserveRatio * 0.2);
+      const reserveGain = surplus * (0.32 + level * 0.018) * (0.98 + reserveRatio * 0.24);
       nextReserve = clamp(nextReserve + reserveGain, 0, reserveCap);
-      const gainBand = health >= 88 ? 0.1 : health >= 76 ? 0.2 : health >= 62 ? 0.34 : 0.54;
-      const capitalLift = Math.max(0, level - 1) * 0.018 + Math.max(0, budget - 70) * 0.0028;
-      const autoLift = autoOn ? (health < 60 ? 0.16 : health < 72 ? 0.1 : 0.04) : 0;
-      nextHealth += surplus * (gainBand + capitalLift + autoLift) * recoverBoost + (nextReserve / Math.max(1, reserveCap)) * 0.1;
-      nextPressure = clamp(nextPressure - surplus * (health < 60 ? 0.9 : 0.48) - reserveRatio * 0.3, 0, 16);
+      const gainBand = health >= 88 ? 0.12 : health >= 76 ? 0.24 : health >= 62 ? 0.4 : 0.62;
+      const capitalLift = Math.max(0, level - 1) * 0.022 + Math.max(0, budget - 70) * 0.0032;
+      const autoLift = autoOn ? (health < 60 ? 0.18 : health < 72 ? 0.12 : 0.05) : 0;
+      nextHealth += surplus * (gainBand + capitalLift + autoLift) * recoverBoost + (nextReserve / Math.max(1, reserveCap)) * 0.14;
+      nextPressure = clamp(nextPressure - surplus * (health < 60 ? 1.65 : health < 76 ? 1.02 : 0.8) - reserveRatio * 0.62, 0, 12);
 
       // If a service is clearly over-covered, let it visibly recover toward healthy range.
-      if (health < 72 && surplus > 0.35) {
-        const recoveryTarget = 72;
+      if (health < 78 && surplus > 0.25) {
+        const recoveryTarget = 78;
         const recoveryGap = recoveryTarget - health;
-        const reserveAssist = 0.06 + reserveRatio * 0.1;
-        const capitalAssist = Math.max(0, level - 3) * 0.03 + Math.max(0, budget - 80) * 0.0035;
-        nextHealth += recoveryGap * (reserveAssist + capitalAssist) * (0.16 + Math.min(0.28, surplus * 0.08));
-        nextPressure = clamp(nextPressure - 0.35 - surplus * 0.12, 0, 16);
+        const reserveAssist = 0.16 + reserveRatio * 0.2;
+        const capitalAssist = Math.max(0, level - 3) * 0.05 + Math.max(0, budget - 80) * 0.0055;
+        const autoAssist = autoOn ? 0.14 : 0;
+        nextHealth += recoveryGap * (reserveAssist + capitalAssist + autoAssist) * (0.26 + Math.min(0.42, surplus * 0.1));
+        nextPressure = clamp(nextPressure - 0.75 - surplus * 0.24, 0, 12);
       }
     } else if (shortage > 0) {
       const reserveAbsorb = Math.min(nextReserve, shortage * (0.9 + level * 0.03));
       nextReserve = clamp(nextReserve - reserveAbsorb, 0, reserveCap);
       const unmet = Math.max(0, shortage - reserveAbsorb);
       const lossBand = health >= 85 ? 0.18 : health >= 70 ? 0.26 : health >= 54 ? 0.34 : 0.44;
-      nextHealth -= unmet * lossBand * dragDampen + shortage * 0.035;
-      nextPressure = clamp(nextPressure + unmet * 0.14 + shortage * 0.04, 0, 16);
+      nextHealth -= unmet * lossBand * dragDampen + shortage * 0.028;
+      nextPressure = clamp(nextPressure + unmet * 0.08 + shortage * 0.022, 0, 12);
     }
 
     nextHealth -= row.debtPenalty + row.highPenalty;
@@ -6332,11 +6406,10 @@ function drawBuildingPressureBar(building, x, y) {
   ctx.restore();
 }
 
-function drawBuildingAlertBadge(priority, x, y, id, active = false) {
+function drawBuildingAlertBadge(priority, x, y, id, active = false, label = "!", title = "") {
   const zoom = state.camera.zoom;
   const danger = priority === "high";
   const warning = priority === "medium";
-  const label = "⬆";
   ctx.save();
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -6378,13 +6451,101 @@ function drawBuildingAlertBadge(priority, x, y, id, active = false) {
   ctx.fillStyle = danger ? "#fff3f1" : warning ? "#1a1608" : "#eef5ff";
   ctx.fillText(label, x, y + 0.5 * zoom);
   ctx.restore();
-  state.ui.buildingButtons.push({ id, x: rx, y: ry, w: width, h: height });
+  state.ui.buildingButtons.push({ id, x: rx, y: ry, w: width, h: height, title });
 }
 
 function pickMapBuildingButtonAt(sx, sy) {
   return (state.ui.buildingButtons || []).find((btn) => (
     sx >= btn.x && sx <= btn.x + btn.w && sy >= btn.y && sy <= btn.y + btn.h
   )) || null;
+}
+
+function drawBuildingSkillCheck() {
+  const skill = state.ui.activeSkillCheck;
+  if (!skill) return;
+  const building = findBuilding(skill.buildingId);
+  if (!building?.placed || !building.tile) return;
+  const p = isoToScreen(building.tile[0], building.tile[1]);
+  const zoom = state.camera.zoom;
+  const y = p.y - (58 + building.level * 11) * zoom;
+  const width = 76 * zoom;
+  const height = 14 * zoom;
+  const x = p.x - width / 2;
+  const pad = 2 * zoom;
+  const value = skillCheckValue(skill);
+  const markerX = x + pad + (width - pad * 2) * value;
+  const start = x + pad + (width - pad * 2) * (skill.targetCenter - skill.targetWidth / 2);
+  const end = x + pad + (width - pad * 2) * (skill.targetCenter + skill.targetWidth / 2);
+
+  ctx.save();
+  if (ctx.roundRect) {
+    ctx.beginPath();
+    ctx.roundRect(x, y, width, height, 999);
+    ctx.fillStyle = "rgba(7, 18, 30, 0.96)";
+    ctx.strokeStyle = "rgba(255, 157, 63, 0.5)";
+    ctx.lineWidth = Math.max(1, 1.2 * zoom);
+    ctx.fill();
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = "rgba(7, 18, 30, 0.96)";
+    ctx.strokeStyle = "rgba(255, 157, 63, 0.5)";
+    ctx.fillRect(x, y, width, height);
+    ctx.strokeRect(x, y, width, height);
+  }
+  const innerY = y + pad;
+  const innerH = height - pad * 2;
+  const innerX = x + pad;
+  const innerW = width - pad * 2;
+  ctx.fillStyle = "rgba(170, 67, 67, 0.72)";
+  if (ctx.roundRect) {
+    ctx.beginPath();
+    ctx.roundRect(innerX, innerY, innerW, innerH, 999);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.roundRect(Math.max(innerX, start), innerY, Math.max(4 * zoom, end - start), innerH, 999);
+    ctx.fillStyle = "rgba(103, 211, 146, 0.95)";
+    ctx.fill();
+  } else {
+    ctx.fillRect(innerX, innerY, innerW, innerH);
+    ctx.fillStyle = "rgba(103, 211, 146, 0.95)";
+    ctx.fillRect(Math.max(innerX, start), innerY, Math.max(4 * zoom, end - start), innerH);
+  }
+  ctx.strokeStyle = "#eef7ff";
+  ctx.lineWidth = Math.max(1, 1.4 * zoom);
+  ctx.beginPath();
+  ctx.moveTo(markerX, y - 2 * zoom);
+  ctx.lineTo(markerX, y + height + 2 * zoom);
+  ctx.stroke();
+  ctx.fillStyle = "#ffe7d2";
+  ctx.font = `${Math.max(9, 10 * zoom)}px sans-serif`;
+  ctx.textAlign = "center";
+  ctx.fillText("Click to stop", p.x, y - 8 * zoom);
+  ctx.restore();
+}
+
+function drawSkillBursts() {
+  for (const burst of state.ui.skillBursts || []) {
+    const building = findBuilding(burst.buildingId);
+    if (!building?.placed || !building.tile) continue;
+    const p = isoToScreen(building.tile[0], building.tile[1]);
+    const progress = 1 - burst.ttl / 0.8;
+    const radius = (8 + progress * 18) * state.camera.zoom;
+    const alpha = clamp(0.45 * (1 - progress), 0, 0.45);
+    const color = burst.grade === "perfect"
+      ? `rgba(103, 211, 146, ${alpha})`
+      : burst.grade === "good"
+        ? `rgba(111, 180, 255, ${alpha})`
+        : burst.grade === "poor"
+          ? `rgba(255, 184, 95, ${alpha})`
+          : `rgba(228, 107, 104, ${alpha})`;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(p.x, p.y - (36 + building.level * 10) * state.camera.zoom, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(1.5, 2 * state.camera.zoom);
+    ctx.stroke();
+    ctx.restore();
+  }
 }
 
 function drawClouds() {
@@ -6643,20 +6804,9 @@ function drawIncidents() {
   const pulse = (Math.sin(performance.now() / 190) + 1) / 2;
   for (const inc of state.incidents) {
     if (inc.resolved) continue;
+    if (inc.requiresPlayerAction && incidentSupportsDirectPlayerAction(inc) && !inc.contained) continue;
     const p = isoToScreen(inc.tile[0], inc.tile[1]);
     if (!isScreenPointVisible(p.x, p.y, 64)) continue;
-    const r = (6 + inc.severity * 1.8 + pulse * 3.5) * state.camera.zoom;
-
-    ctx.beginPath();
-    ctx.arc(p.x, p.y - 8 * state.camera.zoom, r, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(255,255,255,${0.06 + pulse * 0.09})`;
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.arc(p.x, p.y - 8 * state.camera.zoom, r * 0.72, 0, Math.PI * 2);
-    ctx.fillStyle = `${inc.type.color}AA`;
-    ctx.fill();
-
     drawIncidentEffect(inc, p.x, p.y - 8 * state.camera.zoom, pulse);
 
     const fxName = `incident_${inc.type.id}`;
@@ -7148,6 +7298,7 @@ function drawMap() {
   drawTraffic();
   drawCivilians();
   drawMajorEvents();
+  state.ui.buildingButtons = [];
   const drawOrder = state.buildings
     .filter((b) => b.placed && b.tile)
     .sort((a, b) => a.tile[0] + a.tile[1] - (b.tile[0] + b.tile[1]));
@@ -7214,10 +7365,24 @@ function drawMap() {
     ctx.fillText(iconMeta.icon, p.x + 20 * state.camera.zoom, p.y - h3d - 12 * state.camera.zoom);
 
     drawBuildingPressureBar(b, p.x, p.y - h3d - 18 * state.camera.zoom);
+    const action = buildingActionContext(b);
+    if (action) {
+      drawBuildingAlertBadge(
+        action.priority,
+        p.x + 24 * state.camera.zoom,
+        p.y - h3d - 18 * state.camera.zoom,
+        b.id,
+        state.ui.activeSkillCheck?.buildingId === b.id,
+        action.label,
+        action.title
+      );
+    }
     drawMapBuildingLabel(b.name.split(" ")[0], p.x, p.y + 16 * state.camera.zoom);
   }
 
   drawIncidents();
+  drawSkillBursts();
+  drawBuildingSkillCheck();
   drawResponders();
   drawRipples();
   drawAtmosphere();
@@ -7273,6 +7438,128 @@ function pickMajorEventAt(sx, sy) {
     if (dist < 26 * state.camera.zoom) return ev;
   }
   return null;
+}
+
+function clearActiveSkillCheck() {
+  state.ui.activeSkillCheck = null;
+}
+
+function skillCheckValue(skill, now = performance.now()) {
+  if (!skill) return 0.5;
+  const elapsed = Math.max(0, now - (skill.startedAt || now));
+  const speed = skill.speed || 1;
+  const cycleMs = 1150 / speed;
+  const phase = (elapsed % cycleMs) / cycleMs;
+  return phase < 0.5 ? phase * 2 : 2 - phase * 2;
+}
+
+function startBuildingSkillCheck(building, inc) {
+  if (!building || !inc) return false;
+  if (!canPlayerActOnIncidentNow(inc)) {
+    addTicker("Need 1 AP and enough treasury to intervene.");
+    playSfx("uiDenied");
+    return false;
+  }
+  if (!spendActionPoints(1, "manual intervention")) return false;
+  const cost = 6 + (inc.severity || 1) * 2;
+  if (state.budget.treasury < cost) {
+    state.resources.actionPoints = clamp(state.resources.actionPoints + 1, 0, state.resources.maxActionPoints);
+    addTicker(`Need ${formatMoneyMillions(cost)} treasury to intervene.`);
+    playSfx("uiDenied");
+    return false;
+  }
+  state.budget.treasury -= cost;
+  const width = clamp(0.26 - (inc.severity || 1) * 0.03, 0.11, 0.24);
+  const center = 0.5 + rand(-0.1, 0.1);
+  state.ui.activeSkillCheck = {
+    buildingId: building.id,
+    incidentId: inc.id,
+    startedAt: performance.now(),
+    speed: 1 + Math.max(0, (inc.severity || 1) - 1) * 0.18,
+    targetCenter: clamp(center, width / 2 + 0.04, 1 - width / 2 - 0.04),
+    targetWidth: width,
+    cost,
+  };
+  state.selectedBuildingId = building.id;
+  state.ui.mapHudOpen = false;
+  state.ui.mapHudCollapsed = false;
+  markOnboarding("selectedBuilding");
+  addTicker(`Intervene: stop the response meter in the green zone for ${inc.type.title}.`);
+  playSfx("uiSelect");
+  return true;
+}
+
+function resolveBuildingSkillCheck(stopValue = null) {
+  const skill = state.ui.activeSkillCheck;
+  if (!skill) return false;
+  const inc = state.incidents.find((i) => i.id === skill.incidentId);
+  if (!inc || inc.resolved || inc.contained) {
+    clearActiveSkillCheck();
+    return false;
+  }
+  const value = clamp(stopValue ?? skillCheckValue(skill), 0, 1);
+  const centerGap = Math.abs(value - skill.targetCenter);
+  const perfectWidth = skill.targetWidth * 0.28;
+  const goodWidth = skill.targetWidth * 0.5;
+  const poorWidth = skill.targetWidth * 0.95;
+  let grade = "miss";
+  let effect = 0.3;
+  let toast = "Late";
+  if (centerGap <= perfectWidth) {
+    grade = "perfect";
+    effect = 1.45;
+    toast = "Perfect";
+  } else if (centerGap <= goodWidth) {
+    grade = "good";
+    effect = 1;
+    toast = "Good";
+  } else if (centerGap <= poorWidth) {
+    grade = "poor";
+    effect = 0.68;
+    toast = "Partial";
+  }
+
+  inc.contained = true;
+  inc.playerFunded = true;
+  inc.resolveSec = clamp((4.1 + (inc.severity || 1) * 1.45) - effect * 2.1, 1.2, 7.4);
+  applyServicePressureMap({ [inc.type.kpi]: (inc.severity || 1) * effect * 1.2 }, 1);
+  state.kpi.stability = clamp(state.kpi.stability + 0.18 + effect * 0.35, 0, 100);
+  state.ui.skillBursts.push({ buildingId: skill.buildingId, grade, ttl: 0.8 });
+  state.ui.skillBursts = state.ui.skillBursts.slice(-8);
+  clearNowStrip();
+  markOnboarding("upgradedOrDispatched");
+  recordAction(
+    inc.type.id === "corruption" ? "integrity"
+      : inc.type.id === "flood" ? "climate"
+        : inc.type.id === "crime" ? "security"
+          : inc.type.id === "medical" ? "health"
+            : "transport"
+  );
+  pushDecisionToast(`${toast}: ${inc.type.title}`, grade === "miss" ? "bad" : grade === "perfect" ? "good" : "warn");
+  addTicker(`${toast} intervention on ${inc.code || "INCIDENT"} ${inc.type.title}.`);
+  addRailEvent("⚡ Direct Response", `${toast} response on ${inc.type.title}.`, grade !== "miss");
+  playSfx(grade === "miss" ? "uiDenied" : "uiConfirm");
+  logDecisionImpact({
+    title: inc.type.title,
+    category: inc.type.id,
+    choice: `${toast} Manual Response`,
+    demNow: {
+      poverty: effect >= 1 ? 3 : 1,
+      working: effect >= 0.68 ? 2 : 1,
+      middle: effect >= 1 ? 2 : 1,
+      business: inc.type.id === "fire" || inc.type.id === "crime" ? (effect >= 1 ? 2 : 1) : 1,
+      elite: 1,
+    },
+    trustDelta: 0.15 + effect * 0.35,
+    axisDrift: { careAusterity: 0.5, libertyControl: inc.type.id === "crime" ? -0.3 : 0.1, publicDonor: 0.2, truthSpin: 0.1 },
+    treasuryDeltaNow: -(skill.cost || 0),
+    kpiNow: { [inc.type.kpi]: round(effect * 0.8 * 10) / 10, stability: round((0.12 + effect * 0.2) * 10) / 10 },
+    confidence: grade === "perfect" ? "high" : grade === "good" ? "medium" : "low",
+    explain: "Hands-on intervention scaled the response quality instead of acting as an instant guaranteed fix.",
+  });
+  clearActiveSkillCheck();
+  updateTutorialProgress();
+  return true;
 }
 
 function emergencyTapIncident(inc) {
@@ -8780,6 +9067,7 @@ function positionSelectionHud() {
 }
 
 function renderUI() {
+  if (hasBlockingMapOverlay()) clearActiveSkillCheck();
   renderHud();
   renderOnboardingLayout();
   renderSelection();
@@ -8902,6 +9190,9 @@ function updateUiFx(dt) {
   state.ui.ripples = state.ui.ripples
     .map((r) => ({ ...r, ttl: r.ttl - dt }))
     .filter((r) => r.ttl > 0);
+  state.ui.skillBursts = (state.ui.skillBursts || [])
+    .map((b) => ({ ...b, ttl: b.ttl - dt }))
+    .filter((b) => b.ttl > 0);
   state.ui.apToasts = state.ui.apToasts
     .map((t) => ({ ...t, ttl: t.ttl - dt }))
     .filter((t) => t.ttl > 0);
@@ -9087,6 +9378,11 @@ function initFromBaseline(base) {
 
 function handleCanvasPress(sx, sy) {
   if (state.gameOver.active) return;
+  if (state.ui.activeSkillCheck) {
+    resolveBuildingSkillCheck();
+    renderUI();
+    return;
+  }
   state.ui.ripples.push({ x: sx, y: sy, ttl: 0.45 });
 
   if (state.ui.industryPlacement) {
@@ -9163,8 +9459,18 @@ function handleCanvasPress(sx, sy) {
     return;
   }
 
+  const buildingBtn = pickMapBuildingButtonAt(sx, sy);
+  if (buildingBtn) {
+    const badgeBuilding = findBuilding(buildingBtn.id);
+    const badgeIncident = actionableIncidentForBuilding(buildingBtn.id);
+    if (badgeBuilding && badgeIncident && startBuildingSkillCheck(badgeBuilding, badgeIncident)) {
+      renderUI();
+      return;
+    }
+  }
+
   const incident = pickIncidentAt(sx, sy);
-  if (incident) {
+  if (incident && !incidentSupportsDirectPlayerAction(incident)) {
     emergencyTapIncident(incident);
     renderUI();
     return;
@@ -9182,6 +9488,11 @@ function handleCanvasPress(sx, sy) {
 
   const picked = pickBuildingAt(sx, sy);
   if (picked) {
+    const actionIncident = actionableIncidentForBuilding(picked.id);
+    if (actionIncident && startBuildingSkillCheck(picked, actionIncident)) {
+      renderUI();
+      return;
+    }
     state.selectedDefenseId = null;
     state.selectedIndustryId = null;
     state.selectedBuildingId = picked.id;
@@ -9195,6 +9506,7 @@ function handleCanvasPress(sx, sy) {
     return;
   }
 
+  clearActiveSkillCheck();
   state.ui.mapHudOpen = false;
   renderUI();
 }
