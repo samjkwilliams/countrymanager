@@ -6509,6 +6509,7 @@ function drawBuildingAlertBadge(priority, x, y, id, active = false, label = "!",
   const zoom = state.camera.zoom;
   const danger = priority === "high";
   const warning = priority === "medium";
+  const pulse = (Math.sin(performance.now() / (danger ? 115 : 180)) + 1) / 2;
   ctx.save();
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -6547,10 +6548,22 @@ function drawBuildingAlertBadge(priority, x, y, id, active = false, label = "!",
       : "rgba(190, 220, 255, 0.28)";
   ctx.lineWidth = Math.max(1, 1.2 * zoom);
   ctx.stroke();
+  if (danger) {
+    ctx.beginPath();
+    ctx.arc(x, y, width * (0.92 + pulse * 0.34), 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255, 109, 109, ${0.28 + pulse * 0.26})`;
+    ctx.lineWidth = Math.max(1.2, 1.8 * zoom);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x, y, width * (1.18 + pulse * 0.4), 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255, 145, 96, ${0.16 + pulse * 0.18})`;
+    ctx.lineWidth = Math.max(1, 1.4 * zoom);
+    ctx.stroke();
+  }
   ctx.fillStyle = danger ? "#fff3f1" : warning ? "#1a1608" : "#eef5ff";
   ctx.fillText(label, x, y + 0.5 * zoom);
   ctx.restore();
-  state.ui.buildingButtons.push({ id, x: rx, y: ry, w: width, h: height, title });
+  state.ui.buildingButtons.push({ id, kind: "alertBadge", x: rx, y: ry, w: width, h: height, title });
 }
 
 function pickMapBuildingButtonAt(sx, sy) {
@@ -6663,9 +6676,10 @@ function drawBuildingSkillCheck() {
   } else {
     ctx.fillStyle = "#d5e7fb";
     ctx.font = `${Math.max(8, 9 * zoom)}px sans-serif`;
-    ctx.fillText("Click anywhere to stop", p.x, hintY);
+    ctx.fillText("Click building or bar to stop", p.x, hintY);
   }
   ctx.restore();
+  state.ui.buildingButtons.push({ id: building.id, kind: "skillMeter", x, y: y - 10 * zoom, w: width, h: height + 24 * zoom, title: "Timing response" });
 }
 
 function drawLiveBuildingSkillCue(building, incident) {
@@ -6679,8 +6693,6 @@ function drawLiveBuildingSkillCue(building, incident) {
   const x = p.x - width / 2;
   const pad = 2 * zoom;
   const config = skillCheckConfig(building, incident);
-  const value = liveSkillCheckValue(building, incident);
-  const markerX = x + pad + (width - pad * 2) * value;
   const start = x + pad + (width - pad * 2) * (config.targetCenter - config.targetWidth / 2);
   const end = x + pad + (width - pad * 2) * (config.targetCenter + config.targetWidth / 2);
   const pulse = (Math.sin(performance.now() / 110) + 1) / 2;
@@ -6722,25 +6734,30 @@ function drawLiveBuildingSkillCue(building, incident) {
     ctx.fillStyle = "rgba(103, 211, 146, 0.98)";
     ctx.fillRect(Math.max(innerX, start), innerY, Math.max(8 * zoom, end - start), innerH);
   }
-  ctx.strokeStyle = "#f4fbff";
-  ctx.lineWidth = Math.max(1.2, 1.5 * zoom);
-  ctx.beginPath();
-  ctx.moveTo(markerX, y - 6 * zoom);
-  ctx.lineTo(markerX, y + height + 6 * zoom);
-  ctx.stroke();
-  ctx.fillStyle = "#f4fbff";
-  ctx.beginPath();
-  ctx.arc(markerX, y + height / 2, 4.2 * zoom, 0, Math.PI * 2);
-  ctx.fill();
   ctx.fillStyle = "#fff1de";
   ctx.font = `900 ${Math.max(9, 10 * zoom)}px "Orbitron", "Rajdhani", sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("CLICK TO RESPOND", p.x, y - 12 * zoom);
+  ctx.fillText("PLAY RESPONSE", p.x, y - 12 * zoom);
   ctx.font = `800 ${Math.max(8, 9 * zoom)}px "Orbitron", "Rajdhani", sans-serif`;
   ctx.fillStyle = `rgba(255, 214, 168, ${0.82 + pulse * 0.18})`;
-  ctx.fillText("STOP IN GREEN", p.x, y + height + 12 * zoom);
+  ctx.fillText("CLICK BUILDING OR BAR", p.x, y + height + 12 * zoom);
+  const playW = 34 * zoom;
+  const playH = 16 * zoom;
+  if (ctx.roundRect) {
+    ctx.beginPath();
+    ctx.roundRect(p.x - playW / 2, y - 36 * zoom, playW, playH, 999);
+    ctx.fillStyle = `rgba(255, 185, 74, ${0.82 + pulse * 0.14})`;
+    ctx.strokeStyle = `rgba(255, 239, 205, ${0.84 + pulse * 0.12})`;
+    ctx.lineWidth = Math.max(1, 1.2 * zoom);
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.fillStyle = "#0f2033";
+  ctx.font = `900 ${Math.max(8, 9 * zoom)}px "Orbitron", "Rajdhani", sans-serif`;
+  ctx.fillText("PLAY", p.x, y - 28 * zoom);
   ctx.restore();
+  state.ui.buildingButtons.push({ id: building.id, kind: "skillPreview", x, y: y - 42 * zoom, w: width, h: height + 56 * zoom, title: "Start response" });
 }
 
 function drawSkillBursts() {
@@ -7789,11 +7806,40 @@ function startBuildingSkillCheck(building, inc) {
   }
   state.budget.treasury -= cost;
   const config = skillCheckConfig(building, inc);
-  const value = liveSkillCheckValue(building, inc);
-  const centerGap = Math.abs(value - config.targetCenter);
-  const perfectWidth = config.targetWidth * 0.28;
-  const goodWidth = config.targetWidth * 0.5;
-  const poorWidth = config.targetWidth * 0.95;
+  state.ui.activeSkillCheck = {
+    buildingId: building.id,
+    incidentId: inc.id,
+    startedAt: performance.now(),
+    speed: config.speed,
+    targetCenter: config.targetCenter,
+    targetWidth: config.targetWidth,
+    cost,
+    status: "running",
+    phaseOffset: config.phaseOffset,
+  };
+  state.selectedBuildingId = building.id;
+  state.ui.mapHudOpen = false;
+  state.ui.mapHudCollapsed = false;
+  markOnboarding("selectedBuilding");
+  addTicker(`Intervention primed for ${inc.code || "INCIDENT"} ${inc.type.title}.`);
+  playSfx("uiConfirm");
+  return true;
+}
+
+function resolveBuildingSkillCheck() {
+  const skill = state.ui.activeSkillCheck;
+  if (!skill || skill.status !== "running") return false;
+  const building = findBuilding(skill.buildingId);
+  const inc = state.incidents.find((item) => item.id === skill.incidentId);
+  if (!building || !inc || inc.resolved) {
+    clearActiveSkillCheck();
+    return false;
+  }
+  const value = skillCheckValue(skill);
+  const centerGap = Math.abs(value - skill.targetCenter);
+  const perfectWidth = skill.targetWidth * 0.28;
+  const goodWidth = skill.targetWidth * 0.5;
+  const poorWidth = skill.targetWidth * 0.95;
   let grade = "miss";
   let effect = 0.3;
   let toast = "Miss";
@@ -7812,23 +7858,13 @@ function startBuildingSkillCheck(building, inc) {
   }
 
   state.ui.activeSkillCheck = {
-    buildingId: building.id,
-    incidentId: inc.id,
-    startedAt: performance.now(),
-    speed: config.speed,
-    targetCenter: config.targetCenter,
-    targetWidth: config.targetWidth,
-    cost,
+    ...skill,
     status: "resolved",
     stopValue: value,
     resolvedAt: performance.now(),
     resultText: toast.toUpperCase(),
     grade,
   };
-  state.selectedBuildingId = building.id;
-  state.ui.mapHudOpen = false;
-  state.ui.mapHudCollapsed = false;
-  markOnboarding("selectedBuilding");
 
   inc.contained = true;
   inc.playerFunded = true;
@@ -7846,7 +7882,7 @@ function startBuildingSkillCheck(building, inc) {
           : inc.type.id === "medical" ? "health"
             : "transport"
   );
-  pushDecisionToast(`${toast}: ${inc.type.title}`, grade === "miss" ? "bad" : grade === "perfect" ? "good" : "warn");
+  addDecisionToast(`${toast}: ${inc.type.title}`, grade === "miss" ? "bad" : grade === "perfect" ? "good" : "warn");
   addTicker(`${toast} intervention on ${inc.code || "INCIDENT"} ${inc.type.title}.`);
   addRailEvent("⚡ Direct Response", `${toast} response on ${inc.type.title}.`, grade !== "miss");
   playSfx(grade === "miss" ? "uiDenied" : "uiConfirm");
@@ -9711,8 +9747,14 @@ function handleCanvasPress(sx, sy) {
   if (state.gameOver.active) return;
   if (state.ui.activeSkillCheck) {
     if (state.ui.activeSkillCheck.status === "running") {
-      state.ui.ripples.push({ x: sx, y: sy, ttl: 0.32 });
-      resolveBuildingSkillCheck();
+      const activeBuilding = findBuilding(state.ui.activeSkillCheck.buildingId);
+      const meterHit = pickMapBuildingButtonAt(sx, sy);
+      const onSameBuilding = activeBuilding && pickBuildingAt(sx, sy)?.id === activeBuilding.id;
+      const onMeter = meterHit?.kind === "skillMeter" && meterHit.id === state.ui.activeSkillCheck.buildingId;
+      if (onSameBuilding || onMeter) {
+        state.ui.ripples.push({ x: sx, y: sy, ttl: 0.32 });
+        resolveBuildingSkillCheck();
+      }
     }
     renderUI();
     return;
