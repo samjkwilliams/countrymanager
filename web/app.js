@@ -6508,6 +6508,22 @@ function drawBuildingSkillCheck() {
   const titleY = y - 12 * zoom;
   const hintY = y + height + 12 * zoom;
   const pulse = (Math.sin(performance.now() / 130) + 1) / 2;
+  const resolved = skill.status === "resolved";
+  const grade = skill.grade || "good";
+  const resultStroke = grade === "perfect"
+    ? "rgba(103, 211, 146, 0.92)"
+    : grade === "good"
+      ? "rgba(111, 180, 255, 0.9)"
+      : grade === "poor"
+        ? "rgba(255, 184, 95, 0.9)"
+        : "rgba(228, 107, 104, 0.9)";
+  const resultFill = grade === "perfect"
+    ? "rgba(17, 56, 36, 0.96)"
+    : grade === "good"
+      ? "rgba(19, 43, 79, 0.96)"
+      : grade === "poor"
+        ? "rgba(84, 52, 16, 0.96)"
+        : "rgba(86, 28, 28, 0.96)";
 
   ctx.save();
   ctx.shadowColor = "rgba(8, 18, 28, 0.45)";
@@ -6516,13 +6532,13 @@ function drawBuildingSkillCheck() {
     ctx.beginPath();
     ctx.roundRect(x, y, width, height, 999);
     ctx.fillStyle = "rgba(7, 18, 30, 0.96)";
-    ctx.strokeStyle = `rgba(255, 157, 63, ${0.56 + pulse * 0.18})`;
+    ctx.strokeStyle = resolved ? resultStroke : `rgba(255, 157, 63, ${0.56 + pulse * 0.18})`;
     ctx.lineWidth = Math.max(1.2, 1.5 * zoom);
     ctx.fill();
     ctx.stroke();
   } else {
     ctx.fillStyle = "rgba(7, 18, 30, 0.96)";
-    ctx.strokeStyle = `rgba(255, 157, 63, ${0.56 + pulse * 0.18})`;
+    ctx.strokeStyle = resolved ? resultStroke : `rgba(255, 157, 63, ${0.56 + pulse * 0.18})`;
     ctx.fillRect(x, y, width, height);
     ctx.strokeRect(x, y, width, height);
   }
@@ -6531,37 +6547,54 @@ function drawBuildingSkillCheck() {
   const innerH = height - pad * 2;
   const innerX = x + pad;
   const innerW = width - pad * 2;
-  ctx.fillStyle = "rgba(170, 67, 67, 0.72)";
+  ctx.fillStyle = resolved ? "rgba(42, 54, 68, 0.78)" : "rgba(170, 67, 67, 0.72)";
   if (ctx.roundRect) {
     ctx.beginPath();
     ctx.roundRect(innerX, innerY, innerW, innerH, 999);
     ctx.fill();
     ctx.beginPath();
     ctx.roundRect(Math.max(innerX, start), innerY, Math.max(4 * zoom, end - start), innerH, 999);
-    ctx.fillStyle = "rgba(103, 211, 146, 0.95)";
+    ctx.fillStyle = resolved ? resultStroke : "rgba(103, 211, 146, 0.95)";
     ctx.fill();
   } else {
     ctx.fillRect(innerX, innerY, innerW, innerH);
-    ctx.fillStyle = "rgba(103, 211, 146, 0.95)";
+    ctx.fillStyle = resolved ? resultStroke : "rgba(103, 211, 146, 0.95)";
     ctx.fillRect(Math.max(innerX, start), innerY, Math.max(4 * zoom, end - start), innerH);
   }
-  ctx.strokeStyle = "#eef7ff";
+  ctx.strokeStyle = resolved ? resultStroke : "#eef7ff";
   ctx.lineWidth = Math.max(1.2, 1.6 * zoom);
   ctx.beginPath();
   ctx.moveTo(markerX, y - 4 * zoom);
   ctx.lineTo(markerX, y + height + 4 * zoom);
   ctx.stroke();
-  ctx.fillStyle = "#eef7ff";
+  ctx.fillStyle = resolved ? resultStroke : "#eef7ff";
   ctx.beginPath();
   ctx.arc(markerX, y + height / 2, 3.4 * zoom, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = "#ffe7d2";
+  ctx.fillStyle = resolved ? "#f4fbff" : "#ffe7d2";
   ctx.font = `700 ${Math.max(9, 10 * zoom)}px sans-serif`;
   ctx.textAlign = "center";
-  ctx.fillText("STOP IN GREEN", p.x, titleY);
-  ctx.fillStyle = "#d5e7fb";
-  ctx.font = `${Math.max(8, 9 * zoom)}px sans-serif`;
-  ctx.fillText("Click anywhere to stop", p.x, hintY);
+  ctx.fillText(resolved ? (skill.resultText || "RESULT") : "STOP IN GREEN", p.x, titleY);
+  if (resolved) {
+    if (ctx.roundRect) {
+      const pillW = 58 * zoom;
+      const pillH = 18 * zoom;
+      ctx.beginPath();
+      ctx.roundRect(p.x - pillW / 2, hintY - pillH / 2, pillW, pillH, 999);
+      ctx.fillStyle = resultFill;
+      ctx.strokeStyle = resultStroke;
+      ctx.lineWidth = Math.max(1, 1.2 * zoom);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#f7fbff";
+      ctx.font = `700 ${Math.max(9, 10 * zoom)}px sans-serif`;
+      ctx.fillText(skill.resultText || "RESULT", p.x, hintY + 0.5 * zoom);
+    }
+  } else {
+    ctx.fillStyle = "#d5e7fb";
+    ctx.font = `${Math.max(8, 9 * zoom)}px sans-serif`;
+    ctx.fillText("Click anywhere to stop", p.x, hintY);
+  }
   ctx.restore();
 }
 
@@ -7520,9 +7553,10 @@ function clearActiveSkillCheck() {
 
 function skillCheckValue(skill, now = performance.now()) {
   if (!skill) return 0.5;
+  if (Number.isFinite(skill.stopValue)) return clamp(skill.stopValue, 0, 1);
   const elapsed = Math.max(0, now - (skill.startedAt || now));
   const speed = skill.speed || 1;
-  const cycleMs = 1150 / speed;
+  const cycleMs = 1325 / speed;
   const phase = (elapsed % cycleMs) / cycleMs;
   return phase < 0.5 ? phase * 2 : 2 - phase * 2;
 }
@@ -7553,6 +7587,11 @@ function startBuildingSkillCheck(building, inc) {
     targetCenter: clamp(center, width / 2 + 0.04, 1 - width / 2 - 0.04),
     targetWidth: width,
     cost,
+    status: "running",
+    stopValue: null,
+    resolvedAt: 0,
+    resultText: "",
+    grade: null,
   };
   state.selectedBuildingId = building.id;
   state.ui.mapHudOpen = false;
@@ -7566,6 +7605,7 @@ function startBuildingSkillCheck(building, inc) {
 function resolveBuildingSkillCheck(stopValue = null) {
   const skill = state.ui.activeSkillCheck;
   if (!skill) return false;
+  if (skill.status === "resolved") return false;
   const inc = state.incidents.find((i) => i.id === skill.incidentId);
   if (!inc || inc.resolved || inc.contained) {
     clearActiveSkillCheck();
@@ -7631,7 +7671,11 @@ function resolveBuildingSkillCheck(stopValue = null) {
     confidence: grade === "perfect" ? "high" : grade === "good" ? "medium" : "low",
     explain: "Hands-on intervention scaled the response quality instead of acting as an instant guaranteed fix.",
   });
-  clearActiveSkillCheck();
+  skill.status = "resolved";
+  skill.stopValue = value;
+  skill.resolvedAt = performance.now();
+  skill.resultText = toast.toUpperCase();
+  skill.grade = grade;
   updateTutorialProgress();
   return true;
 }
@@ -9277,6 +9321,10 @@ function updateCamera(dt) {
 }
 
 function updateUiFx(dt) {
+  if (state.ui.activeSkillCheck?.status === "resolved") {
+    const resolvedFor = performance.now() - (state.ui.activeSkillCheck.resolvedAt || 0);
+    if (resolvedFor >= 700) clearActiveSkillCheck();
+  }
   state.ui.ripples = state.ui.ripples
     .map((r) => ({ ...r, ttl: r.ttl - dt }))
     .filter((r) => r.ttl > 0);
@@ -9469,8 +9517,10 @@ function initFromBaseline(base) {
 function handleCanvasPress(sx, sy) {
   if (state.gameOver.active) return;
   if (state.ui.activeSkillCheck) {
-    state.ui.ripples.push({ x: sx, y: sy, ttl: 0.32 });
-    resolveBuildingSkillCheck();
+    if (state.ui.activeSkillCheck.status === "running") {
+      state.ui.ripples.push({ x: sx, y: sy, ttl: 0.32 });
+      resolveBuildingSkillCheck();
+    }
     renderUI();
     return;
   }
