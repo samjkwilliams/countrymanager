@@ -1067,6 +1067,7 @@ const state = {
     initiativeGuideActive: false,
     initiativeGuideUntilDay: 0,
     radarHintUntilDay: 0,
+    radarHintDismissed: false,
     buildingButtons: [],
     activeSkillCheck: null,
     skillBursts: [],
@@ -1165,6 +1166,8 @@ const els = {
   initiativeGrid: document.getElementById("initiativeGrid"),
   initiativesCard: document.getElementById("initiativesCard"),
   dockRadarHint: document.getElementById("dockRadarHint"),
+  dockRadarHintText: document.getElementById("dockRadarHintText"),
+  dockRadarDismissBtn: document.getElementById("dockRadarDismissBtn"),
   initiativeHubCard: document.getElementById("initiativeHubCard"),
   initiativeHubHint: document.getElementById("initiativeHubHint"),
   initiativeQuickGrid: document.getElementById("initiativeQuickGrid"),
@@ -2217,6 +2220,7 @@ function setTutorialPhase(phase, announce = true) {
       addTicker("Initiatives unlocked: open the Initiatives tab to launch targeted social programs.");
     }
     state.ui.radarHintUntilDay = state.day + 10;
+    state.ui.radarHintDismissed = false;
     addRailEvent("📈 City Balance", "The radar in Live Pulse shows which systems are drifting. Buildings, budgets, and responses are how you pull those spokes back.", true);
     addTicker("Live Pulse radar unlocked: watch the spokes to see where your city is drifting out of balance.");
     addTicker("Guided mode complete. Full simulation chaos is now unlocked.");
@@ -2228,9 +2232,9 @@ function tutorialFocusCurrentStep() {
   if (!tutorialIsActive()) return;
   const phase = state.tutorial.phase;
   if (phase === "budget" || phase === "upgrade") {
-    const target = state.selectedBuildingId
-      ? findBuilding(state.selectedBuildingId)
-      : state.buildings.find((b) => b.placed) || findBuilding("health");
+    const target = phase === "budget"
+      ? (findBuilding("health")?.placed ? findBuilding("health") : state.buildings.find((b) => b.placed))
+      : (state.selectedBuildingId ? findBuilding(state.selectedBuildingId) : state.buildings.find((b) => b.placed) || findBuilding("health"));
     if (target?.id) {
       state.selectedBuildingId = target.id;
       state.selectedIndustryId = null;
@@ -4725,7 +4729,7 @@ function spawnIncident(forceTypeId = null, options = {}) {
     );
   const currentManualCount = actionableManualIncidents().length;
   const requiresPlayerAction = Boolean(
-    opts.requiresPlayerAction ?? opts.tutorialManual ?? (inferredManual && currentManualCount < 2)
+    opts.requiresPlayerAction ?? opts.tutorialManual ?? (inferredManual && currentManualCount < 1)
   );
 
   const incident = {
@@ -7694,7 +7698,8 @@ function drawMap() {
         action.title
       );
     }
-    drawMapBuildingLabel(b.name.split(" ")[0], p.x, p.y + 16 * state.camera.zoom);
+    const hideLabelForResponse = state.ui.activeSkillCheck?.buildingId === b.id || action?.type === "manualIncident";
+    if (!hideLabelForResponse) drawMapBuildingLabel(b.name.split(" ")[0], p.x, p.y + 16 * state.camera.zoom);
   }
 
   drawIncidents();
@@ -8000,6 +8005,8 @@ function renderRapidCard() {
     if (els.rapidBtnC) els.rapidBtnC.style.display = "none";
     els.rapidCard.classList.remove("urgent");
     incidentsPane?.classList.remove("urgent-pane");
+    incidentsPane?.style.removeProperty("--urgent-speed");
+    els.rapidCard.style.removeProperty("--urgent-speed");
     return;
   }
   if (!a) {
@@ -8019,6 +8026,8 @@ function renderRapidCard() {
       if (els.rapidBtnC) els.rapidBtnC.style.display = "none";
       els.rapidCard.classList.remove("urgent");
       incidentsPane?.classList.remove("urgent-pane");
+      incidentsPane?.style.removeProperty("--urgent-speed");
+      els.rapidCard.style.removeProperty("--urgent-speed");
       return;
     }
     const manualOpen = actionableManualIncidents().length;
@@ -8056,6 +8065,13 @@ function renderRapidCard() {
     if (els.rapidBtnC) els.rapidBtnC.style.display = "none";
     els.rapidCard.classList.toggle("urgent", manualOpen > 0);
     incidentsPane?.classList.toggle("urgent-pane", manualOpen > 0);
+    if (manualOpen > 0) {
+      incidentsPane?.style.setProperty("--urgent-speed", "0.95s");
+      els.rapidCard.style.setProperty("--urgent-speed", "0.95s");
+    } else {
+      incidentsPane?.style.removeProperty("--urgent-speed");
+      els.rapidCard.style.removeProperty("--urgent-speed");
+    }
     return;
   }
 
@@ -8122,6 +8138,10 @@ function renderRapidCard() {
   }
   els.rapidCard.classList.add("urgent");
   incidentsPane?.classList.add("urgent-pane");
+  const daysLeft = Math.max(0, a.expiresDay - state.day);
+  const urgentSpeed = daysLeft <= 1 ? "0.42s" : daysLeft <= 3 ? "0.58s" : daysLeft <= 6 ? "0.74s" : "0.9s";
+  incidentsPane?.style.setProperty("--urgent-speed", urgentSpeed);
+  els.rapidCard.style.setProperty("--urgent-speed", urgentSpeed);
 }
 
 function majorEventCardTarget() {
@@ -8622,12 +8642,15 @@ function renderPulseMiniBoard() {
 
 function renderOpsRadar() {
   if (els.dockRadarHint) {
-    const showHint = !tutorialIsActive() && state.sim.started && state.day <= state.ui.radarHintUntilDay;
+    const showHint = !tutorialIsActive() && state.sim.started && state.day <= state.ui.radarHintUntilDay && !state.ui.radarHintDismissed;
     els.dockRadarHint.hidden = !showHint;
     if (showHint) {
-      els.dockRadarHint.textContent = "This radar is your city balance. Any spoke pushing outward is under strain, and departments plus incident responses pull it back in.";
+      if (els.dockRadarHintText) {
+        els.dockRadarHintText.textContent = "This radar is your city balance. Outward spokes mean strain, and buildings plus incident responses pull them back in.";
+      }
     }
   }
+  document.querySelector(".dock-radar-wrap")?.classList.toggle("guided-focus", !tutorialIsActive() && state.sim.started && state.day <= state.ui.radarHintUntilDay && !state.ui.radarHintDismissed);
   renderRadarInto(els.dockRadarSvg, els.dockHeatList, 4);
 }
 
@@ -8920,8 +8943,9 @@ function renderIndustryPanel() {
   const palette = `<div class="industry-palette">${INDUSTRY_PROJECT_DEFS.map((p) => {
     const selected = state.ui.industryPlacement?.projectId === p.id || state.industry.selectedProjectId === p.id;
     const locked = !industryTierAllowed(p);
+    const guidedFood = inIndustryTutorial && p.id === "food_hub";
     const icon = `./assets/cozy-pack/actors/${p.art}.svg`;
-    return `<button class="industry-palette-btn ${selected ? "active" : ""} ${locked ? "locked" : ""}" data-industry-build="${p.id}" data-industry-id="${p.id}" draggable="${locked ? "false" : "true"}" ${locked ? "disabled" : ""} title="${p.name}">
+    return `<button class="industry-palette-btn ${selected ? "active" : ""} ${locked ? "locked" : ""} ${guidedFood ? "guided-focus" : ""}" data-industry-build="${p.id}" data-industry-id="${p.id}" draggable="${locked ? "false" : "true"}" ${locked ? "disabled" : ""} title="${p.name}">
       <img src="${icon}" alt="${p.name}" />
       <span>${p.name.split(" ")[0]}</span>
     </button>`;
@@ -8930,6 +8954,7 @@ function renderIndustryPanel() {
   els.industryProjects.innerHTML = `${palette}${INDUSTRY_PROJECT_DEFS.map((p) => {
     const selected = state.ui.industryPlacement?.projectId === p.id || state.industry.selectedProjectId === p.id;
     const locked = !industryTierAllowed(p);
+    const guidedFood = inIndustryTutorial && p.id === "food_hub";
     const deposit = round(p.cost * 0.55);
     const zoneCount = state.industry.zones.filter((z) => z.projectId === p.id).length;
     const fRows = FOUNDATION_DEFS.map((f) => {
@@ -8940,12 +8965,12 @@ function renderIndustryPanel() {
     }).join("");
     const label = locked ? `Locked (${TIER_CONFIG[p.tier].name})` : selected ? "Drag to map or click to arm" : "Build Project";
     const disabled = locked ? "disabled" : "";
-    return `<article class="industry-card ${selected ? "active" : ""}">
+    return `<article class="industry-card ${selected ? "active" : ""} ${guidedFood ? "tutorial-highlight" : ""}">
       <div class="title">${p.name}</div>
       <div class="meta">${p.desc}</div>
       <div class="meta">Footprint ${p.size}x${p.size} · Build ${p.buildDays}d · Deposit ${formatMoneyMillions(deposit)} · Total ${formatMoneyMillions(p.cost)} · Built ${zoneCount}</div>
       <div class="dep-row">${fRows}</div>
-      <button class="btn industry-build-btn ${selected && !locked ? "primary" : ""}" data-industry-build="${p.id}" data-industry-id="${p.id}" ${disabled}>${label}</button>
+      <button class="btn industry-build-btn ${selected && !locked ? "primary" : ""} ${guidedFood ? "guided-focus" : ""}" data-industry-build="${p.id}" data-industry-id="${p.id}" ${disabled}>${label}</button>
     </article>`;
   }).join("")}`;
 }
@@ -9986,6 +10011,10 @@ function bindInput() {
       const target = (state.ui.placementRecommendations || [])[0]?.tile || resolveDepartmentPlacementTile(nextId, CITY_CORE_TILE);
       if (target) focusCameraOnTile(target);
     }
+    renderUI();
+  });
+  els.dockRadarDismissBtn?.addEventListener("click", () => {
+    state.ui.radarHintDismissed = true;
     renderUI();
   });
   els.startPlacementBtn?.addEventListener("click", () => {

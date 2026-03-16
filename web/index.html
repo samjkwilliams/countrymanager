@@ -222,10 +222,13 @@
         <div class="dock-head">
           <strong>Live Pulse</strong>
         </div>
-        <div id="dockRadarHint" class="dock-radar-hint" hidden></div>
         <div class="dock-grid">
           <div id="dockPeople" class="pulse-mini-board"></div>
           <div class="dock-radar-wrap">
+            <div id="dockRadarHint" class="dock-radar-hint" hidden>
+              <div id="dockRadarHintText"></div>
+              <button id="dockRadarDismissBtn" class="btn subtle" type="button">Dismiss</button>
+            </div>
             <svg id="dockRadarSvg" viewBox="0 0 220 220" class="ops-radar" aria-label="Dock system pressure radar"></svg>
             <div id="dockHeatList" class="ops-heat-list"></div>
           </div>
@@ -233,7 +236,7 @@
       </section>
     </main>
 
-    <section id="introBriefingModal" class="intro-briefing-modal" hidden>
+    <section id="introBriefingModal" class="intro-briefing-modal">
       <article class="intro-briefing-card">
         <img class="intro-logo" src="assets/ui/statecraft-rise-to-power.png?v=20260221i" alt="Statecraft: Rise to Power" />
         <p class="paper-kicker">Arrival Briefing</p>

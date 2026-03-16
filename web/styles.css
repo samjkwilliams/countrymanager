@@ -966,16 +966,19 @@ h1 {
 [data-pane="incidents"].urgent-pane {
   position: relative;
   border-radius: 18px;
-  animation: incident-pane-pulse 0.85s ease-in-out infinite alternate;
+  animation: incident-pane-pulse var(--urgent-speed, 0.9s) ease-in-out infinite alternate;
+  background: linear-gradient(180deg, rgba(18, 38, 64, 0.98), rgba(11, 24, 43, 0.98));
 }
 
 @keyframes incident-pane-pulse {
   from {
     box-shadow: 0 0 0 2px rgba(255, 122, 92, 0.22), 0 0 18px rgba(255, 122, 92, 0.16);
+    background: linear-gradient(180deg, rgba(18, 38, 64, 0.98), rgba(11, 24, 43, 0.98));
     transform: translateY(0);
   }
   to {
     box-shadow: 0 0 0 4px rgba(255, 122, 92, 0.48), 0 0 34px rgba(255, 122, 92, 0.28);
+    background: linear-gradient(180deg, rgba(70, 30, 34, 0.98), rgba(20, 26, 48, 0.98));
     transform: translateY(-1px);
   }
 }
@@ -1359,7 +1362,7 @@ h1 {
 }
 
 .rapid-card.urgent {
-  animation: urgent-pulse 0.9s ease-in-out infinite alternate;
+  animation: urgent-pulse var(--urgent-speed, 0.9s) ease-in-out infinite alternate;
 }
 
 @keyframes urgent-pulse {
@@ -1711,14 +1714,21 @@ h1 {
 }
 
 .dock-radar-hint {
-  padding: 6px 8px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 191, 74, 0.46);
-  background: rgba(16, 39, 66, 0.9);
+  position: absolute;
+  left: 4px;
+  bottom: calc(100% + 8px);
+  width: min(300px, 92%);
+  padding: 8px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 191, 74, 0.64);
+  background: rgba(16, 39, 66, 0.96);
   color: #f1dfc4;
   font-size: 11px;
   line-height: 1.25;
-  animation: incident-pane-pulse 1s ease-in-out infinite alternate;
+  display: grid;
+  gap: 8px;
+  box-shadow: 0 14px 24px rgba(0, 0, 0, 0.34), 0 0 24px rgba(255, 170, 74, 0.22);
+  z-index: 3;
 }
 
 .dock-head {
@@ -1736,10 +1746,18 @@ h1 {
 }
 
 .dock-radar-wrap {
+  position: relative;
   display: grid;
   grid-template-columns: 148px 1fr;
   gap: 8px;
   align-items: center;
+}
+
+.dock-radar-hint .btn {
+  justify-self: start;
+  min-height: 28px;
+  padding: 5px 10px;
+  font-size: 10px;
 }
 
 .news-strip .ops-radar {
