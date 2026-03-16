@@ -2195,6 +2195,7 @@ function setTutorialPhase(phase, announce = true) {
 
   if (meta.tab) setActiveSideTab(meta.tab);
   if (phase === "industry") state.ui.quickBuildCollapsed = true;
+  requestAnimationFrame(() => tutorialFocusCurrentStep());
   if (phase === "freeplay") {
     for (const inc of state.incidents) {
       if (inc.tutorialManual) inc.tutorialManual = false;
