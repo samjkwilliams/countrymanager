@@ -1063,6 +1063,7 @@ const state = {
     mapRevealUntilMs: 0,
     mapSpotlightUntilMs: 0,
     introBriefingOpen: true,
+    introStarting: false,
     lastSeenIncidentAlertId: null,
     initiativeGuideActive: false,
     initiativeGuideUntilDay: 0,
@@ -10014,9 +10015,14 @@ function bindInput() {
   const beginFounding = (e) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
-    if (!state.ui.introBriefingOpen) return;
-    if (els.introBriefingStartBtn) els.introBriefingStartBtn.disabled = true;
+    if (!state.ui.introBriefingOpen || state.ui.introStarting) return;
+    state.ui.introStarting = true;
     state.ui.introBriefingOpen = false;
+    if (els.introBriefingModal) {
+      els.introBriefingModal.hidden = true;
+      els.introBriefingModal.style.pointerEvents = "none";
+    }
+    if (els.introBriefingStartBtn) els.introBriefingStartBtn.disabled = true;
     triggerToolboxSpotlight(6500);
     triggerMapSpotlight(6500);
     const nextId = nextFoundingDepartmentId();
@@ -10026,8 +10032,11 @@ function bindInput() {
       if (target) focusCameraOnTile(target);
     }
     renderUI();
+    requestAnimationFrame(() => {
+      state.ui.introStarting = false;
+      if (els.introBriefingModal) els.introBriefingModal.style.pointerEvents = "";
+    });
   };
-  els.introBriefingStartBtn?.addEventListener("pointerdown", beginFounding);
   els.introBriefingStartBtn?.addEventListener("click", beginFounding);
   const dismissRadarHint = (e) => {
     e?.preventDefault?.();
