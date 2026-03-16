@@ -834,14 +834,14 @@ const TUTORIAL_STEPS = [
     id: "budget",
     short: "Tune one budget",
     title: "Step 1: Tune One Department Budget",
-    body: "Click a department, set a budget target, then apply it and watch treasury trend impact.",
+    body: "Click a department, set a budget target, then apply it. The radar shows your city balance: weak spokes mark the systems you need to pull back toward center.",
     tab: null,
   },
   {
     id: "upgrade",
     short: "Upgrade one facility",
     title: "Step 2: Upgrade a Facility",
-    body: "Upgrade one department to raise service capacity and feel the cost, AP spend, and delayed payoff.",
+    body: "Upgrade one department to raise service capacity. Use the radar as your balance board: your buildings and interventions are what move those category lines.",
     tab: null,
   },
   {
@@ -1559,6 +1559,7 @@ function applyTutorialHighlights() {
   const phase = state.tutorial.phase;
   if ((phase === "budget" || phase === "upgrade") && state.selectedBuildingId) {
     els.budgetSlider?.classList.add("guided-focus");
+    document.querySelector(".dock-radar-wrap")?.classList.add("guided-focus");
     if (phase === "budget") {
       els.applyBudgetBtn?.classList.add("guided-focus");
     }
@@ -2184,6 +2185,9 @@ function setTutorialPhase(phase, announce = true) {
   if (announce) {
     addTicker(`Guided step: ${meta.title}.`);
     addRailEvent("🧭 Guided Step", meta.short, true);
+  }
+  if (phase === "budget" || phase === "upgrade") {
+    addTicker("Watch the radar: each spoke is a city system, and your funding, upgrades, and responses are what rebalance it.");
   }
 
   if (meta.tab) setActiveSideTab(meta.tab);
@@ -3343,7 +3347,7 @@ function upgradeSelected() {
     },
     trustDelta: 0.6,
     axisDrift: { careAusterity: 1.2, libertyControl: 0, publicDonor: 0.4, truthSpin: 0.2 },
-    treasuryDeltaNow: -cost,
+    treasuryDeltaNow: -(skill.cost || 0),
     kpiNow: { [b.kpi]: 1.2, stability: 0.3 },
     riskFlags: cost > 26 ? ["capital_spend_pressure"] : [],
     confidence: "high",
@@ -6738,26 +6742,26 @@ function drawLiveBuildingSkillCue(building, incident) {
   ctx.font = `900 ${Math.max(9, 10 * zoom)}px "Orbitron", "Rajdhani", sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("PLAY RESPONSE", p.x, y - 12 * zoom);
+  ctx.fillText("PLAY RESPONSE", p.x, y - 14 * zoom);
   ctx.font = `800 ${Math.max(8, 9 * zoom)}px "Orbitron", "Rajdhani", sans-serif`;
   ctx.fillStyle = `rgba(255, 214, 168, ${0.82 + pulse * 0.18})`;
   ctx.fillText("CLICK BUILDING OR BAR", p.x, y + height + 12 * zoom);
-  const playW = 34 * zoom;
-  const playH = 16 * zoom;
+  const playW = 68 * zoom;
+  const playH = 32 * zoom;
   if (ctx.roundRect) {
     ctx.beginPath();
-    ctx.roundRect(p.x - playW / 2, y - 36 * zoom, playW, playH, 999);
+    ctx.roundRect(p.x - playW / 2, y - 54 * zoom, playW, playH, 999);
     ctx.fillStyle = `rgba(255, 185, 74, ${0.82 + pulse * 0.14})`;
     ctx.strokeStyle = `rgba(255, 239, 205, ${0.84 + pulse * 0.12})`;
-    ctx.lineWidth = Math.max(1, 1.2 * zoom);
+    ctx.lineWidth = Math.max(1.4, 1.8 * zoom);
     ctx.fill();
     ctx.stroke();
   }
   ctx.fillStyle = "#0f2033";
-  ctx.font = `900 ${Math.max(8, 9 * zoom)}px "Orbitron", "Rajdhani", sans-serif`;
-  ctx.fillText("PLAY", p.x, y - 28 * zoom);
+  ctx.font = `900 ${Math.max(14, 16 * zoom)}px "Orbitron", "Rajdhani", sans-serif`;
+  ctx.fillText("PLAY", p.x, y - 38 * zoom);
   ctx.restore();
-  state.ui.buildingButtons.push({ id: building.id, kind: "skillPreview", x, y: y - 42 * zoom, w: width, h: height + 56 * zoom, title: "Start response" });
+  state.ui.buildingButtons.push({ id: building.id, kind: "skillPreview", x: x - 10 * zoom, y: y - 60 * zoom, w: width + 20 * zoom, h: height + 78 * zoom, title: "Start response" });
 }
 
 function drawSkillBursts() {
@@ -7777,14 +7781,14 @@ function skillCheckValue(skill, now = performance.now()) {
   if (Number.isFinite(skill.stopValue)) return clamp(skill.stopValue, 0, 1);
   const elapsed = Math.max(0, now - (skill.startedAt || now));
   const speed = skill.speed || 1;
-  const cycleMs = 1325 / speed;
+  const cycleMs = 1460 / speed;
   const phase = (elapsed % cycleMs) / cycleMs;
   return phase < 0.5 ? phase * 2 : 2 - phase * 2;
 }
 
 function liveSkillCheckValue(building, inc, now = performance.now()) {
   const config = skillCheckConfig(building, inc);
-  const cycleMs = 1325 / config.speed;
+  const cycleMs = 1460 / config.speed;
   const phase = (((now / cycleMs) + config.phaseOffset) % 1 + 1) % 1;
   return phase < 0.5 ? phase * 2 : 2 - phase * 2;
 }
@@ -7972,6 +7976,7 @@ function rapidImpactFocusLabel(active) {
 
 function renderRapidCard() {
   const a = state.rapid.active;
+  const incidentsPane = document.querySelector('[data-pane="incidents"]');
   els.rapidMomentum.textContent = String(state.rapid.momentum);
   if (!state.sim.started) {
     els.rapidTitle.textContent = "Founding phase active.";
@@ -7988,6 +7993,7 @@ function renderRapidCard() {
     if (els.rapidBtnC) els.rapidBtnC.textContent = "Option C";
     if (els.rapidBtnC) els.rapidBtnC.style.display = "none";
     els.rapidCard.classList.remove("urgent");
+    incidentsPane?.classList.remove("urgent-pane");
     return;
   }
   if (!a) {
@@ -8006,6 +8012,7 @@ function renderRapidCard() {
       if (els.rapidBtnC) els.rapidBtnC.textContent = "Option C";
       if (els.rapidBtnC) els.rapidBtnC.style.display = "none";
       els.rapidCard.classList.remove("urgent");
+      incidentsPane?.classList.remove("urgent-pane");
       return;
     }
     const manualOpen = actionableManualIncidents().length;
@@ -8041,7 +8048,8 @@ function renderRapidCard() {
     els.rapidBtnB.title = "";
     if (els.rapidBtnC) els.rapidBtnC.title = "";
     if (els.rapidBtnC) els.rapidBtnC.style.display = "none";
-    els.rapidCard.classList.remove("urgent");
+    els.rapidCard.classList.toggle("urgent", manualOpen > 0);
+    incidentsPane?.classList.toggle("urgent-pane", manualOpen > 0);
     return;
   }
 
@@ -8107,6 +8115,7 @@ function renderRapidCard() {
     }
   }
   els.rapidCard.classList.add("urgent");
+  incidentsPane?.classList.add("urgent-pane");
 }
 
 function majorEventCardTarget() {
