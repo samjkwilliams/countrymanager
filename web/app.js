@@ -1151,7 +1151,6 @@ const els = {
   rapidWho: document.getElementById("rapidWho"),
   rapidFeedback: document.getElementById("rapidFeedback"),
   rapidTimer: document.getElementById("rapidTimer"),
-  rapidMomentum: document.getElementById("rapidMomentum"),
   rapidBtnA: document.getElementById("rapidBtnA"),
   rapidBtnB: document.getElementById("rapidBtnB"),
   rapidBtnC: document.getElementById("rapidBtnC"),
@@ -8062,7 +8061,6 @@ function renderRapidCard() {
     btn.classList.remove("selected", "correct", "wrong");
     btn.title = "";
   });
-  els.rapidMomentum.textContent = String(state.rapid.momentum);
   if (!state.sim.started) {
     els.rapidTitle.textContent = "Founding phase active.";
     if (els.rapidWhat) els.rapidWhat.textContent = "\"Rapid briefs unlock after you launch government.\"";
