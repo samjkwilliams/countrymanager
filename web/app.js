@@ -8047,7 +8047,7 @@ function renderRapidCard() {
   const a = state.rapid.active;
   const feedback = state.ui.rapidFeedback;
   const incidentsPane = document.querySelector('[data-pane="incidents"]');
-  els.rapidCard.classList.remove("urgent", "resolved-good", "resolved-bad", "resolved-neutral");
+  els.rapidCard.classList.remove("urgent", "resolved-good", "resolved-bad", "resolved-neutral", "resolved-compact");
   incidentsPane?.classList.remove("urgent-pane");
   incidentsPane?.style.removeProperty("--urgent-speed");
   els.rapidCard.style.removeProperty("--urgent-speed");
@@ -8077,8 +8077,8 @@ function renderRapidCard() {
   }
   if (feedback && !a) {
     els.rapidTitle.textContent = feedback.title || "Decision registered";
-    if (els.rapidWhat) els.rapidWhat.textContent = `"${feedback.quote || feedback.message || "Decision logged."}"`;
-    if (els.rapidWho) els.rapidWho.textContent = feedback.focus || "Impact focus: updated";
+    if (els.rapidWhat) els.rapidWhat.textContent = "";
+    if (els.rapidWho) els.rapidWho.textContent = "";
     if (els.rapidFeedback) {
       els.rapidFeedback.hidden = false;
       els.rapidFeedback.textContent = feedback.message || "Decision registered.";
@@ -8105,7 +8105,7 @@ function renderRapidCard() {
         if (chosenVerdict) btn.classList.add(chosenVerdict);
       }
     });
-    els.rapidCard.classList.add(`resolved-${feedback.kind || "neutral"}`);
+    els.rapidCard.classList.add(`resolved-${feedback.kind || "neutral"}`, "resolved-compact");
     return;
   }
   if (!a) {
