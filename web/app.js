@@ -8710,9 +8710,10 @@ function renderPulseMiniBoard() {
       const trend = p.trend > 0 ? `+${round(p.trend)}` : `${round(p.trend)}`;
       const short = p.label.split(" ")[0];
       return `<article class="pulse-chip ${cls}">
-        <div class="head"><div class="name">${short}</div><div class="trend">${trend}</div></div>
+        <div class="name">${short}</div>
         <div class="val">${round(p.happiness)}%</div>
-        <div class="bar"><div class="bar-fill" style="width:${clamp(p.happiness, 0, 100)}%"></div></div>
+        <div class="trend">${trend}</div>
+        <div class="bar"><div class="bar-fill" style="height:${clamp(p.happiness, 0, 100)}%"></div></div>
       </article>`;
     })
     .join("");
@@ -10122,6 +10123,7 @@ function bindInput() {
       if (els.introBriefingModal) els.introBriefingModal.style.pointerEvents = "";
     });
   };
+  els.introBriefingStartBtn?.addEventListener("pointerdown", beginFounding);
   els.introBriefingStartBtn?.addEventListener("click", beginFounding);
   const dismissRadarHint = (e) => {
     e?.preventDefault?.();
