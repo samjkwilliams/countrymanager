@@ -2141,8 +2141,8 @@ h1 {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  gap: 22px;
-  padding: clamp(44px, 6vw, 72px) clamp(20px, 4vw, 36px) clamp(36px, 5vw, 56px);
+  gap: 14px;
+  padding: clamp(24px, 3vw, 40px) clamp(20px, 4vw, 36px) clamp(24px, 3vw, 40px);
   background:
     radial-gradient(circle at 50% 72%, rgba(6, 16, 32, 0.14), transparent 22%),
     linear-gradient(180deg, rgba(4, 12, 24, 0.22) 0%, rgba(4, 12, 24, 0.1) 22%, rgba(4, 12, 24, 0.4) 58%, rgba(4, 12, 24, 0.78) 100%);
@@ -2152,27 +2152,28 @@ h1 {
   width: min(760px, 54vw);
   display: grid;
   justify-items: center;
-  gap: 14px;
-  padding: clamp(20px, 2.4vw, 28px) clamp(22px, 3vw, 34px);
+  gap: 10px;
+  padding: clamp(16px, 1.8vw, 22px) clamp(18px, 2.2vw, 28px);
   border: 1px solid rgba(255, 173, 92, 0.34);
   border-radius: 26px;
   background: linear-gradient(180deg, rgba(6, 18, 34, 0.48), rgba(4, 12, 24, 0.62));
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(10px);
   text-align: center;
+  max-height: min(54vh, 480px);
 }
 
 .intro-briefing-card h2 {
   margin: 0;
   color: #ffe1cb;
   max-width: 14ch;
-  font-size: clamp(28px, 3.3vw, 48px);
+  font-size: clamp(22px, 2.6vw, 40px);
   line-height: 1.04;
 }
 
 .intro-logo {
   display: block;
-  width: min(520px, 72vw);
+  width: min(420px, 58vw);
   height: auto;
   margin: 0;
   filter: drop-shadow(0 0 22px rgba(255, 124, 36, 0.18));
@@ -2182,8 +2183,8 @@ h1 {
   color: #d5e0f3;
   max-width: 30ch;
   margin: 0;
-  font-size: clamp(18px, 1.5vw, 24px);
-  line-height: 1.5;
+  font-size: clamp(16px, 1.2vw, 21px);
+  line-height: 1.42;
 }
 
 .intro-points {
@@ -2215,39 +2216,40 @@ h1 {
 }
 
 .splash-dialog .btn.primary {
-  min-width: 190px;
-  min-height: 64px;
-  font-size: 1.26rem;
+  min-width: 176px;
+  min-height: 56px;
+  font-size: 1.12rem;
 }
 
 @media (max-width: 860px) {
   .splash-screen-content {
     min-height: 100vh;
     justify-content: flex-start;
-    gap: 18px;
-    padding: 34px 16px 24px;
+    gap: 14px;
+    padding: 24px 16px 20px;
     background: linear-gradient(180deg, rgba(4, 12, 24, 0.22) 0%, rgba(4, 12, 24, 0.16) 22%, rgba(4, 12, 24, 0.58) 62%, rgba(4, 12, 24, 0.85) 100%);
   }
 
   .intro-logo {
-    width: min(320px, 86vw);
+    width: min(300px, 78vw);
   }
 
   .splash-dialog {
     width: min(94vw, 560px);
-    gap: 12px;
-    padding: 18px 16px 20px;
+    gap: 10px;
+    padding: 16px 14px 18px;
     border-radius: 22px;
+    max-height: none;
   }
 
   .intro-briefing-card h2 {
     max-width: 12ch;
-    font-size: clamp(24px, 7vw, 38px);
+    font-size: clamp(22px, 6.2vw, 34px);
   }
 
   .intro-lead {
     max-width: 28ch;
-    font-size: clamp(16px, 4.5vw, 20px);
+    font-size: clamp(15px, 4.2vw, 18px);
   }
 }
 
