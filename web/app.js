@@ -1064,6 +1064,12 @@ const state = {
     mapSpotlightUntilMs: 0,
     introBriefingOpen: true,
     introStarting: false,
+    introLoadingOpen: false,
+    pendingIntroStart: false,
+    bootReady: false,
+    bootProgress: 0,
+    bootMessage: "Loading city data",
+    inputBound: false,
     lastSeenIncidentAlertId: null,
     initiativeGuideActive: false,
     initiativeGuideUntilDay: 0,
@@ -1255,6 +1261,10 @@ const els = {
   sidePanel: document.querySelector(".side-panel"),
   introBriefingModal: document.getElementById("introBriefingModal"),
   introBriefingStartBtn: document.getElementById("introBriefingStartBtn"),
+  introLoadingModal: document.getElementById("introLoadingModal"),
+  introLoadingText: document.getElementById("introLoadingText"),
+  introLoadingBarFill: document.getElementById("introLoadingBarFill"),
+  introLoadingPercent: document.getElementById("introLoadingPercent"),
 };
 
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
@@ -8411,6 +8421,48 @@ function renderIntroBriefing() {
   els.introBriefingModal.hidden = !state.ui.introBriefingOpen;
 }
 
+function renderIntroLoading() {
+  if (!els.introLoadingModal) return;
+  const show = Boolean(state.ui.introLoadingOpen);
+  els.introLoadingModal.hidden = !show;
+  if (!show) return;
+  if (els.introLoadingText) els.introLoadingText.textContent = state.ui.bootMessage || "Loading city data";
+  if (els.introLoadingBarFill) els.introLoadingBarFill.style.width = `${clamp(state.ui.bootProgress || 0, 0, 100)}%`;
+  if (els.introLoadingPercent) els.introLoadingPercent.textContent = `${Math.round(clamp(state.ui.bootProgress || 0, 0, 100))}%`;
+}
+
+function setBootProgress(progress, message) {
+  state.ui.bootProgress = clamp(progress, 0, 100);
+  if (message) state.ui.bootMessage = message;
+  renderIntroLoading();
+}
+
+function finalizeIntroStart() {
+  if (!state.ui.introBriefingOpen || state.ui.introStarting) return;
+  state.ui.introStarting = true;
+  state.ui.pendingIntroStart = false;
+  state.ui.introBriefingOpen = false;
+  state.ui.introLoadingOpen = false;
+  if (els.introBriefingModal) {
+    els.introBriefingModal.hidden = true;
+    els.introBriefingModal.style.pointerEvents = "none";
+  }
+  if (els.introBriefingStartBtn) els.introBriefingStartBtn.disabled = true;
+  triggerToolboxSpotlight(6500);
+  triggerMapSpotlight(6500);
+  const nextId = nextFoundingDepartmentId();
+  if (nextId) {
+    chooseDepartmentPlacement(nextId, "setup");
+    const target = (state.ui.placementRecommendations || [])[0]?.tile || resolveDepartmentPlacementTile(nextId, CITY_CORE_TILE);
+    if (target) focusCameraOnTile(target);
+  }
+  renderUI();
+  requestAnimationFrame(() => {
+    state.ui.introStarting = false;
+    if (els.introBriefingModal) els.introBriefingModal.style.pointerEvents = "";
+  });
+}
+
 function renderHud() {
   setText(els.tierLabel, TIER_CONFIG[state.tierIndex].name);
   setText(els.dayLabel, String(state.day));
@@ -9564,6 +9616,7 @@ function positionSelectionHud() {
 
 function renderUI() {
   if (hasBlockingMapOverlay()) clearActiveSkillCheck();
+  renderIntroLoading();
   renderHud();
   renderOnboardingLayout();
   renderSelection();
@@ -10110,26 +10163,13 @@ function bindInput() {
     e?.preventDefault?.();
     e?.stopPropagation?.();
     if (!state.ui.introBriefingOpen || state.ui.introStarting) return;
-    state.ui.introStarting = true;
-    state.ui.introBriefingOpen = false;
-    if (els.introBriefingModal) {
-      els.introBriefingModal.hidden = true;
-      els.introBriefingModal.style.pointerEvents = "none";
+    if (!state.ui.bootReady) {
+      state.ui.pendingIntroStart = true;
+      state.ui.introLoadingOpen = true;
+      renderIntroLoading();
+      return;
     }
-    if (els.introBriefingStartBtn) els.introBriefingStartBtn.disabled = true;
-    triggerToolboxSpotlight(6500);
-    triggerMapSpotlight(6500);
-    const nextId = nextFoundingDepartmentId();
-    if (nextId) {
-      chooseDepartmentPlacement(nextId, "setup");
-      const target = (state.ui.placementRecommendations || [])[0]?.tile || resolveDepartmentPlacementTile(nextId, CITY_CORE_TILE);
-      if (target) focusCameraOnTile(target);
-    }
-    renderUI();
-    requestAnimationFrame(() => {
-      state.ui.introStarting = false;
-      if (els.introBriefingModal) els.introBriefingModal.style.pointerEvents = "";
-    });
+    finalizeIntroStart();
   };
   els.introBriefingStartBtn?.addEventListener("click", beginFounding);
   const dismissRadarHint = (e) => {
@@ -10823,29 +10863,40 @@ function buildSparkline(values) {
 
 async function bootstrap() {
   bindInput();
+  setBootProgress(8, "Loading baseline systems");
   const baseline = await loadBaseline();
+  setBootProgress(20, "Loading brief library");
   const scenarios = await loadScenarioLibrary();
+  setBootProgress(30, "Loading truth checks");
   const truthChecks = await loadTruthChecks();
   initFromBaseline(baseline);
   state.content.scenarioLibrary = scenarios;
   state.content.truthChecks = truthChecks;
   if (!state.election.currentOpponent) state.election.currentOpponent = pickOppositionCandidate();
+  setBootProgress(42, "Loading civic art pack");
   try {
     await loadAssetPack();
+    setBootProgress(72, "Loading ministry art");
     await loadDepartmentPngOverrides();
+    setBootProgress(88, "Loading terrain tiles");
     await loadTerrainTileOverrides();
     addTicker("Cozy art pack loaded.");
   } catch {
+    setBootProgress(72, "Recovering with local art assets");
     await loadDepartmentPngOverrides();
+    setBootProgress(88, "Loading terrain tiles");
     await loadTerrainTileOverrides();
     addTicker("Asset pack unavailable; using fallback visuals.");
   }
+  setBootProgress(96, "Preparing city view");
   initDecorProps();
   updateFoundations();
   recalcBuildingStates();
   refreshAdvisorBrief();
   syncPauseButton();
   resizeCanvas();
+  state.ui.bootReady = true;
+  setBootProgress(100, "World ready");
   renderUI();
   ensureBgm(true);
 
@@ -10853,6 +10904,7 @@ async function bootstrap() {
   if (truthChecks.length > 0) addTicker(`Truth Check deck loaded: ${truthChecks.length} briefs ready.`);
   else if (scenarios.length > 0) addTicker(`Scenario library loaded: ${scenarios.length} civic briefs ready.`);
   addRailEvent("Tip", "Place all departments first. Then press Launch Government.", true);
+  if (state.ui.pendingIntroStart) finalizeIntroStart();
 
   setInterval(() => {
     if (state.paused || !state.sim.started) return;
