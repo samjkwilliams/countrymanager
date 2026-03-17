@@ -2559,6 +2559,13 @@ function loadSvgImage(src) {
   });
 }
 
+async function runBatched(items, worker, batchSize = 10) {
+  for (let i = 0; i < items.length; i += batchSize) {
+    const slice = items.slice(i, i + batchSize);
+    await Promise.allSettled(slice.map(worker));
+  }
+}
+
 const DEPARTMENT_PNG_LEVELS = {
   treasury: 10,
   education: 10,
@@ -2583,29 +2590,28 @@ function departmentArtSrc(id, lvl = 1) {
 async function loadDepartmentPngOverrides() {
   const tasks = BUILDING_DEFS.flatMap((def) => {
     const levels = Array.from({ length: DEPARTMENT_PNG_LEVELS[def.id] || 1 }, (_, i) => i + 1);
-    return levels.map(async (lvl) => {
-      try {
-        const img = await loadSvgImage(departmentArtSrc(def.id, lvl));
-        state.assets.buildings[`${def.id}_lvl${lvl}`] = img;
-      } catch {
-        // Keep existing fallback if png is missing.
-      }
-    });
+    return levels.map((lvl) => ({ def, lvl }));
   });
-  await Promise.all(tasks);
+  await runBatched(tasks, async ({ def, lvl }) => {
+    try {
+      const img = await loadSvgImage(departmentArtSrc(def.id, lvl));
+      state.assets.buildings[`${def.id}_lvl${lvl}`] = img;
+    } catch {
+      // Keep existing fallback if png is missing.
+    }
+  }, 6);
 }
 
 async function loadTerrainTileOverrides() {
   const tileIds = [...new Set(Object.values(TERRAIN_TILE_VARIANTS).flat())];
-  const tasks = tileIds.map(async (tileId) => {
+  await runBatched(tileIds, async (tileId) => {
     try {
       const img = await loadSvgImage(`${TERRAIN_TILE_BASE}/${tileId}.png`);
       state.assets.tiles[tileId] = img;
     } catch {
       // Keep fallback/cozy-pack tile if missing.
     }
-  });
-  await Promise.all(tasks);
+  }, 8);
 }
 
 async function loadAssetPack() {
@@ -2613,17 +2619,18 @@ async function loadAssetPack() {
   if (!manifestRes.ok) throw new Error("asset manifest fetch failed");
   const manifest = await manifestRes.json();
 
-  const tasks = manifest.files
-    .filter((f) => f.endsWith(".svg"))
-    .map(async (rel) => {
+  const files = manifest.files.filter((f) => f.endsWith(".svg"));
+  await runBatched(files, async (rel) => {
+    try {
       const img = await loadSvgImage(`${ASSET_BASE}/${rel}`);
       if (rel.startsWith("tiles/")) state.assets.tiles[rel.replace("tiles/", "").replace(".svg", "")] = img;
       if (rel.startsWith("buildings/")) state.assets.buildings[rel.replace("buildings/", "").replace(".svg", "")] = img;
       if (rel.startsWith("actors/")) state.assets.actors[rel.replace("actors/", "").replace(".svg", "")] = img;
       if (rel.startsWith("fx/")) state.assets.fx[rel.replace("fx/", "").replace(".svg", "")] = img;
-    });
-
-  await Promise.all(tasks);
+    } catch {
+      // Skip individual broken assets so one bad request doesn't drop the whole pack.
+    }
+  }, 10);
   state.assets.loaded = true;
 }
 
@@ -10031,6 +10038,8 @@ function handleCanvasPress(sx, sy) {
 }
 
 function bindInput() {
+  if (state.ui.inputBound) return;
+  state.ui.inputBound = true;
   const unlock = () => unlockAudio();
   window.addEventListener("pointerdown", unlock, { once: true, capture: true });
   window.addEventListener("touchstart", unlock, { once: true, capture: true, passive: true });
@@ -10122,7 +10131,6 @@ function bindInput() {
       if (els.introBriefingModal) els.introBriefingModal.style.pointerEvents = "";
     });
   };
-  els.introBriefingStartBtn?.addEventListener("pointerdown", beginFounding);
   els.introBriefingStartBtn?.addEventListener("click", beginFounding);
   const dismissRadarHint = (e) => {
     e?.preventDefault?.();
@@ -10814,6 +10822,7 @@ function buildSparkline(values) {
 }
 
 async function bootstrap() {
+  bindInput();
   const baseline = await loadBaseline();
   const scenarios = await loadScenarioLibrary();
   const truthChecks = await loadTruthChecks();
@@ -10835,7 +10844,6 @@ async function bootstrap() {
   updateFoundations();
   recalcBuildingStates();
   refreshAdvisorBrief();
-  bindInput();
   syncPauseButton();
   resizeCanvas();
   renderUI();
