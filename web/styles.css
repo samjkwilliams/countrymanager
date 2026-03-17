@@ -1343,40 +1343,117 @@ h1 {
   border-width: 2px;
   border-color: rgba(255, 124, 36, 0.56);
   background: linear-gradient(180deg, rgba(14, 34, 58, 0.96), rgba(9, 23, 40, 0.96));
-  padding: 7px;
+  padding: 14px;
 }
 
 .rapid-card h2 {
+  margin: 0 0 6px;
   font-size: 14px;
 }
 
-.rapid-card .brief-snapshot {
-  margin-top: 4px;
-  font-size: 11px;
-  line-height: 1.16;
+.rapid-kicker {
+  margin: 0 0 10px;
+  color: #ffd9be;
+  font-size: 14px;
+  font-weight: 600;
 }
 
-.rapid-card .muted {
-  font-size: 10px;
+.rapid-quote {
+  margin: 0;
+  color: #f7e2d2;
+  font-size: clamp(20px, 2vw, 30px);
+  line-height: 1.18;
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+.rapid-focus {
+  margin: 8px 0 0;
+  font-size: 12px;
+}
+
+.rapid-feedback {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 166, 92, 0.24);
+  background: rgba(7, 20, 35, 0.52);
+  color: #d7e3f6;
+  font-size: 13px;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.rapid-feedback.good {
+  border-color: rgba(76, 212, 154, 0.5);
+  background: linear-gradient(180deg, rgba(14, 54, 43, 0.74), rgba(8, 29, 24, 0.78));
+  color: #dffbef;
+}
+
+.rapid-feedback.bad {
+  border-color: rgba(255, 110, 104, 0.52);
+  background: linear-gradient(180deg, rgba(69, 22, 26, 0.78), rgba(36, 10, 14, 0.8));
+  color: #ffe1df;
+}
+
+.rapid-feedback.neutral {
+  border-color: rgba(255, 189, 96, 0.34);
+  background: linear-gradient(180deg, rgba(62, 42, 18, 0.5), rgba(28, 20, 10, 0.56));
+  color: #ffe8cf;
 }
 
 .rapid-card .mini-grid {
-  margin-top: 6px;
-  gap: 6px;
+  margin-top: 12px;
+  gap: 10px;
 }
 
 .rapid-card .mini-grid strong {
-  font-size: 11px;
+  font-size: 22px;
 }
 
 .rapid-card .actions .btn {
-  min-height: 34px;
-  padding: 5px 6px;
-  font-size: 10px;
+  min-height: 50px;
+  padding: 10px 12px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.rapid-card .actions {
+  margin-top: 12px;
+}
+
+.rapid-card .actions .btn.selected {
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 2px rgba(255, 214, 138, 0.18), 0 8px 18px rgba(0, 0, 0, 0.22);
+}
+
+.rapid-card .actions .btn.correct {
+  border-color: rgba(76, 212, 154, 0.72);
+  background: linear-gradient(180deg, rgba(25, 88, 68, 0.9), rgba(14, 48, 38, 0.96));
+  color: #effff7;
+}
+
+.rapid-card .actions .btn.wrong {
+  border-color: rgba(255, 110, 104, 0.72);
+  background: linear-gradient(180deg, rgba(92, 32, 36, 0.92), rgba(50, 16, 20, 0.98));
+  color: #fff0f0;
 }
 
 .rapid-card.urgent {
   animation: urgent-pulse var(--urgent-speed, 0.9s) ease-in-out infinite alternate;
+}
+
+.rapid-card.resolved-good {
+  box-shadow: 0 12px 34px rgba(12, 30, 26, 0.42), 0 0 26px rgba(76, 212, 154, 0.26);
+}
+
+.rapid-card.resolved-bad {
+  box-shadow: 0 12px 34px rgba(34, 10, 14, 0.46), 0 0 26px rgba(255, 110, 104, 0.26);
+}
+
+.rapid-card.resolved-neutral {
+  box-shadow: 0 12px 34px rgba(40, 28, 10, 0.42), 0 0 22px rgba(255, 184, 90, 0.22);
 }
 
 @keyframes urgent-pulse {

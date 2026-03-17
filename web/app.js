@@ -1069,6 +1069,7 @@ const state = {
     initiativeGuideUntilDay: 0,
     radarHintUntilDay: 0,
     radarHintDismissed: false,
+    rapidFeedback: null,
     buildingButtons: [],
     activeSkillCheck: null,
     skillBursts: [],
@@ -1148,8 +1149,7 @@ const els = {
   rapidTitle: document.getElementById("rapidTitle"),
   rapidWhat: document.getElementById("rapidWhat"),
   rapidWho: document.getElementById("rapidWho"),
-  rapidBody: document.getElementById("rapidBody"),
-  rapidEvidence: document.getElementById("rapidEvidence"),
+  rapidFeedback: document.getElementById("rapidFeedback"),
   rapidTimer: document.getElementById("rapidTimer"),
   rapidMomentum: document.getElementById("rapidMomentum"),
   rapidBtnA: document.getElementById("rapidBtnA"),
@@ -2241,7 +2241,7 @@ function tutorialFocusCurrentStep() {
       state.selectedBuildingId = target.id;
       state.selectedIndustryId = null;
       markOnboarding("selectedBuilding");
-      focusCameraOnTile(buildingTile(target));
+      focusCameraOnTutorialTile(buildingTile(target));
     }
     focusControlPanel();
     return;
@@ -3566,6 +3566,7 @@ function resolveRapid(choice, timedOut = false) {
   const active = state.rapid.active;
   if (!active) return;
   let scenarioTruthQuality = null;
+  let rapidFeedback = null;
   if (active.mode === "scenario" && Array.isArray(active.options)) {
     const picked = active.options.find((o) => o.key === choice) || active.options[0];
     applyDemographicShiftMap(picked.dem_now || {});
@@ -3609,7 +3610,16 @@ function resolveRapid(choice, timedOut = false) {
           : verdictLabel === "WRONG"
             ? `YOU GOT PLAYED · ${shorten(picked.outcome_blurb || "Narrative trap landed.", 62)}`
             : `FAIR HOLD · ${shorten(picked.outcome_blurb || "Data was mixed; neutral call.", 62)}`;
-      addDecisionToast(verdictMsg, verdictKind);
+      rapidFeedback = {
+        kind: verdictKind,
+        title: active.title || "Incident brief",
+        quote: active.claim || active.prompt || active.body || active.title || "Incident resolved.",
+        focus: rapidImpactFocusLabel(active),
+        message: verdictMsg,
+        timerLabel: "DONE",
+        choice,
+        options: (active.options || []).map((o) => ({ key: o.key, label: compactChoiceLabel(o.label, 3) || "Option" })),
+      };
       if (!timedOut) {
         if (verdictLabel === "RIGHT") playSfx("uiPositive");
         else if (verdictLabel === "WRONG") playSfx("uiNegative");
@@ -3685,9 +3695,36 @@ function resolveRapid(choice, timedOut = false) {
       confidence: "medium",
       explain: supportive ? "You absorbed short-term cost for resilience." : "You protected short-run spend but raised deferred risk.",
     });
+    rapidFeedback = {
+      kind: supportive ? "good" : "neutral",
+      title: active.title || "Incident brief",
+      quote: active.body || active.title || "Decision resolved.",
+      focus: rapidImpactFocusLabel(active),
+      message: supportive ? "Decision committed. You backed the stabilizing response." : "Decision committed. You chose the lower-cost line.",
+      timerLabel: "DONE",
+      choice,
+      options: [
+        { key: "a", label: active.a || "Option A" },
+        { key: "b", label: active.b || "Option B" },
+      ],
+    };
   }
   if (timedOut) playSfx("uiNegative");
   else if (active.mode !== "scenario") playSfx("uiConfirm");
+  if (!timedOut) setRapidFeedback(rapidFeedback || {
+    kind: "neutral",
+    title: active.title || "Incident brief",
+    quote: active.body || active.claim || active.title || "Decision resolved.",
+    focus: rapidImpactFocusLabel(active),
+    message: "Decision committed.",
+    timerLabel: "DONE",
+    choice,
+    options: [
+      { key: "a", label: active.a || "Option A" },
+      { key: "b", label: active.b || "Option B" },
+    ],
+  });
+  else setRapidFeedback(null);
   state.rapid.active = null;
   updateTutorialProgress();
 }
@@ -8003,20 +8040,33 @@ function rapidImpactFocusLabel(active) {
   return "Impact focus: Governance confidence and service pressure.";
 }
 
+function setRapidFeedback(feedback) {
+  state.ui.rapidFeedback = feedback ? { ...feedback, shownAt: performance.now() } : null;
+}
+
 function renderRapidCard() {
   const a = state.rapid.active;
+  const feedback = state.ui.rapidFeedback;
   const incidentsPane = document.querySelector('[data-pane="incidents"]');
-  els.rapidCard.classList.remove("urgent");
+  els.rapidCard.classList.remove("urgent", "resolved-good", "resolved-bad", "resolved-neutral");
   incidentsPane?.classList.remove("urgent-pane");
   incidentsPane?.style.removeProperty("--urgent-speed");
   els.rapidCard.style.removeProperty("--urgent-speed");
+  if (els.rapidFeedback) {
+    els.rapidFeedback.hidden = true;
+    els.rapidFeedback.textContent = "";
+    els.rapidFeedback.className = "rapid-feedback";
+  }
+  [els.rapidBtnA, els.rapidBtnB, els.rapidBtnC].forEach((btn) => {
+    if (!btn) return;
+    btn.classList.remove("selected", "correct", "wrong");
+    btn.title = "";
+  });
   els.rapidMomentum.textContent = String(state.rapid.momentum);
   if (!state.sim.started) {
     els.rapidTitle.textContent = "Founding phase active.";
-    if (els.rapidWhat) els.rapidWhat.textContent = "Rapid INCIDENT briefs unlock after you launch government.";
+    if (els.rapidWhat) els.rapidWhat.textContent = "\"Rapid briefs unlock after you launch government.\"";
     if (els.rapidWho) els.rapidWho.textContent = "Impact focus: -";
-    els.rapidBody.textContent = "Simulation is paused during founding placement.";
-    if (els.rapidEvidence) els.rapidEvidence.textContent = "";
     els.rapidTimer.textContent = "-";
     els.rapidBtnA.disabled = true;
     els.rapidBtnB.disabled = true;
@@ -8027,13 +8077,44 @@ function renderRapidCard() {
     if (els.rapidBtnC) els.rapidBtnC.style.display = "none";
     return;
   }
+  if (feedback && !a) {
+    els.rapidTitle.textContent = feedback.title || "Decision registered";
+    if (els.rapidWhat) els.rapidWhat.textContent = `"${feedback.quote || feedback.message || "Decision logged."}"`;
+    if (els.rapidWho) els.rapidWho.textContent = feedback.focus || "Impact focus: updated";
+    if (els.rapidFeedback) {
+      els.rapidFeedback.hidden = false;
+      els.rapidFeedback.textContent = feedback.message || "Decision registered.";
+      els.rapidFeedback.className = `rapid-feedback ${feedback.kind || "neutral"}`;
+    }
+    els.rapidTimer.textContent = feedback.timerLabel || "DONE";
+    els.rapidBtnA.disabled = true;
+    els.rapidBtnB.disabled = true;
+    if (els.rapidBtnC) els.rapidBtnC.disabled = true;
+    const options = feedback.options || [];
+    const chosen = feedback.choice;
+    const chosenVerdict = feedback.kind === "good" ? "correct" : feedback.kind === "bad" ? "wrong" : "";
+    [els.rapidBtnA, els.rapidBtnB, els.rapidBtnC].forEach((btn, index) => {
+      if (!btn) return;
+      const option = options[index];
+      if (!option) {
+        btn.style.display = "none";
+        return;
+      }
+      btn.style.display = "";
+      btn.textContent = option.label;
+      if (option.key === chosen) {
+        btn.classList.add("selected");
+        if (chosenVerdict) btn.classList.add(chosenVerdict);
+      }
+    });
+    els.rapidCard.classList.add(`resolved-${feedback.kind || "neutral"}`);
+    return;
+  }
   if (!a) {
     if (tutorialIsActive() && !["incident", "rapid", "freeplay"].includes(state.tutorial.phase)) {
       els.rapidTitle.textContent = "Guided mode in progress.";
-      if (els.rapidWhat) els.rapidWhat.textContent = "Rapid INCIDENT briefs unlock after budget, upgrade, industry, and first manual incident.";
+      if (els.rapidWhat) els.rapidWhat.textContent = "\"Rapid briefs unlock after budget, upgrade, industry, and your first manual incident.\"";
       if (els.rapidWho) els.rapidWho.textContent = "Impact focus: -";
-      els.rapidBody.textContent = "Follow guided steps to unlock timed briefs.";
-      if (els.rapidEvidence) els.rapidEvidence.textContent = "";
       els.rapidTimer.textContent = "-";
       els.rapidBtnA.disabled = true;
       els.rapidBtnB.disabled = true;
@@ -8049,23 +8130,34 @@ function renderRapidCard() {
     if (manualOpen > 0) {
       els.rapidTitle.textContent = "No timed civic brief right now.";
       const nextIn = Math.max(0, state.rapid.nextAtDay - state.day);
-      if (els.rapidWhat) els.rapidWhat.textContent = "Manual incidents are still active on map.";
+      if (els.rapidWhat) els.rapidWhat.textContent = "\"Manual incidents are still active on the map.\"";
       if (els.rapidWho) els.rapidWho.textContent = "Impact focus: Resolve manual incidents first.";
-      els.rapidBody.textContent = `Next major brief in ~${nextIn} days.`;
+      if (els.rapidFeedback) {
+        els.rapidFeedback.hidden = false;
+        els.rapidFeedback.textContent = `Next major brief in ~${nextIn} days.`;
+        els.rapidFeedback.className = "rapid-feedback neutral";
+      }
     } else if (manualBlocked > 0) {
       els.rapidTitle.textContent = "No direct incident action available.";
       const nextIn = Math.max(0, state.rapid.nextAtDay - state.day);
-      if (els.rapidWhat) els.rapidWhat.textContent = "Incidents are pending while resources recover.";
+      if (els.rapidWhat) els.rapidWhat.textContent = "\"Incidents are pending while resources recover.\"";
       if (els.rapidWho) els.rapidWho.textContent = "Impact focus: restore AP/treasury to intervene.";
-      els.rapidBody.textContent = `Next civic brief in ~${nextIn} days.`;
+      if (els.rapidFeedback) {
+        els.rapidFeedback.hidden = false;
+        els.rapidFeedback.textContent = `Next civic brief in ~${nextIn} days.`;
+        els.rapidFeedback.className = "rapid-feedback neutral";
+      }
     } else {
       els.rapidTitle.textContent = "All clear.";
       const nextIn = Math.max(0, state.rapid.nextAtDay - state.day);
-      if (els.rapidWhat) els.rapidWhat.textContent = "No manual actions required right now.";
+      if (els.rapidWhat) els.rapidWhat.textContent = "\"No manual actions required right now.\"";
       if (els.rapidWho) els.rapidWho.textContent = "Impact focus: -";
-      els.rapidBody.textContent = `Next civic brief in ~${nextIn} days.`;
+      if (els.rapidFeedback) {
+        els.rapidFeedback.hidden = false;
+        els.rapidFeedback.textContent = `Next civic brief in ~${nextIn} days.`;
+        els.rapidFeedback.className = "rapid-feedback neutral";
+      }
     }
-    if (els.rapidEvidence) els.rapidEvidence.textContent = "";
     els.rapidTimer.textContent = "-";
     els.rapidBtnA.disabled = true;
     els.rapidBtnB.disabled = true;
@@ -8088,32 +8180,11 @@ function renderRapidCard() {
 
   els.rapidTitle.textContent = a.title || "Civic Brief";
   if (a.mode === "scenario") {
-    if (els.rapidWhat) els.rapidWhat.textContent = a.claim || a.prompt || a.body || "A fast-moving claim needs a call now.";
+    if (els.rapidWhat) els.rapidWhat.textContent = `"${a.claim || a.prompt || a.body || "A fast-moving claim needs a call now."}"`;
     if (els.rapidWho) els.rapidWho.textContent = rapidImpactFocusLabel(a);
-    els.rapidBody.textContent = `Source: ${a.speaker || "Unknown"} · Choose your response before the timer expires.`;
   } else {
-    if (els.rapidWhat) els.rapidWhat.textContent = a.body || "Rapid civic brief active.";
+    if (els.rapidWhat) els.rapidWhat.textContent = `"${a.body || "Rapid civic brief active."}"`;
     if (els.rapidWho) els.rapidWho.textContent = rapidImpactFocusLabel(a);
-    els.rapidBody.textContent = "Pick one option now. Delays reduce momentum.";
-  }
-  if (els.rapidEvidence) {
-    if (a.mode === "scenario" && a.clues) {
-      const parts = [];
-      if (a.clues.data) parts.push(`Data: ${a.clues.data}`);
-      if (a.clues.street) parts.push(`Street: ${a.clues.street}`);
-      if (a.clues.motive) parts.push(`Motive: ${a.clues.motive}`);
-      const conf = truthConfidence(a.options || []);
-      const speaker = a.speaker || "Source";
-      const reads = state.truth.speakerReads[speaker];
-      const speakerLine = reads
-        ? ` | You vs ${speaker}: ${reads.right}R/${reads.wrong}W`
-        : "";
-      els.rapidEvidence.textContent = `${parts.join("  |  ")}  |  Confidence: ${conf}${speakerLine}`;
-    } else if (a.mode === "scenario" && Array.isArray(a.evidence) && a.evidence.length) {
-      els.rapidEvidence.textContent = `Clues: ${a.evidence.map((x) => prettifyTag(x)).slice(0, 3).join(" · ")}`;
-    } else {
-      els.rapidEvidence.textContent = "";
-    }
   }
   els.rapidTimer.textContent = String(Math.max(0, a.expiresDay - state.day));
   els.rapidBtnA.disabled = false;
@@ -9574,10 +9645,23 @@ function cameraForTile(tile) {
   return { x: -termX, y: 30 - termY };
 }
 
-function focusCameraOnTile(tile) {
+function focusCameraOnTile(tile, opts = {}) {
   const t = cameraForTile(tile);
-  state.camera.targetX = t.x;
-  state.camera.targetY = t.y;
+  state.camera.targetX = t.x + (opts.screenOffsetX || 0);
+  state.camera.targetY = t.y + (opts.screenOffsetY || 0);
+}
+
+function tutorialVisibleGuideWidth() {
+  const guide = els.tutorialOverlay;
+  if (!guide || guide.hidden || !tutorialIsActive()) return 0;
+  const rect = guide.getBoundingClientRect();
+  return Math.max(0, rect.width + 32);
+}
+
+function focusCameraOnTutorialTile(tile) {
+  const guideWidth = tutorialVisibleGuideWidth();
+  const pushRight = guideWidth > 0 ? Math.min(state.camera.viewW * 0.2, guideWidth * 0.42) : 0;
+  focusCameraOnTile(tile, { screenOffsetX: pushRight });
 }
 
 function updateCamera(dt) {
@@ -9624,6 +9708,9 @@ function updateUiFx(dt) {
   state.ui.decisionToasts = state.ui.decisionToasts
     .map((t) => ({ ...t, ttl: t.ttl - dt }))
     .filter((t) => t.ttl > 0);
+  if (state.ui.rapidFeedback && performance.now() - (state.ui.rapidFeedback.shownAt || 0) > 2200) {
+    state.ui.rapidFeedback = null;
+  }
 }
 
 function drawRipples() {
